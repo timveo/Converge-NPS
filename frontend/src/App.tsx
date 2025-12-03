@@ -1,9 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { useAuth } from '@/hooks/useAuth';
 import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import AdminLayout from '@/components/AdminLayout';
 
-// Pages (to be created)
+// User Pages
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
@@ -12,23 +13,12 @@ import ConnectionsPage from '@/pages/ConnectionsPage';
 import SchedulePage from '@/pages/SchedulePage';
 import MessagesPage from '@/pages/MessagesPage';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="skeleton h-12 w-12 rounded-full" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-}
+// Admin Pages
+import AdminDashboard from '@/pages/admin/AdminDashboard';
+import SessionManagement from '@/pages/admin/SessionManagement';
+import SessionForm from '@/pages/admin/SessionForm';
+import UserManagement from '@/pages/admin/UserManagement';
+import Analytics from '@/pages/admin/Analytics';
 
 function App() {
   return (
@@ -39,7 +29,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Protected routes */}
+        {/* Protected user routes */}
         <Route
           path="/"
           element={
@@ -77,6 +67,68 @@ function App() {
           element={
             <ProtectedRoute>
               <MessagesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin routes (require admin/staff role) */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <AdminDashboard />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/sessions"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <SessionManagement />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/sessions/new"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <SessionForm />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/sessions/:id/edit"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <SessionForm />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <UserManagement />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/analytics"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <Analytics />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
