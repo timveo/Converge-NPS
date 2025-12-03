@@ -18,6 +18,7 @@ import connectionRoutes from './routes/connection.routes';
 import sessionRoutes from './routes/session.routes';
 import projectRoutes from './routes/project.routes';
 import messageRoutes from './routes/message.routes';
+import adminRoutes from './routes/admin.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -134,6 +135,7 @@ export function createApp(): Application {
   app.use(`${API_VERSION}/projects`, projectRoutes);
   app.use(`${API_VERSION}/messages`, messageRoutes);
   app.use(`${API_VERSION}/conversations`, messageRoutes);
+  app.use(`${API_VERSION}/admin`, adminRoutes);
 
   // ===========================
   // 404 Handler
