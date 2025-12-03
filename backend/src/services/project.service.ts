@@ -46,21 +46,21 @@ export async function listProjects(filters: {
   }
 
   if (filters.submittedBy) {
-    where.submittedBy = filters.submittedBy;
+    where.piId = filters.submittedBy;
   }
 
   if (filters.search) {
     where.OR = [
       { title: { contains: filters.search, mode: 'insensitive' } },
       { description: { contains: filters.search, mode: 'insensitive' } },
-      { tags: { has: filters.search } },
+      { keywords: { has: filters.search } },
     ];
   }
 
-  const projects = await prisma.researchProjects.findMany({
+  const projects = await prisma.project.findMany({
     where,
     include: {
-      submitter: {
+      pi: {
         select: {
           id: true,
           fullName: true,
@@ -84,10 +84,10 @@ export async function listProjects(filters: {
  * Get project by ID with interest status
  */
 export async function getProjectById(projectId: string, userId?: string) {
-  const project = await prisma.researchProjects.findUnique({
+  const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
-      submitter: {
+      pi: {
         select: {
           id: true,
           fullName: true,
@@ -95,8 +95,8 @@ export async function getProjectById(projectId: string, userId?: string) {
           organization: true,
           role: true,
           bio: true,
-          linkedin: true,
-          github: true,
+          linkedinUrl: true,
+          websiteUrl: true,
         },
       },
       interests: userId ? {
@@ -128,10 +128,10 @@ export async function expressInterest(userId: string, data: {
   message?: string;
 }) {
   // Check if project exists
-  const project = await prisma.researchProjects.findUnique({
+  const project = await prisma.project.findUnique({
     where: { id: data.projectId },
     include: {
-      submitter: {
+      pi: {
         select: {
           id: true,
           allowMessaging: true,
@@ -145,7 +145,7 @@ export async function expressInterest(userId: string, data: {
   }
 
   // Check if already expressed interest
-  const existingInterest = await prisma.projectInterests.findFirst({
+  const existingInterest = await prisma.projectInterest.findFirst({
     where: {
       userId,
       projectId: data.projectId,
@@ -157,12 +157,12 @@ export async function expressInterest(userId: string, data: {
   }
 
   // Cannot express interest in own project
-  if (project.submittedBy === userId) {
+  if (project.piId === userId) {
     throw new Error('Cannot express interest in your own project');
   }
 
   // Create interest
-  const interest = await prisma.projectInterests.create({
+  const interest = await prisma.projectInterest.create({
     data: {
       userId,
       projectId: data.projectId,
@@ -190,7 +190,7 @@ export async function expressInterest(userId: string, data: {
  */
 export async function getProjectInterests(projectId: string, requestingUserId: string) {
   // Check if project exists and user is submitter
-  const project = await prisma.researchProjects.findUnique({
+  const project = await prisma.project.findUnique({
     where: { id: projectId },
   });
 
@@ -198,11 +198,11 @@ export async function getProjectInterests(projectId: string, requestingUserId: s
     throw new Error('Project not found');
   }
 
-  if (project.submittedBy !== requestingUserId) {
-    throw new Error('Only project submitter can view interests');
+  if (project.piId !== requestingUserId) {
+    throw new Error('Only project PI can view interests');
   }
 
-  const interests = await prisma.projectInterests.findMany({
+  const interests = await prisma.projectInterest.findMany({
     where: { projectId },
     include: {
       user: {
@@ -213,8 +213,8 @@ export async function getProjectInterests(projectId: string, requestingUserId: s
           organization: true,
           role: true,
           bio: true,
-          linkedin: true,
-          github: true,
+          linkedinUrl: true,
+          websiteUrl: true,
         },
       },
     },
@@ -230,12 +230,12 @@ export async function getProjectInterests(projectId: string, requestingUserId: s
  * Get user's expressed interests
  */
 export async function getUserInterests(userId: string) {
-  const interests = await prisma.projectInterests.findMany({
+  const interests = await prisma.projectInterest.findMany({
     where: { userId },
     include: {
       project: {
         include: {
-          submitter: {
+          pi: {
             select: {
               id: true,
               fullName: true,
@@ -257,7 +257,7 @@ export async function getUserInterests(userId: string) {
  * Withdraw interest from project
  */
 export async function withdrawInterest(userId: string, interestId: string) {
-  const interest = await prisma.projectInterests.findUnique({
+  const interest = await prisma.projectInterest.findUnique({
     where: { id: interestId },
   });
 
@@ -269,7 +269,7 @@ export async function withdrawInterest(userId: string, interestId: string) {
     throw new Error('Unauthorized to withdraw this interest');
   }
 
-  await prisma.projectInterests.delete({
+  await prisma.projectInterest.delete({
     where: { id: interestId },
   });
 
@@ -414,7 +414,7 @@ export async function listOpportunities(filters: {
     ];
   }
 
-  const opportunities = await prisma.industryOpportunities.findMany({
+  const opportunities = await prisma.opportunity.findMany({
     where,
     include: {
       poster: {
@@ -426,7 +426,7 @@ export async function listOpportunities(filters: {
         },
       },
       _count: {
-        select: { applications: true },
+        select: { interests: true },
       },
     },
     orderBy: {
@@ -441,7 +441,7 @@ export async function listOpportunities(filters: {
  * Get opportunity by ID
  */
 export async function getOpportunityById(opportunityId: string, userId?: string) {
-  const opportunity = await prisma.industryOpportunities.findUnique({
+  const opportunity = await prisma.opportunity.findUnique({
     where: { id: opportunityId },
     include: {
       poster: {
@@ -453,12 +453,12 @@ export async function getOpportunityById(opportunityId: string, userId?: string)
           role: true,
         },
       },
-      applications: userId ? {
+      interests: userId ? {
         where: { userId },
         take: 1,
       } : false,
       _count: {
-        select: { applications: true },
+        select: { interests: true },
       },
     },
   });
@@ -469,8 +469,8 @@ export async function getOpportunityById(opportunityId: string, userId?: string)
 
   return {
     ...opportunity,
-    applicationCount: opportunity._count.applications,
-    userApplication: opportunity.applications?.[0] || null,
+    applicationCount: opportunity._count.interests,
+    userApplication: opportunity.interests?.[0] || null,
   };
 }
 
@@ -479,11 +479,10 @@ export async function getOpportunityById(opportunityId: string, userId?: string)
  */
 export async function applyToOpportunity(userId: string, data: {
   opportunityId: string;
-  coverLetter?: string;
-  resumeUrl?: string;
+  message?: string;
 }) {
   // Check if opportunity exists
-  const opportunity = await prisma.industryOpportunities.findUnique({
+  const opportunity = await prisma.opportunity.findUnique({
     where: { id: data.opportunityId },
   });
 
@@ -491,12 +490,12 @@ export async function applyToOpportunity(userId: string, data: {
     throw new Error('Opportunity not found');
   }
 
-  if (opportunity.status !== 'open') {
+  if (opportunity.status !== 'active') {
     throw new Error('Opportunity is not open for applications');
   }
 
   // Check if already applied
-  const existingApplication = await prisma.opportunityApplications.findFirst({
+  const existingApplication = await prisma.opportunityInterest.findFirst({
     where: {
       userId,
       opportunityId: data.opportunityId,
@@ -513,12 +512,12 @@ export async function applyToOpportunity(userId: string, data: {
   }
 
   // Create application
-  const application = await prisma.opportunityApplications.create({
+  const application = await prisma.opportunityInterest.create({
     data: {
       userId,
       opportunityId: data.opportunityId,
-      coverLetter: data.coverLetter,
-      resumeUrl: data.resumeUrl,
+      message: data.message,
+      status: 'interested',
     },
     include: {
       opportunity: true,

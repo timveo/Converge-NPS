@@ -17,9 +17,9 @@ import profileRoutes from './routes/profile.routes';
 import connectionRoutes from './routes/connection.routes';
 import sessionRoutes from './routes/session.routes';
 import projectRoutes from './routes/project.routes';
-import messageRoutes from './routes/message.routes';
-import adminRoutes from './routes/admin.routes';
-import smartsheetRoutes from './routes/smartsheet.routes';
+// import messageRoutes from './routes/message.routes'; // TEMPORARILY DISABLED - schema mismatch
+// import adminRoutes from './routes/admin.routes'; // TEMPORARILY DISABLED - schema mismatch
+// import smartsheetRoutes from './routes/smartsheet.routes'; // TEMPORARILY DISABLED
 import partnerRoutes from './routes/partner.routes';
 import staffRoutes from './routes/staff.routes';
 import opportunityRoutes from './routes/opportunity.routes';
@@ -63,8 +63,17 @@ export function createApp(): Application {
   );
 
   // CORS - Cross-origin resource sharing
+  const allowedOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173').split(',');
+
   const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
@@ -142,12 +151,12 @@ export function createApp(): Application {
   app.use(`${API_VERSION}/sessions`, sessionRoutes);
   app.use(`${API_VERSION}/projects`, projectRoutes);
   app.use(`${API_VERSION}/opportunities`, opportunityRoutes);
-  app.use(`${API_VERSION}/messages`, messageRoutes);
-  app.use(`${API_VERSION}/conversations`, messageRoutes);
+  // app.use(`${API_VERSION}/messages`, messageRoutes); // TEMPORARILY DISABLED - schema mismatch
+  // app.use(`${API_VERSION}/conversations`, messageRoutes); // TEMPORARILY DISABLED - schema mismatch
   app.use(`${API_VERSION}/partners`, partnerRoutes);
   app.use(`${API_VERSION}/staff`, staffRoutes);
-  app.use(`${API_VERSION}/admin`, adminRoutes);
-  app.use(`${API_VERSION}/admin/smartsheet`, smartsheetRoutes);
+  // app.use(`${API_VERSION}/admin`, adminRoutes); // TEMPORARILY DISABLED - schema mismatch
+  // app.use(`${API_VERSION}/admin/smartsheet`, smartsheetRoutes); // TEMPORARILY DISABLED
 
   // ===========================
   // 404 Handler

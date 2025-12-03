@@ -3,7 +3,7 @@ import * as adminService from '../services/admin.service';
 
 // Middleware to check admin/staff role
 export function requireAdmin(req: Request, res: Response, next: Function) {
-  if (!req.user || !['admin', 'staff'].includes(req.user.role)) {
+  if (!req.user || !req.user.roles || !req.user.roles.some(role => ['admin', 'staff'].includes(role))) {
     return res.status(403).json({
       success: false,
       error: 'Admin or staff access required',

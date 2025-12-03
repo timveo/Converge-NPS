@@ -9,7 +9,7 @@ import { createServer } from 'http';
 import { createApp } from './app';
 import logger from './utils/logger';
 import { PrismaClient } from '@prisma/client';
-import { initializeSocketServer } from './socket';
+// import { initializeSocketServer } from './socket'; // TEMPORARILY DISABLED - schema mismatch
 
 // Load environment variables
 dotenv.config();
@@ -36,9 +36,9 @@ async function startServer() {
     // Create HTTP server
     const httpServer = createServer(app);
 
-    // Initialize Socket.IO
-    const io = initializeSocketServer(httpServer);
-    logger.info('WebSocket server initialized');
+    // Initialize Socket.IO - TEMPORARILY DISABLED
+    // const io = initializeSocketServer(httpServer);
+    // logger.info('WebSocket server initialized');
 
     // Start listening
     const server = httpServer.listen(PORT, HOST, () => {
@@ -65,10 +65,10 @@ async function startServer() {
       server.close(async () => {
         logger.info('HTTP server closed');
 
-        // Close Socket.IO
-        io.close(() => {
-          logger.info('WebSocket server closed');
-        });
+        // Close Socket.IO - TEMPORARILY DISABLED
+        // io.close(() => {
+        //   logger.info('WebSocket server closed');
+        // });
 
         // Close database connection
         await prisma.$disconnect();

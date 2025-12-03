@@ -70,10 +70,10 @@ export async function expressInterest(req: Request, res: Response) {
     const { id: projectId } = req.params;
     const userId = req.user!.id;
 
-    const data = projectService.createProjectInterestSchema.parse({
+    const data = {
       projectId,
-      ...req.body,
-    });
+      ...projectService.createProjectInterestSchema.parse(req.body),
+    };
 
     const interest = await projectService.expressInterest(userId, data);
 

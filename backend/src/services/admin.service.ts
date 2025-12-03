@@ -37,7 +37,7 @@ export async function createSession(data: z.infer<typeof createSessionSchema>) {
   }
 
   // Check for scheduling conflicts (same location)
-  const conflicts = await prisma.sessions.findMany({
+  const conflicts = await prisma.session.findMany({
     where: {
       location: data.location,
       status: { not: 'cancelled' },
@@ -62,7 +62,7 @@ export async function createSession(data: z.infer<typeof createSessionSchema>) {
     throw new Error(`Location conflict: ${data.location} is already booked during this time`);
   }
 
-  const session = await prisma.sessions.create({
+  const session = await prisma.session.create({
     data: {
       ...data,
       startTime: start,
@@ -77,7 +77,7 @@ export async function createSession(data: z.infer<typeof createSessionSchema>) {
  * Update existing session (admin only)
  */
 export async function updateSession(sessionId: string, data: z.infer<typeof updateSessionSchema>) {
-  const session = await prisma.sessions.findUnique({
+  const session = await prisma.session.findUnique({
     where: { id: sessionId },
   });
 
@@ -97,7 +97,7 @@ export async function updateSession(sessionId: string, data: z.infer<typeof upda
     // Check for conflicts if location or times changed
     if (data.location || data.startTime || data.endTime) {
       const location = data.location || session.location;
-      const conflicts = await prisma.sessions.findMany({
+      const conflicts = await prisma.session.findMany({
         where: {
           id: { not: sessionId },
           location,
@@ -125,7 +125,7 @@ export async function updateSession(sessionId: string, data: z.infer<typeof upda
     }
   }
 
-  const updated = await prisma.sessions.update({
+  const updated = await prisma.session.update({
     where: { id: sessionId },
     data: {
       ...data,
@@ -146,7 +146,7 @@ export async function updateSession(sessionId: string, data: z.infer<typeof upda
  * Delete session (admin only)
  */
 export async function deleteSession(sessionId: string) {
-  const session = await prisma.sessions.findUnique({
+  const session = await prisma.session.findUnique({
     where: { id: sessionId },
     include: {
       _count: {
@@ -161,7 +161,7 @@ export async function deleteSession(sessionId: string) {
 
   // Instead of deleting, mark as cancelled if there are RSVPs
   if (session._count.rsvps > 0) {
-    const updated = await prisma.sessions.update({
+    const updated = await prisma.session.update({
       where: { id: sessionId },
       data: { status: 'cancelled' },
     });
@@ -170,7 +170,7 @@ export async function deleteSession(sessionId: string) {
   }
 
   // Actually delete if no RSVPs
-  await prisma.sessions.delete({
+  await prisma.session.delete({
     where: { id: sessionId },
   });
 
@@ -203,7 +203,7 @@ export async function listUsers(filters: {
   }
 
   const [users, total] = await Promise.all([
-    prisma.profiles.findMany({
+    prisma.profile.findMany({
       where,
       select: {
         id: true,
@@ -225,7 +225,7 @@ export async function listUsers(filters: {
       take: filters.limit || 50,
       skip: filters.offset || 0,
     }),
-    prisma.profiles.count({ where }),
+    prisma.profile.count({ where }),
   ]);
 
   return { users, total };
@@ -235,7 +235,7 @@ export async function listUsers(filters: {
  * Get user details (admin only)
  */
 export async function getUserDetails(userId: string) {
-  const user = await prisma.profiles.findUnique({
+  const user = await prisma.profile.findUnique({
     where: { id: userId },
     include: {
       _count: {
@@ -264,7 +264,7 @@ export async function getUserDetails(userId: string) {
  * Update user role (admin only)
  */
 export async function updateUserRole(userId: string, data: z.infer<typeof updateUserRoleSchema>) {
-  const user = await prisma.profiles.findUnique({
+  const user = await prisma.profile.findUnique({
     where: { id: userId },
   });
 
@@ -272,7 +272,7 @@ export async function updateUserRole(userId: string, data: z.infer<typeof update
     throw new Error('User not found');
   }
 
-  const updated = await prisma.profiles.update({
+  const updated = await prisma.profile.update({
     where: { id: userId },
     data: { role: data.role },
     select: {
@@ -291,7 +291,7 @@ export async function updateUserRole(userId: string, data: z.infer<typeof update
  * Suspend user account (admin only)
  */
 export async function suspendUser(userId: string, reason: string) {
-  const user = await prisma.profiles.findUnique({
+  const user = await prisma.profile.findUnique({
     where: { id: userId },
   });
 
@@ -305,7 +305,7 @@ export async function suspendUser(userId: string, reason: string) {
 
   // In production, you'd have a 'suspended' field in the schema
   // For now, we'll set profile visibility to private and disable features
-  const updated = await prisma.profiles.update({
+  const updated = await prisma.profile.update({
     where: { id: userId },
     data: {
       profileVisibility: 'private',
@@ -336,27 +336,27 @@ export async function getDashboardStats() {
     upcomingSessions,
   ] = await Promise.all([
     // Total counts
-    prisma.profiles.count(),
-    prisma.sessions.count({ where: { status: { not: 'cancelled' } } }),
-    prisma.connections.count(),
-    prisma.messages.count(),
-    prisma.researchProjects.count(),
+    prisma.profile.count(),
+    prisma.session.count({ where: { status: { not: 'cancelled' } } }),
+    prisma.connection.count(),
+    prisma.message.count(),
+    prisma.project.count(),
 
     // Users by role
-    prisma.profiles.groupBy({
+    prisma.profile.groupBy({
       by: ['role'],
       _count: true,
     }),
 
     // Sessions by track
-    prisma.sessions.groupBy({
+    prisma.session.groupBy({
       by: ['track'],
       where: { status: { not: 'cancelled' } },
       _count: true,
     }),
 
     // Recent users (last 7 days)
-    prisma.profiles.count({
+    prisma.profile.count({
       where: {
         createdAt: {
           gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
@@ -365,7 +365,7 @@ export async function getDashboardStats() {
     }),
 
     // Upcoming sessions
-    prisma.sessions.count({
+    prisma.session.count({
       where: {
         status: 'scheduled',
         startTime: { gte: new Date() },
@@ -399,7 +399,7 @@ export async function getDashboardStats() {
  */
 export async function getRsvpStats() {
   const [rsvpsBySession, rsvpsByStatus] = await Promise.all([
-    prisma.sessions.findMany({
+    prisma.session.findMany({
       where: {
         status: { not: 'cancelled' },
         startTime: { gte: new Date() },
@@ -419,7 +419,7 @@ export async function getRsvpStats() {
       orderBy: { startTime: 'asc' },
     }),
 
-    prisma.rsvps.groupBy({
+    prisma.rsvp.groupBy({
       by: ['status'],
       _count: true,
     }),
@@ -453,11 +453,11 @@ export async function getActivityReport(days: number = 7) {
     newRsvps,
     newProjects,
   ] = await Promise.all([
-    prisma.profiles.count({ where: { createdAt: { gte: since } } }),
-    prisma.connections.count({ where: { createdAt: { gte: since } } }),
-    prisma.messages.count({ where: { createdAt: { gte: since } } }),
-    prisma.rsvps.count({ where: { createdAt: { gte: since } } }),
-    prisma.researchProjects.count({ where: { createdAt: { gte: since } } }),
+    prisma.profile.count({ where: { createdAt: { gte: since } } }),
+    prisma.connection.count({ where: { createdAt: { gte: since } } }),
+    prisma.message.count({ where: { createdAt: { gte: since } } }),
+    prisma.rsvp.count({ where: { createdAt: { gte: since } } }),
+    prisma.project.count({ where: { createdAt: { gte: since } } }),
   ]);
 
   return {

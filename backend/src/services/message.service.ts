@@ -24,7 +24,7 @@ export const updateMessageStatusSchema = z.object({
  */
 export async function getOrCreateConversation(userId1: string, userId2: string) {
   // Check if conversation already exists (in either direction)
-  let conversation = await prisma.conversations.findFirst({
+  let conversation = await prisma.conversation.findFirst({
     where: {
       OR: [
         { AND: [{ user1Id: userId1 }, { user2Id: userId2 }] },
@@ -56,7 +56,7 @@ export async function getOrCreateConversation(userId1: string, userId2: string) 
   }
 
   // Check if recipient allows messaging
-  const recipient = await prisma.profiles.findUnique({
+  const recipient = await prisma.profile.findUnique({
     where: { id: userId2 },
     select: { allowMessaging: true },
   });
@@ -66,7 +66,7 @@ export async function getOrCreateConversation(userId1: string, userId2: string) 
   }
 
   // Create new conversation
-  conversation = await prisma.conversations.create({
+  conversation = await prisma.conversation.create({
     data: {
       user1Id: userId1,
       user2Id: userId2,
@@ -115,7 +115,7 @@ export async function sendMessage(senderId: string, data: {
   }
 
   // Verify sender is part of the conversation
-  const conversation = await prisma.conversations.findUnique({
+  const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
   });
 
@@ -128,7 +128,7 @@ export async function sendMessage(senderId: string, data: {
   }
 
   // Create message (rate limit enforced by DB trigger)
-  const message = await prisma.messages.create({
+  const message = await prisma.message.create({
     data: {
       conversationId,
       senderId,
@@ -157,7 +157,7 @@ export async function sendMessage(senderId: string, data: {
   });
 
   // Update conversation lastMessageAt
-  await prisma.conversations.update({
+  await prisma.conversation.update({
     where: { id: conversationId },
     data: { lastMessageAt: new Date() },
   });
@@ -177,7 +177,7 @@ export async function getConversationMessages(
   } = {}
 ) {
   // Verify user is part of conversation
-  const conversation = await prisma.conversations.findUnique({
+  const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
   });
 
@@ -193,7 +193,7 @@ export async function getConversationMessages(
 
   // Cursor-based pagination
   if (options.before) {
-    const beforeMessage = await prisma.messages.findUnique({
+    const beforeMessage = await prisma.message.findUnique({
       where: { id: options.before },
     });
 
@@ -202,7 +202,7 @@ export async function getConversationMessages(
     }
   }
 
-  const messages = await prisma.messages.findMany({
+  const messages = await prisma.message.findMany({
     where,
     include: {
       sender: {
@@ -224,7 +224,7 @@ export async function getConversationMessages(
  * Get user's conversations
  */
 export async function getUserConversations(userId: string) {
-  const conversations = await prisma.conversations.findMany({
+  const conversations = await prisma.conversation.findMany({
     where: {
       OR: [{ user1Id: userId }, { user2Id: userId }],
     },
@@ -288,7 +288,7 @@ export async function getUserConversations(userId: string) {
  */
 export async function markMessagesAsRead(userId: string, conversationId: string) {
   // Verify user is part of conversation
-  const conversation = await prisma.conversations.findUnique({
+  const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
   });
 
@@ -301,7 +301,7 @@ export async function markMessagesAsRead(userId: string, conversationId: string)
   }
 
   // Mark all messages from other user as read
-  await prisma.messages.updateMany({
+  await prisma.message.updateMany({
     where: {
       conversationId,
       senderId: { not: userId },
@@ -319,7 +319,7 @@ export async function markMessagesAsRead(userId: string, conversationId: string)
  * Update message status (for delivery/read receipts)
  */
 export async function updateMessageStatus(messageId: string, status: 'sent' | 'delivered' | 'read') {
-  const message = await prisma.messages.update({
+  const message = await prisma.message.update({
     where: { id: messageId },
     data: { status },
   });
@@ -332,7 +332,7 @@ export async function updateMessageStatus(messageId: string, status: 'sent' | 'd
  */
 export async function deleteConversation(userId: string, conversationId: string) {
   // Verify user is part of conversation
-  const conversation = await prisma.conversations.findUnique({
+  const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
   });
 
@@ -347,7 +347,7 @@ export async function deleteConversation(userId: string, conversationId: string)
   // In a production app, you'd implement a soft delete mechanism
   // For MVP, we'll just delete the conversation
   // Note: This will cascade delete all messages due to Prisma schema
-  await prisma.conversations.delete({
+  await prisma.conversation.delete({
     where: { id: conversationId },
   });
 
@@ -358,7 +358,7 @@ export async function deleteConversation(userId: string, conversationId: string)
  * Get unread message count
  */
 export async function getUnreadCount(userId: string) {
-  const count = await prisma.messages.count({
+  const count = await prisma.message.count({
     where: {
       conversation: {
         OR: [

@@ -780,13 +780,31 @@ export async function importSessions(): Promise<ImportResult> {
 
     for (const row of sheet.rows) {
       try {
-        const title = getCellValue(row, sheet.columns, 'Title') || getCellValue(row, sheet.columns, 'Session Title');
-        const description = getCellValue(row, sheet.columns, 'Description');
+        const title = getCellValue(row, sheet.columns, 'Title') || getCellValue(row, sheet.columns, 'Session Title') || getCellValue(row, sheet.columns, 'Event Title');
+        const description = getCellValue(row, sheet.columns, 'Description') || getCellValue(row, sheet.columns, 'Event Description');
         const speaker = getCellValue(row, sheet.columns, 'Speaker Name') || getCellValue(row, sheet.columns, 'Speaker');
         const location = getCellValue(row, sheet.columns, 'Location') || getCellValue(row, sheet.columns, 'Room');
         const sessionType = getCellValue(row, sheet.columns, 'Session Type') || getCellValue(row, sheet.columns, 'Type');
-        const startTime = parseDate(getCellValue(row, sheet.columns, 'Start Time'));
-        const endTime = parseDate(getCellValue(row, sheet.columns, 'End Time'));
+        const startTimeStr = getCellValue(row, sheet.columns, 'Start Time');
+        const endTimeStr = getCellValue(row, sheet.columns, 'End Time');
+        const dateStr = getCellValue(row, sheet.columns, 'Date');
+
+        // Combine date with time if they're separate
+        let startTime: Date | null = null;
+        let endTime: Date | null = null;
+
+        if (dateStr && startTimeStr) {
+          startTime = parseDate(`${dateStr} ${startTimeStr}`);
+        } else {
+          startTime = parseDate(startTimeStr);
+        }
+
+        if (dateStr && endTimeStr) {
+          endTime = parseDate(`${dateStr} ${endTimeStr}`);
+        } else {
+          endTime = parseDate(endTimeStr);
+        }
+
         const capacity = parseInt(getCellValue(row, sheet.columns, 'Capacity')) || 50;
 
         // Validation
@@ -882,17 +900,17 @@ export async function importProjects(): Promise<ImportResult> {
 
     for (const row of sheet.rows) {
       try {
-        const title = getCellValue(row, sheet.columns, 'Project Title') || getCellValue(row, sheet.columns, 'Title');
-        const description = getCellValue(row, sheet.columns, 'Description');
-        const piName = getCellValue(row, sheet.columns, 'PI Name') || getCellValue(row, sheet.columns, 'Principal Investigator');
-        const piEmail = getCellValue(row, sheet.columns, 'PI Email');
-        const department = getCellValue(row, sheet.columns, 'Department');
-        const researchStage = getCellValue(row, sheet.columns, 'Research Stage') || getCellValue(row, sheet.columns, 'Stage');
-        const classification = getCellValue(row, sheet.columns, 'Classification') || 'Unclassified';
-        const keywords = parseArray(getCellValue(row, sheet.columns, 'Keywords') || getCellValue(row, sheet.columns, 'Tags'));
+        const title = getCellValue(row, sheet.columns, 'Project Title') || getCellValue(row, sheet.columns, 'Title') || getCellValue(row, sheet.columns, 'Collaborative Project 1 - Title');
+        const description = getCellValue(row, sheet.columns, 'Description') || getCellValue(row, sheet.columns, 'Project 1 - Description');
+        const piName = getCellValue(row, sheet.columns, 'PI Name') || getCellValue(row, sheet.columns, 'Principal Investigator') || getCellValue(row, sheet.columns, 'POC Full Name');
+        const piEmail = getCellValue(row, sheet.columns, 'PI Email') || getCellValue(row, sheet.columns, 'POC Email');
+        const department = getCellValue(row, sheet.columns, 'Department') || getCellValue(row, sheet.columns, 'NPS Program / Department');
+        const researchStage = getCellValue(row, sheet.columns, 'Research Stage') || getCellValue(row, sheet.columns, 'Stage') || getCellValue(row, sheet.columns, 'Project 1 - Stage');
+        const classification = getCellValue(row, sheet.columns, 'Classification') || getCellValue(row, sheet.columns, 'Project 1 - Classification') || 'Unclassified';
+        const keywords = parseArray(getCellValue(row, sheet.columns, 'Keywords') || getCellValue(row, sheet.columns, 'Tags') || getCellValue(row, sheet.columns, 'Technology Focus'));
         const researchAreas = parseArray(getCellValue(row, sheet.columns, 'Research Areas'));
         const seeking = parseArray(getCellValue(row, sheet.columns, 'Seeking') || getCellValue(row, sheet.columns, 'Looking For'));
-        const students = parseArray(getCellValue(row, sheet.columns, 'Students') || getCellValue(row, sheet.columns, 'Team Members'));
+        const students = parseArray(getCellValue(row, sheet.columns, 'Students') || getCellValue(row, sheet.columns, 'Team Members') || getCellValue(row, sheet.columns, 'Advisor(s)'));
 
         // Validation
         if (!title) {
@@ -1248,15 +1266,28 @@ export async function importAttendees(): Promise<ImportResult> {
 
     for (const row of sheet.rows) {
       try {
-        const fullName = getCellValue(row, sheet.columns, 'Full Name') || getCellValue(row, sheet.columns, 'Name');
+        // Try to get full name, or combine first and last name
+        let fullName = getCellValue(row, sheet.columns, 'Full Name') || getCellValue(row, sheet.columns, 'Name');
+        if (!fullName) {
+          const firstName = getCellValue(row, sheet.columns, 'First Name');
+          const lastName = getCellValue(row, sheet.columns, 'Last Name');
+          if (firstName && lastName) {
+            fullName = `${firstName} ${lastName}`;
+          } else if (firstName) {
+            fullName = firstName;
+          } else if (lastName) {
+            fullName = lastName;
+          }
+        }
+
         const email = getCellValue(row, sheet.columns, 'Email') || getCellValue(row, sheet.columns, 'Email Address');
         const phone = getCellValue(row, sheet.columns, 'Phone') || getCellValue(row, sheet.columns, 'Phone Number');
-        const rank = getCellValue(row, sheet.columns, 'Rank');
+        const rank = getCellValue(row, sheet.columns, 'Rank') || getCellValue(row, sheet.columns, 'Rank/Title');
         const organization = getCellValue(row, sheet.columns, 'Organization') || getCellValue(row, sheet.columns, 'Company');
         const department = getCellValue(row, sheet.columns, 'Department');
-        const role = getCellValue(row, sheet.columns, 'Role') || getCellValue(row, sheet.columns, 'Position');
+        const role = getCellValue(row, sheet.columns, 'Role') || getCellValue(row, sheet.columns, 'Position') || getCellValue(row, sheet.columns, 'Participant Type');
         const linkedinUrl = getCellValue(row, sheet.columns, 'LinkedIn') || getCellValue(row, sheet.columns, 'LinkedIn URL');
-        const websiteUrl = getCellValue(row, sheet.columns, 'Website');
+        const websiteUrl = getCellValue(row, sheet.columns, 'Website') || getCellValue(row, sheet.columns, 'Personal/Company Website');
 
         // Validation
         if (!fullName) {
@@ -1305,8 +1336,15 @@ export async function importAttendees(): Promise<ImportResult> {
           });
           result.updated++;
         } else {
+          // Generate UUID for new profile
+          const profileId = await prisma.$queryRaw<Array<{ gen_random_uuid: string }>>`SELECT gen_random_uuid()`;
+          const newId = profileId[0].gen_random_uuid;
+
           const newProfile = await prisma.profile.create({
-            data: profileData,
+            data: {
+              ...profileData,
+              id: newId,
+            },
           });
 
           // Generate QR code for new profile

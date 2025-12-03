@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Converge-NPS Mobile Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        .device-frame {
+            background: #1a1a1a;
+            border-radius: 40px;
+            padding: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .device-frame::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 25px;
+            background: #1a1a1a;
+            border-radius: 0 0 15px 15px;
+            z-index: 10;
+        }
+
+        .device-screen {
+            border-radius: 30px;
+            overflow: hidden;
+            background: white;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-frame {
+            width: 375px;
+            height: 667px;
+        }
+
+        .tablet-frame {
+            width: 768px;
+            height: 1024px;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        .device-label {
+            text-align: center;
+            margin-top: 15px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .controls button {
+            display: block;
+            width: 100%;
+            padding: 8px 15px;
+            margin: 5px 0;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .controls button:hover {
+            background: #5568d3;
+        }
+
+        .info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            max-width: 300px;
+        }
+
+        .info h3 {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .info p {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .info code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        @media (max-width: 1200px) {
+            .tablet-frame {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .controls, .info {
+                position: static;
+                margin: 10px;
+            }
+
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h3>Quick Navigation</h3>
+        <button onclick="navigateTo('/')">Dashboard</button>
+        <button onclick="navigateTo('/schedule')">Schedule</button>
+        <button onclick="navigateTo('/connections')">Connections</button>
+        <button onclick="navigateTo('/messages')">Messages</button>
+        <button onclick="navigateTo('/profile')">Profile</button>
+        <button onclick="location.reload()">Refresh All</button>
+    </div>
+
+    <div class="info">
+        <h3>Mobile Preview</h3>
+        <p><strong>iPhone 14 Pro:</strong> 375×667px</p>
+        <p><strong>Tablet:</strong> 768×1024px</p>
+        <p>Showing live mobile layout with bottom navigation, responsive design, and touch-optimized UI.</p>
+        <p><code>← 768px = Mobile</code><br>
+           <code>768-1023px = Tablet</code><br>
+           <code>≥ 1024px = Desktop</code></p>
+    </div>
+
+    <div class="container">
+        <!-- Mobile View -->
+        <div class="device-frame mobile-frame">
+            <div class="device-screen">
+                <iframe id="mobileFrame" src="http://localhost:5173"></iframe>
+            </div>
+            <div class="device-label">iPhone 14 Pro (Mobile View)</div>
+        </div>
+
+        <!-- Tablet View -->
+        <div class="device-frame tablet-frame">
+            <div class="device-screen">
+                <iframe id="tabletFrame" src="http://localhost:5173"></iframe>
+            </div>
+            <div class="device-label">iPad (Tablet View)</div>
+        </div>
+    </div>
+
+    <script>
+        function navigateTo(path) {
+            const baseUrl = 'http://localhost:5173';
+            document.getElementById('mobileFrame').src = baseUrl + path;
+            const tabletFrame = document.getElementById('tabletFrame');
+            if (tabletFrame) {
+                tabletFrame.src = baseUrl + path;
+            }
+        }
+
+        // Reload iframes every 30 seconds to show updates
+        setInterval(() => {
+            const mobileFrame = document.getElementById('mobileFrame');
+            const tabletFrame = document.getElementById('tabletFrame');
+            const mobileUrl = mobileFrame.src;
+            const tabletUrl = tabletFrame.src;
+
+            // Only reload if still on localhost (prevents errors if navigated away)
+            if (mobileUrl.includes('localhost')) {
+                mobileFrame.src = mobileUrl;
+            }
+            if (tabletFrame && tabletUrl.includes('localhost')) {
+                tabletFrame.src = tabletUrl;
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

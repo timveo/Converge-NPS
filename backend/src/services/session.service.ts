@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 // Validation schemas
 export const sessionFiltersSchema = z.object({
@@ -13,11 +11,11 @@ export const sessionFiltersSchema = z.object({
 
 export const createRsvpSchema = z.object({
   sessionId: z.string().uuid(),
-  status: z.enum(['attending', 'maybe', 'not_attending']).optional().default('attending'),
+  status: z.enum(['confirmed', 'waitlisted', 'cancelled']).optional().default('confirmed'),
 });
 
 export const updateRsvpSchema = z.object({
-  status: z.enum(['attending', 'maybe', 'not_attending']),
+  status: z.enum(['confirmed', 'waitlisted', 'cancelled']),
 });
 
 // Session service functions
@@ -60,7 +58,7 @@ export async function listSessions(filters: {
     ];
   }
 
-  const sessions = await prisma.sessions.findMany({
+  const sessions = await prisma.session.findMany({
     where,
     include: {
       _count: {
@@ -79,13 +77,13 @@ export async function listSessions(filters: {
  * Get session by ID with RSVP counts
  */
 export async function getSessionById(sessionId: string, userId?: string) {
-  const session = await prisma.sessions.findUnique({
+  const session = await prisma.session.findUnique({
     where: { id: sessionId },
     include: {
       _count: {
         select: {
           rsvps: {
-            where: { status: 'attending' }
+            where: { status: 'confirmed' }
           }
         },
       },
@@ -112,16 +110,11 @@ export async function getSessionById(sessionId: string, userId?: string) {
  */
 export async function createRsvp(userId: string, data: {
   sessionId: string;
-  status?: 'attending' | 'maybe' | 'not_attending';
+  status?: 'confirmed' | 'waitlisted' | 'cancelled';
 }) {
   // Check if session exists
-  const session = await prisma.sessions.findUnique({
+  const session = await prisma.session.findUnique({
     where: { id: data.sessionId },
-    include: {
-      _count: {
-        select: { rsvps: { where: { status: 'attending' } } },
-      },
-    },
   });
 
   if (!session) {
@@ -129,15 +122,20 @@ export async function createRsvp(userId: string, data: {
   }
 
   // Check capacity
-  if (data.status === 'attending' && session.capacity) {
-    const attendingCount = session._count.rsvps;
+  if (data.status === 'confirmed' && session.capacity) {
+    const attendingCount = await prisma.rsvp.count({
+      where: {
+        sessionId: data.sessionId,
+        status: 'confirmed' as any,
+      },
+    });
     if (attendingCount >= session.capacity) {
       throw new Error('Session is at full capacity');
     }
   }
 
   // Check for existing RSVP
-  const existingRsvp = await prisma.rsvps.findFirst({
+  const existingRsvp = await prisma.rsvp.findFirst({
     where: {
       userId,
       sessionId: data.sessionId,
@@ -149,10 +147,10 @@ export async function createRsvp(userId: string, data: {
   }
 
   // Check for conflicts
-  const conflicts = await prisma.rsvps.findMany({
+  const conflicts = await prisma.rsvp.findMany({
     where: {
       userId,
-      status: 'attending',
+      status: 'confirmed' as any,
       session: {
         OR: [
           {
@@ -186,16 +184,16 @@ export async function createRsvp(userId: string, data: {
     },
   });
 
-  if (conflicts.length > 0 && data.status === 'attending') {
+  if (conflicts.length > 0 && data.status === 'confirmed') {
     throw new Error(`Schedule conflict with: ${conflicts[0].session.title}`);
   }
 
   // Create RSVP
-  const rsvp = await prisma.rsvps.create({
+  const rsvp = await prisma.rsvp.create({
     data: {
       userId,
       sessionId: data.sessionId,
-      status: data.status || 'attending',
+      status: (data.status || 'confirmed') as any,
     },
     include: {
       session: true,
@@ -209,10 +207,10 @@ export async function createRsvp(userId: string, data: {
  * Update RSVP status
  */
 export async function updateRsvp(userId: string, rsvpId: string, data: {
-  status: 'attending' | 'maybe' | 'not_attending';
+  status: 'confirmed' | 'waitlisted' | 'cancelled';
 }) {
   // Find existing RSVP
-  const existingRsvp = await prisma.rsvps.findUnique({
+  const existingRsvp = await prisma.rsvp.findUnique({
     where: { id: rsvpId },
     include: { session: true },
   });
@@ -226,13 +224,13 @@ export async function updateRsvp(userId: string, rsvpId: string, data: {
   }
 
   // Check capacity if changing to attending
-  if (data.status === 'attending' && existingRsvp.status !== 'attending') {
+  if (data.status === 'confirmed' && (existingRsvp.status as any) !== 'confirmed') {
     const session = existingRsvp.session;
     if (session.capacity) {
-      const attendingCount = await prisma.rsvps.count({
+      const attendingCount = await prisma.rsvp.count({
         where: {
           sessionId: session.id,
-          status: 'attending',
+          status: 'confirmed' as any,
         },
       });
 
@@ -242,10 +240,10 @@ export async function updateRsvp(userId: string, rsvpId: string, data: {
     }
 
     // Check for conflicts
-    const conflicts = await prisma.rsvps.findMany({
+    const conflicts = await prisma.rsvp.findMany({
       where: {
         userId,
-        status: 'attending',
+        status: 'confirmed' as any,
         sessionId: { not: existingRsvp.sessionId },
         session: {
           OR: [
@@ -283,9 +281,9 @@ export async function updateRsvp(userId: string, rsvpId: string, data: {
   }
 
   // Update RSVP
-  const updatedRsvp = await prisma.rsvps.update({
+  const updatedRsvp = await prisma.rsvp.update({
     where: { id: rsvpId },
-    data: { status: data.status },
+    data: { status: data.status as any },
     include: { session: true },
   });
 
@@ -296,7 +294,7 @@ export async function updateRsvp(userId: string, rsvpId: string, data: {
  * Delete RSVP
  */
 export async function deleteRsvp(userId: string, rsvpId: string) {
-  const rsvp = await prisma.rsvps.findUnique({
+  const rsvp = await prisma.rsvp.findUnique({
     where: { id: rsvpId },
   });
 
@@ -308,7 +306,7 @@ export async function deleteRsvp(userId: string, rsvpId: string) {
     throw new Error('Unauthorized to delete this RSVP');
   }
 
-  await prisma.rsvps.delete({
+  await prisma.rsvp.delete({
     where: { id: rsvpId },
   });
 
@@ -319,7 +317,7 @@ export async function deleteRsvp(userId: string, rsvpId: string) {
  * Get user's RSVPs
  */
 export async function getUserRsvps(userId: string, filters?: {
-  status?: 'attending' | 'maybe' | 'not_attending';
+  status?: 'confirmed' | 'waitlisted' | 'cancelled';
   upcoming?: boolean;
 }) {
   const where: any = { userId };
@@ -334,7 +332,7 @@ export async function getUserRsvps(userId: string, filters?: {
     };
   }
 
-  const rsvps = await prisma.rsvps.findMany({
+  const rsvps = await prisma.rsvp.findMany({
     where,
     include: {
       session: true,
@@ -357,10 +355,10 @@ export async function getSessionAttendees(sessionId: string, userRole: string) {
     throw new Error('Unauthorized to view attendee list');
   }
 
-  const attendees = await prisma.rsvps.findMany({
+  const attendees = await prisma.rsvp.findMany({
     where: {
       sessionId,
-      status: 'attending',
+      status: 'confirmed' as any,
     },
     include: {
       user: {
@@ -385,7 +383,7 @@ export async function getSessionAttendees(sessionId: string, userRole: string) {
  * Check for schedule conflicts
  */
 export async function checkScheduleConflicts(userId: string, sessionId: string) {
-  const session = await prisma.sessions.findUnique({
+  const session = await prisma.session.findUnique({
     where: { id: sessionId },
   });
 
@@ -393,10 +391,10 @@ export async function checkScheduleConflicts(userId: string, sessionId: string) 
     throw new Error('Session not found');
   }
 
-  const conflicts = await prisma.rsvps.findMany({
+  const conflicts = await prisma.rsvp.findMany({
     where: {
       userId,
-      status: 'attending',
+      status: 'confirmed' as any,
       session: {
         OR: [
           {

@@ -70,10 +70,10 @@ export async function createRsvp(req: Request, res: Response) {
     const { id: sessionId } = req.params;
     const userId = req.user!.id;
 
-    const data = sessionService.createRsvpSchema.parse({
+    const data = {
       sessionId,
-      ...req.body,
-    });
+      ...sessionService.createRsvpSchema.parse(req.body),
+    };
 
     const rsvp = await sessionService.createRsvp(userId, data);
 
@@ -238,7 +238,7 @@ export async function getMyRsvps(req: Request, res: Response) {
 export async function getAttendees(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const userRole = req.user!.role;
+    const userRole = req.user!.roles[0]; // Get first role
 
     const attendees = await sessionService.getSessionAttendees(id, userRole);
 

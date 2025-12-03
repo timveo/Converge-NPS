@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Filter, Search, Calendar } from 'lucide-react';
 import { SessionCard } from '@/components/sessions/SessionCard';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -84,7 +85,16 @@ export default function SchedulePage() {
       }
 
       const response = await api.get('/sessions', { params });
-      setSessions(response.data.data);
+      const sessionsData = response.data.data || response.data;
+
+      // Map API response to frontend format
+      const mappedSessions = sessionsData.map((session: any) => ({
+        ...session,
+        track: session.sessionType || session.track || 'Other',
+        attendeeCount: session._count?.rsvps || session.attendeeCount || 0,
+      }));
+
+      setSessions(mappedSessions);
     } catch (err: any) {
       console.error('Failed to fetch sessions', err);
       setError('Failed to load sessions. Please try again.');
@@ -116,14 +126,15 @@ export default function SchedulePage() {
   const sessionGroups = groupSessionsByDate(sessions);
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Event Schedule</h1>
-        <p className="text-gray-600">
-          Browse sessions and RSVP to reserve your spot
-        </p>
-      </div>
+    <MainLayout>
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Event Schedule</h1>
+          <p className="text-gray-600">
+            Browse sessions and RSVP to reserve your spot
+          </p>
+        </div>
 
       {/* Tabs */}
       <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
@@ -241,6 +252,7 @@ export default function SchedulePage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </MainLayout>
   );
 }
