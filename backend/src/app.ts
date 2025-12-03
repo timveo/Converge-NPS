@@ -19,6 +19,7 @@ import sessionRoutes from './routes/session.routes';
 import projectRoutes from './routes/project.routes';
 import messageRoutes from './routes/message.routes';
 import adminRoutes from './routes/admin.routes';
+import smartsheetRoutes from './routes/smartsheet.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -136,6 +137,7 @@ export function createApp(): Application {
   app.use(`${API_VERSION}/messages`, messageRoutes);
   app.use(`${API_VERSION}/conversations`, messageRoutes);
   app.use(`${API_VERSION}/admin`, adminRoutes);
+  app.use(`${API_VERSION}/admin/smartsheet`, smartsheetRoutes);
 
   // ===========================
   // 404 Handler

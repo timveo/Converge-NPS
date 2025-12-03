@@ -612,3 +612,26 @@ model OfflineQueue {
   @@index([operationType])
   @@map("offline_queue")
 }
+
+// =============================================================================
+// 13. SMARTSHEET INTEGRATION
+// =============================================================================
+
+/// Smartsheet sync log for tracking data synchronization
+model SmartsheetSyncLog {
+  id            String    @id @default(uuid())
+  entityType    String    @map("entity_type")  // 'user', 'rsvp', 'connection', 'analytics'
+  entityId      String    @map("entity_id")
+  sheetId       String    @map("sheet_id")     // Smartsheet sheet ID
+  rowId         String?   @map("row_id")       // Smartsheet row ID (null if not yet created)
+  status        String    @default("pending")   // 'success', 'pending', 'error'
+  errorMessage  String?   @map("error_message") @db.Text
+  retryCount    Int       @default(0) @map("retry_count")
+  lastAttempt   DateTime  @default(now()) @map("last_attempt") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([lastAttempt])
+  @@map("smartsheet_sync_log")
+}
