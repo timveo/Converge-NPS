@@ -1,6 +1,6 @@
-# [Project Name]
+# [Converge@NPS]
 
-Brief description of what this project does.
+NPS Event Applicatoin for Networking and Collaboration.
 
 ---
 
