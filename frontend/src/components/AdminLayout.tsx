@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Users, TrendingUp, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, TrendingUp, ArrowLeft, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AdminLayoutProps {
@@ -26,6 +26,11 @@ const navItems = [
     name: 'Analytics',
     path: '/admin/analytics',
     icon: TrendingUp,
+  },
+  {
+    name: 'Smartsheet',
+    path: '/admin/smartsheet',
+    icon: Database,
   },
 ];
 

@@ -19,6 +19,7 @@ import SessionManagement from '@/pages/admin/SessionManagement';
 import SessionForm from '@/pages/admin/SessionForm';
 import UserManagement from '@/pages/admin/UserManagement';
 import Analytics from '@/pages/admin/Analytics';
+import Smartsheet from '@/pages/admin/Smartsheet';
 
 function App() {
   return (
@@ -128,6 +129,16 @@ function App() {
             <ProtectedRoute requireAdmin>
               <AdminLayout>
                 <Analytics />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/smartsheet"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <Smartsheet />
               </AdminLayout>
             </ProtectedRoute>
           }
