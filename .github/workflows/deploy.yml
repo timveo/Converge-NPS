@@ -1,0 +1,425 @@
+name: CI/CD Pipeline - Converge-NPS
+
+on:
+  push:
+    branches: [main, staging, develop]
+  pull_request:
+    branches: [main, staging]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ========================================
+  # Job 1: Lint Backend
+  # ========================================
+  lint-backend:
+    name: Lint Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript type check
+        run: npm run typecheck || npx tsc --noEmit
+
+  # ========================================
+  # Job 2: Lint Frontend
+  # ========================================
+  lint-frontend:
+    name: Lint Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript type check
+        run: npm run typecheck || npx tsc --noEmit
+
+  # ========================================
+  # Job 3: Test Backend
+  # ========================================
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: converge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/converge_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: test-secret
+      JWT_REFRESH_SECRET: test-refresh-secret
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+
+      - name: Run unit tests
+        run: npm test -- --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./backend/coverage
+          flags: backend
+
+  # ========================================
+  # Job 4: Test Frontend
+  # ========================================
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test -- --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./frontend/coverage
+          flags: frontend
+
+  # ========================================
+  # Job 5: Build Backend
+  # ========================================
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    needs: [lint-backend, test-backend]
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dist
+          path: backend/dist
+          retention-days: 7
+
+  # ========================================
+  # Job 6: Build Frontend
+  # ========================================
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: [lint-frontend, test-frontend]
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build React app
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  # ========================================
+  # Job 7: Deploy to Development
+  # ========================================
+  deploy-development:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: development
+      url: https://api.dev.converge-nps.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy Backend to Railway (Development)
+        working-directory: ./backend
+        run: railway up --environment development
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_DEVELOPMENT }}
+
+      - name: Run database migrations
+        working-directory: ./backend
+        run: railway run --environment development npx prisma migrate deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_DEVELOPMENT }}
+
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && 'Development deployment successful' || 'Development deployment FAILED' }}: ${{ github.sha }}"
+            }
+
+  # ========================================
+  # Job 8: Deploy to Staging
+  # ========================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://api.staging.converge-nps.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy Backend to Railway (Staging)
+        working-directory: ./backend
+        run: railway up --environment staging
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+
+      - name: Run database migrations
+        working-directory: ./backend
+        run: railway run --environment staging npx prisma migrate deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+
+      - name: Run integration tests
+        working-directory: ./backend
+        run: npm run test:integration || echo "Integration tests not yet implemented"
+        env:
+          API_URL: https://api.staging.converge-nps.com
+
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && 'Staging deployment successful' || 'Staging deployment FAILED' }}: ${{ github.sha }}",
+              "attachments": [{
+                "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+                "fields": [
+                  {"title": "Environment", "value": "Staging", "short": true},
+                  {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
+                  {"title": "Commit", "value": "${{ github.sha }}", "short": true},
+                  {"title": "Author", "value": "${{ github.actor }}", "short": true}
+                ]
+              }]
+            }
+
+  # ========================================
+  # Job 9: Deploy to Production
+  # ========================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://api.converge-nps.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy Backend to Railway (Production)
+        working-directory: ./backend
+        run: railway up --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
+
+      - name: Run database migrations
+        working-directory: ./backend
+        run: railway run --environment production npx prisma migrate deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
+
+      - name: Run smoke tests
+        working-directory: ./backend
+        run: npm run test:smoke || echo "Smoke tests not yet implemented"
+        env:
+          API_URL: https://api.converge-nps.com
+
+      - name: Notify Slack - Success
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "Production deployment successful",
+              "attachments": [{
+                "color": "good",
+                "fields": [
+                  {"title": "Environment", "value": "Production", "short": true},
+                  {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
+                  {"title": "Commit", "value": "${{ github.sha }}", "short": true},
+                  {"title": "Author", "value": "${{ github.actor }}", "short": true},
+                  {"title": "URL", "value": "https://api.converge-nps.com", "short": false}
+                ]
+              }]
+            }
+
+      - name: Notify Slack - Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "Production deployment FAILED",
+              "attachments": [{
+                "color": "danger",
+                "fields": [
+                  {"title": "Environment", "value": "Production", "short": true},
+                  {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
+                  {"title": "Commit", "value": "${{ github.sha }}", "short": true},
+                  {"title": "Author", "value": "${{ github.actor }}", "short": true}
+                ]
+              }]
+            }

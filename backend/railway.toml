@@ -1,0 +1,55 @@
+# Railway Configuration for Converge-NPS Backend
+# This file defines build, deploy, and scaling settings for Railway
+
+[build]
+  # Use Dockerfile for consistent builds
+  builder = "dockerfile"
+  dockerfilePath = "Dockerfile"
+
+[deploy]
+  # Number of replicas
+  numReplicas = 2
+
+  # Restart policy
+  restartPolicyType = "on-failure"
+  restartPolicyMaxRetries = 3
+
+  # Health check configuration
+  healthcheckPath = "/health"
+  healthcheckTimeout = 5
+
+  # Graceful shutdown timeout (seconds)
+  sleepBeforeRestart = 10
+
+[scaling]
+  # Auto-scaling configuration
+  minReplicas = 2
+  maxReplicas = 5
+
+  # Scale up when CPU > 70% for 5 minutes
+  targetCPUPercent = 70
+
+  # Scale up when memory > 80%
+  targetMemoryPercent = 80
+
+# Environment-specific overrides
+[environments.development]
+  [environments.development.deploy]
+    numReplicas = 1
+  [environments.development.scaling]
+    minReplicas = 1
+    maxReplicas = 2
+
+[environments.staging]
+  [environments.staging.deploy]
+    numReplicas = 2
+  [environments.staging.scaling]
+    minReplicas = 2
+    maxReplicas = 3
+
+[environments.production]
+  [environments.production.deploy]
+    numReplicas = 2
+  [environments.production.scaling]
+    minReplicas = 2
+    maxReplicas = 5
