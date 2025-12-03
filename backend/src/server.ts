@@ -5,9 +5,11 @@
  */
 
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 import { createApp } from './app';
 import { logger } from './utils/logger';
 import { PrismaClient } from '@prisma/client';
+import { initializeSocketServer } from './socket';
 
 // Load environment variables
 dotenv.config();
@@ -31,8 +33,15 @@ async function startServer() {
     // Create Express app
     const app = createApp();
 
+    // Create HTTP server
+    const httpServer = createServer(app);
+
+    // Initialize Socket.IO
+    const io = initializeSocketServer(httpServer);
+    logger.info('WebSocket server initialized');
+
     // Start listening
-    const server = app.listen(PORT, HOST, () => {
+    const server = httpServer.listen(PORT, HOST, () => {
       logger.info(`Server started successfully`, {
         port: PORT,
         host: HOST,
@@ -55,6 +64,11 @@ async function startServer() {
 
       server.close(async () => {
         logger.info('HTTP server closed');
+
+        // Close Socket.IO
+        io.close(() => {
+          logger.info('WebSocket server closed');
+        });
 
         // Close database connection
         await prisma.$disconnect();
