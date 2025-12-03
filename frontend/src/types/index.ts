@@ -45,8 +45,9 @@ export interface RegisterData {
   email: string;
   password: string;
   fullName: string;
-  organization: string;
-  role: UserRole;
+  organization?: string;
+  department?: string;
+  role?: string;
 }
 
 // Connection Types

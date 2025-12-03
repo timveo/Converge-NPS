@@ -7,7 +7,7 @@
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { createApp } from './app';
-import { logger } from './utils/logger';
+import logger from './utils/logger';
 import { PrismaClient } from '@prisma/client';
 import { initializeSocketServer } from './socket';
 

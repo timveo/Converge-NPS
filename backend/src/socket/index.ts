@@ -2,7 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { verify } from 'jsonwebtoken';
 import * as messageService from '../services/message.service';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;

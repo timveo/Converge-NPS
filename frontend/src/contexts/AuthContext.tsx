@@ -27,7 +27,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const loadUser = async () => {
       if (api.isAuthenticated()) {
         try {
-          const userData = await api.get<User>('/users/me');
+          const response = await api.get<{ profile: any }>('/users/me');
+          // Map backend user format to frontend User type
+          const userData: User = {
+            ...response.profile,
+            roles: response.profile.userRoles?.map((r: any) => r.role) || [],
+            privacy: {
+              profileVisibility: response.profile.profileVisibility,
+              allowQrScanning: response.profile.allowQrScanning,
+              allowMessaging: response.profile.allowMessaging,
+              hideContactInfo: response.profile.hideContactInfo,
+            },
+          };
           setUser(userData);
         } catch (error) {
           console.error('Failed to load user:', error);
@@ -41,33 +52,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
-    const response = await api.post<{ user: User } & AuthTokens>(
+    const response = await api.post<{ user: any; accessToken: string; message: string }>(
       '/auth/login',
       credentials
     );
 
-    api.setAuthTokens({
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-      expiresIn: response.expiresIn,
-    });
+    // Store access token in localStorage
+    localStorage.setItem('accessToken', response.accessToken);
+    // Set token expiry (1 hour from now, matching backend JWT expiration)
+    localStorage.setItem('tokenExpiry', String(Date.now() + 3600 * 1000));
+    // Refresh token is stored in httpOnly cookie by backend
 
-    setUser(response.user);
+    // Map backend user format to frontend User type
+    const user: User = {
+      ...response.user,
+      roles: response.user.userRoles?.map((r: any) => r.role) || [],
+      privacy: {
+        profileVisibility: response.user.profileVisibility,
+        allowQrScanning: response.user.allowQrScanning,
+        allowMessaging: response.user.allowMessaging,
+        hideContactInfo: response.user.hideContactInfo,
+      },
+    };
+
+    setUser(user);
   };
 
   const register = async (data: RegisterData) => {
-    const response = await api.post<{ user: User } & AuthTokens>(
+    // Registration doesn't auto-login, just creates the account
+    await api.post<{ message: string; userId: string; verificationToken?: string }>(
       '/auth/register',
       data
     );
-
-    api.setAuthTokens({
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-      expiresIn: response.expiresIn,
-    });
-
-    setUser(response.user);
+    // User needs to login after registration
+    // (email verification is optional in development)
   };
 
   const logout = async () => {

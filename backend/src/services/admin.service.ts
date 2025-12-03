@@ -472,3 +472,77 @@ export async function getActivityReport(days: number = 7) {
     },
   };
 }
+
+/**
+ * Get audit logs (admin only)
+ */
+export async function getAuditLogs(filters?: {
+  eventType?: string;
+  userId?: string;
+  resourceType?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const where: any = {};
+
+  if (filters?.eventType) {
+    where.eventType = filters.eventType;
+  }
+
+  if (filters?.userId) {
+    where.userId = filters.userId;
+  }
+
+  if (filters?.resourceType) {
+    where.resourceType = filters.resourceType;
+  }
+
+  if (filters?.startDate || filters?.endDate) {
+    where.createdAt = {};
+    if (filters.startDate) {
+      where.createdAt.gte = new Date(filters.startDate);
+    }
+    if (filters.endDate) {
+      where.createdAt.lte = new Date(filters.endDate);
+    }
+  }
+
+  const limit = filters?.limit || 50;
+  const offset = filters?.offset || 0;
+
+  const [logs, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      skip: offset,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+        targetUser: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    }),
+    prisma.auditLog.count({ where }),
+  ]);
+
+  return {
+    logs,
+    total,
+    limit,
+    offset,
+    hasMore: offset + limit < total,
+  };
+}

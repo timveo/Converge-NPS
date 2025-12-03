@@ -8,7 +8,7 @@ import * as messageService from '../services/message.service';
 export async function sendMessage(req: Request, res: Response) {
   try {
     const userId = req.user!.id;
-    const data = messageService.sendMessageSchema.parse(req.body);
+    const data = messageService.sendMessageSchema.parse(req.body) as any;
 
     const message = await messageService.sendMessage(userId, data);
 

@@ -4,9 +4,14 @@ import { useAuth } from '@/hooks/useAuth';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  requireStaff?: boolean;
 }
 
-export default function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
+export default function ProtectedRoute({
+  children,
+  requireAdmin = false,
+  requireStaff = false,
+}: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
 
   // Show loading spinner while checking auth
@@ -24,7 +29,29 @@ export default function ProtectedRoute({ children, requireAdmin = false }: Prote
   }
 
   // Check admin/staff role if required
-  if (requireAdmin && !['admin', 'staff'].includes(user.role)) {
+  const hasAdminAccess = user.roles?.includes('admin') || user.roles?.includes('staff');
+  const hasStaffAccess = user.roles?.includes('staff') || user.roles?.includes('admin');
+
+  if (requireAdmin && !hasAdminAccess) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <p className="text-gray-600 mb-4">
+            You don't have permission to access this page.
+          </p>
+          <a
+            href="/"
+            className="text-blue-600 hover:text-blue-700 font-medium"
+          >
+            Go to Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (requireStaff && !hasStaffAccess) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">

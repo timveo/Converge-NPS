@@ -12,7 +12,7 @@ import {
   QRScanSchema,
   ConnectionsQuerySchema,
 } from '../types/schemas';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 
 export class ConnectionController {
   /**
@@ -27,7 +27,7 @@ export class ConnectionController {
         });
       }
 
-      const { qrCodeData, collaborativeIntents, notes } = QRScanSchema.parse(req.body);
+      const { qrCodeData, collaborativeIntents, notes } = QRScanSchema.parse(req.body) as any;
 
       // Look up user by QR code
       const qrResult = await ConnectionService.getConnectionByQRCode(qrCodeData);
@@ -73,7 +73,7 @@ export class ConnectionController {
         });
       }
 
-      const data = CreateConnectionSchema.parse(req.body);
+      const data = CreateConnectionSchema.parse(req.body) as any;
 
       const connection = await ConnectionService.createConnection({
         userId: req.user.id,
@@ -154,7 +154,7 @@ export class ConnectionController {
       }
 
       const { id } = req.params;
-      const data = UpdateConnectionSchema.parse(req.body);
+      const data = UpdateConnectionSchema.parse(req.body) as any;
 
       const connection = await ConnectionService.updateConnection(id, req.user.id, data);
 
@@ -215,6 +215,30 @@ export class ConnectionController {
         .header('Content-Type', 'text/csv')
         .header('Content-Disposition', `attachment; filename="connections-${Date.now()}.csv"`)
         .send(csv);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /connections/recommendations
+   * Get connection recommendations
+   */
+  static async getRecommendations(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Not authenticated' },
+        });
+      }
+
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+
+      const recommendations = await ConnectionService.getRecommendations(req.user.id, limit);
+
+      res.status(200).json({
+        data: recommendations,
+      });
     } catch (error) {
       next(error);
     }

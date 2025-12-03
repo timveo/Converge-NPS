@@ -8,6 +8,9 @@ const router = Router();
  * Session routes
  */
 
+// GET /v1/sessions/my-schedule - Get user's schedule (must come before /:id)
+router.get('/my-schedule', authenticate, sessionController.getMySchedule);
+
 // GET /v1/sessions - List sessions with filters
 router.get('/', authenticate, sessionController.listSessions);
 

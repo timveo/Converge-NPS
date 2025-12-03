@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 interface QRScannerProps {
   onClose?: () => void;

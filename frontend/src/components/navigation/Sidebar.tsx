@@ -6,12 +6,13 @@ import {
   Users,
   Briefcase,
   FlaskConical,
+  Building2,
   User,
   Settings,
   LogOut,
 } from 'lucide-react';
 import { useDeviceType } from '@/hooks/useDeviceType';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -32,14 +33,14 @@ const navItems: NavItem[] = [
     label: 'Schedule',
   },
   {
-    path: '/messages',
-    icon: MessageCircle,
-    label: 'Messages',
-  },
-  {
     path: '/connections',
     icon: Users,
     label: 'Connections',
+  },
+  {
+    path: '/messages',
+    icon: MessageCircle,
+    label: 'Messages',
   },
   {
     path: '/opportunities',
@@ -50,6 +51,11 @@ const navItems: NavItem[] = [
     path: '/projects',
     icon: FlaskConical,
     label: 'Research',
+  },
+  {
+    path: '/partners',
+    icon: Building2,
+    label: 'Partners',
   },
 ];
 

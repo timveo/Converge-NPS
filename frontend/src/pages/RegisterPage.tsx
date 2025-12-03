@@ -24,10 +24,12 @@ export default function RegisterPage() {
 
     try {
       await register(formData);
-      toast.success('Account created successfully!');
-      navigate('/');
-    } catch (error) {
-      toast.error('Registration failed. Please try again.');
+      toast.success('Account created successfully! Please log in.');
+      navigate('/login');
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error?.message || error?.message || 'Registration failed. Please try again.';
+      toast.error(errorMessage);
+      console.error('Registration error:', error);
     } finally {
       setIsLoading(false);
     }

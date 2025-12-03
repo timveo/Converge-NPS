@@ -82,7 +82,7 @@ export function generateAccessToken(userId: string, email: string, roles: AppRol
     algorithm: 'HS256',
     issuer: 'converge-nps.com',
     audience: 'converge-nps-api',
-  });
+  } as jwt.SignOptions);
 }
 
 export function generateRefreshToken(userId: string): string {
@@ -96,7 +96,7 @@ export function generateRefreshToken(userId: string): string {
     algorithm: 'HS256',
     issuer: 'converge-nps.com',
     audience: 'converge-nps-api',
-  });
+  } as jwt.SignOptions);
 }
 
 // =============================================================================

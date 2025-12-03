@@ -91,12 +91,12 @@ class ApiClient {
         throw new Error('No refresh token available');
       }
 
-      const response = await axios.post<ApiResponse<AuthTokens>>(
+      const response = await axios.post<AuthTokens>(
         `${BASE_URL}/auth/refresh`,
         { refreshToken }
       );
 
-      const tokens = response.data.data;
+      const tokens = response.data;
       this.setTokens(tokens);
       this.refreshTokenPromise = null;
       return tokens.accessToken;
@@ -108,36 +108,36 @@ class ApiClient {
   // Public methods
 
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.get<ApiResponse<T>>(url, config);
-    return response.data.data;
+    const response = await this.client.get<T>(url, config);
+    return response.data;
   }
 
   async post<T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.post<ApiResponse<T>>(url, data, config);
-    return response.data.data;
+    const response = await this.client.post<T>(url, data, config);
+    return response.data;
   }
 
   async patch<T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.patch<ApiResponse<T>>(url, data, config);
-    return response.data.data;
+    const response = await this.client.patch<T>(url, data, config);
+    return response.data;
   }
 
   async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.delete<ApiResponse<T>>(url, config);
-    return response.data.data;
+    const response = await this.client.delete<T>(url, config);
+    return response.data;
   }
 
   async uploadFile<T>(url: string, file: File, fieldName = 'file'): Promise<T> {
     const formData = new FormData();
     formData.append(fieldName, file);
 
-    const response = await this.client.post<ApiResponse<T>>(url, formData, {
+    const response = await this.client.post<T>(url, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
 
-    return response.data.data;
+    return response.data;
   }
 
   // Auth methods

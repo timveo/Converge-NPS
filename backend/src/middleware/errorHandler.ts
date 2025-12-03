@@ -4,7 +4,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import logger from '../utils/logger';
-import { v4 as uuidv4 } from 'crypto';
+import { randomUUID } from 'crypto';
 
 export interface ApiError {
   code: string;
@@ -73,9 +73,9 @@ export function errorHandler(
   err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
-  const requestId = uuidv4();
+  const requestId = randomUUID();
 
   // Log error
   logger.error({

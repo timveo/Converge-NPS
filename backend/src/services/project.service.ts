@@ -277,6 +277,108 @@ export async function withdrawInterest(userId: string, interestId: string) {
 }
 
 /**
+ * Bookmark a project
+ */
+export async function bookmarkProject(userId: string, projectId: string, notes?: string) {
+  // Check if project exists
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+  });
+
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  // Check if already bookmarked
+  const existing = await prisma.projectBookmark.findUnique({
+    where: {
+      userId_projectId: {
+        userId,
+        projectId,
+      },
+    },
+  });
+
+  if (existing) {
+    throw new Error('Project already bookmarked');
+  }
+
+  const bookmark = await prisma.projectBookmark.create({
+    data: {
+      userId,
+      projectId,
+      notes: notes || null,
+    },
+    include: {
+      project: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          stage: true,
+          researchAreas: true,
+        },
+      },
+    },
+  });
+
+  return bookmark;
+}
+
+/**
+ * Remove project bookmark
+ */
+export async function unbookmarkProject(userId: string, projectId: string) {
+  const bookmark = await prisma.projectBookmark.findUnique({
+    where: {
+      userId_projectId: {
+        userId,
+        projectId,
+      },
+    },
+  });
+
+  if (!bookmark) {
+    throw new Error('Bookmark not found');
+  }
+
+  await prisma.projectBookmark.delete({
+    where: {
+      userId_projectId: {
+        userId,
+        projectId,
+      },
+    },
+  });
+}
+
+/**
+ * Get user's bookmarked projects
+ */
+export async function getUserProjectBookmarks(userId: string) {
+  const bookmarks = await prisma.projectBookmark.findMany({
+    where: { userId },
+    include: {
+      project: {
+        include: {
+          pi: {
+            select: {
+              id: true,
+              fullName: true,
+              organization: true,
+              department: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return bookmarks;
+}
+
+/**
  * List industry opportunities with filters
  */
 export async function listOpportunities(filters: {
@@ -433,4 +535,109 @@ export async function applyToOpportunity(userId: string, data: {
   });
 
   return application;
+}
+
+/**
+ * Bookmark an opportunity
+ */
+export async function bookmarkOpportunity(userId: string, opportunityId: string) {
+  // Check if opportunity exists
+  const opportunity = await prisma.opportunity.findUnique({
+    where: { id: opportunityId },
+  });
+
+  if (!opportunity) {
+    throw new Error('Opportunity not found');
+  }
+
+  // Check if already bookmarked (using OpportunityInterest as bookmark)
+  const existing = await prisma.opportunityInterest.findUnique({
+    where: {
+      opportunityId_userId: {
+        opportunityId,
+        userId,
+      },
+    },
+  });
+
+  if (existing) {
+    throw new Error('Opportunity already bookmarked');
+  }
+
+  const bookmark = await prisma.opportunityInterest.create({
+    data: {
+      userId,
+      opportunityId,
+      status: 'bookmarked',
+    },
+    include: {
+      opportunity: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          type: true,
+          deadline: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  return bookmark;
+}
+
+/**
+ * Remove opportunity bookmark
+ */
+export async function unbookmarkOpportunity(userId: string, opportunityId: string) {
+  const bookmark = await prisma.opportunityInterest.findUnique({
+    where: {
+      opportunityId_userId: {
+        opportunityId,
+        userId,
+      },
+    },
+  });
+
+  if (!bookmark) {
+    throw new Error('Bookmark not found');
+  }
+
+  await prisma.opportunityInterest.delete({
+    where: {
+      opportunityId_userId: {
+        opportunityId,
+        userId,
+      },
+    },
+  });
+}
+
+/**
+ * Get user's bookmarked opportunities
+ */
+export async function getUserOpportunityBookmarks(userId: string) {
+  const bookmarks = await prisma.opportunityInterest.findMany({
+    where: {
+      userId,
+      status: 'bookmarked',
+    },
+    include: {
+      opportunity: {
+        include: {
+          poster: {
+            select: {
+              id: true,
+              fullName: true,
+              organization: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return bookmarks;
 }

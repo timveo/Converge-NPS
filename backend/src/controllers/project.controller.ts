@@ -308,3 +308,184 @@ export async function applyToOpportunity(req: Request, res: Response) {
     });
   }
 }
+
+/**
+ * POST /v1/projects/:id/bookmark
+ * Bookmark a project
+ */
+export async function bookmarkProject(req: Request, res: Response) {
+  try {
+    const { id: projectId } = req.params;
+    const userId = req.user!.id;
+    const { notes } = req.body;
+
+    const bookmark = await projectService.bookmarkProject(userId, projectId, notes);
+
+    res.status(201).json({
+      success: true,
+      data: bookmark,
+      message: 'Project bookmarked successfully',
+    });
+  } catch (error: any) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (error.message.includes('already bookmarked')) {
+      return res.status(409).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to bookmark project',
+    });
+  }
+}
+
+/**
+ * DELETE /v1/projects/:id/bookmark
+ * Remove project bookmark
+ */
+export async function unbookmarkProject(req: Request, res: Response) {
+  try {
+    const { id: projectId } = req.params;
+    const userId = req.user!.id;
+
+    await projectService.unbookmarkProject(userId, projectId);
+
+    res.json({
+      success: true,
+      message: 'Bookmark removed successfully',
+    });
+  } catch (error: any) {
+    if (error.message === 'Bookmark not found') {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to remove bookmark',
+    });
+  }
+}
+
+/**
+ * GET /v1/projects/bookmarks
+ * Get user's bookmarked projects
+ */
+export async function getProjectBookmarks(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const bookmarks = await projectService.getUserProjectBookmarks(userId);
+
+    res.json({
+      success: true,
+      data: bookmarks,
+      count: bookmarks.length,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch bookmarks',
+    });
+  }
+}
+
+/**
+ * POST /v1/opportunities/:id/bookmark
+ * Bookmark an opportunity
+ */
+export async function bookmarkOpportunity(req: Request, res: Response) {
+  try {
+    const { id: opportunityId } = req.params;
+    const userId = req.user!.id;
+
+    const bookmark = await projectService.bookmarkOpportunity(userId, opportunityId);
+
+    res.status(201).json({
+      success: true,
+      data: bookmark,
+      message: 'Opportunity bookmarked successfully',
+    });
+  } catch (error: any) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (error.message.includes('already bookmarked')) {
+      return res.status(409).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to bookmark opportunity',
+    });
+  }
+}
+
+/**
+ * DELETE /v1/opportunities/:id/bookmark
+ * Remove opportunity bookmark
+ */
+export async function unbookmarkOpportunity(req: Request, res: Response) {
+  try {
+    const { id: opportunityId } = req.params;
+    const userId = req.user!.id;
+
+    await projectService.unbookmarkOpportunity(userId, opportunityId);
+
+    res.json({
+      success: true,
+      message: 'Bookmark removed successfully',
+    });
+  } catch (error: any) {
+    if (error.message === 'Bookmark not found') {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to remove bookmark',
+    });
+  }
+}
+
+/**
+ * GET /v1/opportunities/bookmarks
+ * Get user's bookmarked opportunities
+ */
+export async function getOpportunityBookmarks(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const bookmarks = await projectService.getUserOpportunityBookmarks(userId);
+
+    res.json({
+      success: true,
+      data: bookmarks,
+      count: bookmarks.length,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch bookmarks',
+    });
+  }
+}

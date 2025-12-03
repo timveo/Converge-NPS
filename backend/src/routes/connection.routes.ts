@@ -26,6 +26,12 @@ router.post('/qr-scan', ConnectionController.qrScan);
 router.post('/manual', ConnectionController.manualEntry);
 
 /**
+ * GET /connections/recommendations
+ * Get connection recommendations (must come before /:id route)
+ */
+router.get('/recommendations', ConnectionController.getRecommendations);
+
+/**
  * GET /connections/export
  * Export connections as CSV (must come before /:id route)
  */

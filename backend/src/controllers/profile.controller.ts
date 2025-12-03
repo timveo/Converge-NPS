@@ -7,7 +7,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ProfileService } from '../services/profile.service';
 import { UpdateProfileSchema, UpdatePrivacySchema, UpdateOnboardingSchema } from '../types/schemas';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 
 export class ProfileController {
   /**
@@ -42,7 +42,7 @@ export class ProfileController {
         });
       }
 
-      const data = UpdateProfileSchema.parse(req.body);
+      const data = UpdateProfileSchema.parse(req.body) as any;
 
       const profile = await ProfileService.updateProfile(req.user.id, data);
 
@@ -69,7 +69,7 @@ export class ProfileController {
         });
       }
 
-      const data = UpdatePrivacySchema.parse(req.body);
+      const data = UpdatePrivacySchema.parse(req.body) as any;
 
       const profile = await ProfileService.updatePrivacy(req.user.id, data);
 
@@ -96,7 +96,7 @@ export class ProfileController {
         });
       }
 
-      const { onboardingStep, onboardingCompleted } = UpdateOnboardingSchema.parse(req.body);
+      const { onboardingStep, onboardingCompleted } = UpdateOnboardingSchema.parse(req.body) as any;
 
       const profile = await ProfileService.updateOnboarding(req.user.id, onboardingStep, onboardingCompleted);
 

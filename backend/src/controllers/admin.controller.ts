@@ -20,7 +20,7 @@ export function requireAdmin(req: Request, res: Response, next: Function) {
  */
 export async function createSession(req: Request, res: Response) {
   try {
-    const data = adminService.createSessionSchema.parse(req.body);
+    const data = adminService.createSessionSchema.parse(req.body) as any;
     const session = await adminService.createSession(data);
 
     res.status(201).json({
@@ -58,7 +58,7 @@ export async function createSession(req: Request, res: Response) {
 export async function updateSession(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const data = adminService.updateSessionSchema.parse(req.body);
+    const data = adminService.updateSessionSchema.parse(req.body) as any;
     const session = await adminService.updateSession(id, data);
 
     res.json({
@@ -194,7 +194,7 @@ export async function getUserDetails(req: Request, res: Response) {
 export async function updateUserRole(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const data = adminService.updateUserRoleSchema.parse(req.body);
+    const data = adminService.updateUserRoleSchema.parse(req.body) as any;
     const user = await adminService.updateUserRole(id, data);
 
     res.json({
@@ -329,6 +329,42 @@ export async function getActivityReport(req: Request, res: Response) {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch activity report',
+    });
+  }
+}
+
+/**
+ * GET /v1/admin/audit-logs
+ * Get audit logs
+ */
+export async function getAuditLogs(req: Request, res: Response) {
+  try {
+    const filters = {
+      eventType: req.query.eventType as string,
+      userId: req.query.userId as string,
+      resourceType: req.query.resourceType as string,
+      startDate: req.query.startDate as string,
+      endDate: req.query.endDate as string,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+      offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
+    };
+
+    const result = await adminService.getAuditLogs(filters);
+
+    res.json({
+      success: true,
+      data: result.logs,
+      pagination: {
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch audit logs',
     });
   }
 }

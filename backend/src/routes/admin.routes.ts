@@ -50,4 +50,11 @@ router.get('/stats/rsvps', adminController.getRsvpStats);
 // GET /v1/admin/stats/activity - Activity report
 router.get('/stats/activity', adminController.getActivityReport);
 
+/**
+ * Audit Logs
+ */
+
+// GET /v1/admin/audit-logs - Get audit logs
+router.get('/audit-logs', adminController.getAuditLogs);
+
 export default router;

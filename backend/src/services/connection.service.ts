@@ -374,4 +374,121 @@ export class ConnectionService {
 
     return { userId: qrCode.userId };
   }
+
+  /**
+   * Get connection recommendations for a user
+   * Based on shared interests, organization, department, etc.
+   */
+  static async getRecommendations(userId: string, limit: number = 10) {
+    // Get user's profile and existing connections
+    const [currentUser, existingConnections] = await Promise.all([
+      prisma.profile.findUnique({
+        where: { id: userId },
+        select: {
+          organization: true,
+          department: true,
+          accelerationInterests: true,
+          userRoles: {
+            select: { role: true },
+          },
+        },
+      }),
+      prisma.connection.findMany({
+        where: { userId },
+        select: { connectedUserId: true },
+      }),
+    ]);
+
+    if (!currentUser) {
+      throw new NotFoundError('User not found');
+    }
+
+    const connectedUserIds = existingConnections.map(c => c.connectedUserId);
+
+    // Find recommended users based on:
+    // 1. Same organization or department
+    // 2. Shared acceleration interests
+    // 3. Different roles (for diversity)
+    const recommendations = await prisma.profile.findMany({
+      where: {
+        id: {
+          not: userId,
+          notIn: connectedUserIds,
+        },
+        profileVisibility: 'public',
+        allowQrScanning: true,
+        OR: [
+          // Same organization
+          currentUser.organization
+            ? { organization: currentUser.organization }
+            : {},
+          // Same department
+          currentUser.department
+            ? { department: currentUser.department }
+            : {},
+          // Shared interests
+          currentUser.accelerationInterests.length > 0
+            ? {
+                accelerationInterests: {
+                  hasSome: currentUser.accelerationInterests,
+                },
+              }
+            : {},
+        ],
+      },
+      select: {
+        id: true,
+        fullName: true,
+        organization: true,
+        department: true,
+        role: true,
+        bio: true,
+        avatarUrl: true,
+        accelerationInterests: true,
+        linkedinUrl: true,
+        userRoles: {
+          select: { role: true },
+        },
+      },
+      take: limit,
+    });
+
+    // Calculate match score for each recommendation
+    const scoredRecommendations = recommendations.map(rec => {
+      let score = 0;
+      const reasons: string[] = [];
+
+      // Same organization
+      if (currentUser.organization && rec.organization === currentUser.organization) {
+        score += 3;
+        reasons.push('Same organization');
+      }
+
+      // Same department
+      if (currentUser.department && rec.department === currentUser.department) {
+        score += 2;
+        reasons.push('Same department');
+      }
+
+      // Shared interests
+      const sharedInterests = currentUser.accelerationInterests.filter(interest =>
+        rec.accelerationInterests.includes(interest)
+      );
+      if (sharedInterests.length > 0) {
+        score += sharedInterests.length;
+        reasons.push(`${sharedInterests.length} shared interest${sharedInterests.length > 1 ? 's' : ''}`);
+      }
+
+      return {
+        ...rec,
+        matchScore: score,
+        matchReasons: reasons,
+      };
+    });
+
+    // Sort by match score
+    scoredRecommendations.sort((a, b) => b.matchScore - a.matchScore);
+
+    return scoredRecommendations;
+  }
 }

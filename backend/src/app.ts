@@ -9,7 +9,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/errorHandler';
-import { logger } from './utils/logger';
+import logger from './utils/logger';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -20,6 +20,9 @@ import projectRoutes from './routes/project.routes';
 import messageRoutes from './routes/message.routes';
 import adminRoutes from './routes/admin.routes';
 import smartsheetRoutes from './routes/smartsheet.routes';
+import partnerRoutes from './routes/partner.routes';
+import staffRoutes from './routes/staff.routes';
+import opportunityRoutes from './routes/opportunity.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -83,7 +86,7 @@ export function createApp(): Application {
   // Request Logging
   // ===========================
 
-  app.use((req: Request, res: Response, next: NextFunction) => {
+  app.use((req: Request, _res: Response, next: NextFunction) => {
     logger.info(`${req.method} ${req.path}`, {
       method: req.method,
       path: req.path,
@@ -97,7 +100,7 @@ export function createApp(): Application {
   // Health Check
   // ===========================
 
-  app.get('/health', (req: Request, res: Response) => {
+  app.get('/health', (_req: Request, res: Response) => {
     res.status(200).json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -106,7 +109,7 @@ export function createApp(): Application {
     });
   });
 
-  app.get('/', (req: Request, res: Response) => {
+  app.get('/', (_req: Request, res: Response) => {
     res.status(200).json({
       name: 'Converge-NPS API',
       version: '1.0.0',
@@ -118,7 +121,11 @@ export function createApp(): Application {
         connections: '/api/v1/connections',
         sessions: '/api/v1/sessions',
         projects: '/api/v1/projects',
+        opportunities: '/api/v1/opportunities',
+        partners: '/api/v1/partners',
         messages: '/api/v1/messages',
+        staff: '/api/v1/staff',
+        admin: '/api/v1/admin',
       },
     });
   });
@@ -134,8 +141,11 @@ export function createApp(): Application {
   app.use(`${API_VERSION}/connections`, connectionRoutes);
   app.use(`${API_VERSION}/sessions`, sessionRoutes);
   app.use(`${API_VERSION}/projects`, projectRoutes);
+  app.use(`${API_VERSION}/opportunities`, opportunityRoutes);
   app.use(`${API_VERSION}/messages`, messageRoutes);
   app.use(`${API_VERSION}/conversations`, messageRoutes);
+  app.use(`${API_VERSION}/partners`, partnerRoutes);
+  app.use(`${API_VERSION}/staff`, staffRoutes);
   app.use(`${API_VERSION}/admin`, adminRoutes);
   app.use(`${API_VERSION}/admin/smartsheet`, smartsheetRoutes);
 

@@ -78,40 +78,22 @@ export class AuthService {
       },
     });
 
-    // Store password hash in separate auth table (not in profile)
-    // For MVP, we'll use a passwords table
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS user_passwords (
-        user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-        password_hash TEXT NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `;
-
-    await prisma.$executeRaw`
-      INSERT INTO user_passwords (user_id, password_hash)
-      VALUES (${userId}::uuid, ${passwordHash})
-      ON CONFLICT (user_id) DO UPDATE SET password_hash = ${passwordHash}, updated_at = NOW();
-    `;
+    // Store password hash
+    await prisma.userPassword.create({
+      data: {
+        userId,
+        passwordHash,
+      },
+    });
 
     // Store verification token
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS email_verifications (
-        user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-        token_hash TEXT NOT NULL,
-        expires_at TIMESTAMPTZ NOT NULL,
-        verified BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `;
-
-    await prisma.$executeRaw`
-      INSERT INTO email_verifications (user_id, token_hash, expires_at)
-      VALUES (${userId}::uuid, ${verificationTokenHash}, ${verificationTokenExpiry})
-      ON CONFLICT (user_id) DO UPDATE
-      SET token_hash = ${verificationTokenHash}, expires_at = ${verificationTokenExpiry};
-    `;
+    await prisma.emailVerification.create({
+      data: {
+        userId,
+        tokenHash: verificationTokenHash,
+        expiresAt: verificationTokenExpiry,
+      },
+    });
 
     // Assign default role (student)
     await prisma.userRole.create({
@@ -141,27 +123,28 @@ export class AuthService {
     }
 
     // Get password hash
-    const passwordRecord: any = await prisma.$queryRaw`
-      SELECT password_hash FROM user_passwords WHERE user_id = ${user.id}::uuid;
-    `;
+    const passwordRecord = await prisma.userPassword.findUnique({
+      where: { userId: user.id },
+    });
 
-    if (!passwordRecord || passwordRecord.length === 0) {
+    if (!passwordRecord) {
       throw new UnauthorizedError('Invalid email or password');
     }
 
     // Verify password
-    const isValid = await verifyPassword(password, passwordRecord[0].password_hash);
+    const isValid = await verifyPassword(password, passwordRecord.passwordHash);
 
     if (!isValid) {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    // Check email verification
-    const verification: any = await prisma.$queryRaw`
-      SELECT verified FROM email_verifications WHERE user_id = ${user.id}::uuid;
-    `;
+    // Check email verification (optional for development)
+    const verification = await prisma.emailVerification.findFirst({
+      where: { userId: user.id },
+    });
 
-    if (!verification || verification.length === 0 || !verification[0].verified) {
+    // In development, allow unverified emails
+    if (process.env.NODE_ENV === 'production' && (!verification || !verification.verifiedAt)) {
       throw new UnauthorizedError('Email not verified. Please check your email.');
     }
 
@@ -172,25 +155,15 @@ export class AuthService {
 
     // Store refresh token hash
     const refreshTokenHash = hashToken(refreshToken);
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS user_sessions (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-        refresh_token_hash TEXT NOT NULL,
-        device_info TEXT,
-        ip_address INET,
-        last_activity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        expires_at TIMESTAMPTZ NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `;
-
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-    await prisma.$executeRaw`
-      INSERT INTO user_sessions (user_id, refresh_token_hash, expires_at)
-      VALUES (${user.id}::uuid, ${refreshTokenHash}, ${expiresAt});
-    `;
+    await prisma.userSession.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash,
+        expiresAt,
+      },
+    });
 
     // Return user data (without sensitive fields)
     const { ...safeUser } = user;

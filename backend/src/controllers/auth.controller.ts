@@ -9,12 +9,11 @@ import { AuthService } from '../services/auth.service';
 import {
   RegisterSchema,
   LoginSchema,
-  RefreshTokenSchema,
   ForgotPasswordSchema,
   ResetPasswordSchema,
   VerifyEmailSchema,
 } from '../types/schemas';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 
 export class AuthController {
   /**
@@ -24,7 +23,7 @@ export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
     try {
       // Validate input
-      const data = RegisterSchema.parse(req.body);
+      const data = RegisterSchema.parse(req.body) as any as any;
 
       // Register user
       const { userId, verificationToken } = await AuthService.register(data);
@@ -54,7 +53,7 @@ export class AuthController {
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
       // Validate input
-      const { email, password } = LoginSchema.parse(req.body);
+      const { email, password } = LoginSchema.parse(req.body) as any;
 
       // Login user
       const { user, accessToken, refreshToken } = await AuthService.login(email, password);
@@ -84,18 +83,19 @@ export class AuthController {
    * POST /auth/refresh
    * Refresh access token
    */
-  static async refresh(req: Request, res: Response, next: NextFunction) {
+  static async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Get refresh token from cookie or body
       const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
       if (!refreshToken) {
-        return res.status(401).json({
+        res.status(401).json({
           error: {
             code: 'MISSING_REFRESH_TOKEN',
             message: 'Refresh token required',
           },
         });
+        return;
       }
 
       // Refresh tokens
@@ -150,7 +150,7 @@ export class AuthController {
    */
   static async forgotPassword(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email } = ForgotPasswordSchema.parse(req.body);
+      const { email } = ForgotPasswordSchema.parse(req.body) as any;
 
       const resetToken = await AuthService.requestPasswordReset(email);
 
@@ -180,7 +180,7 @@ export class AuthController {
    */
   static async resetPassword(req: Request, res: Response, next: NextFunction) {
     try {
-      const { token, password } = ResetPasswordSchema.parse(req.body);
+      const { token, password } = ResetPasswordSchema.parse(req.body) as any;
 
       await AuthService.resetPassword(token, password);
 
@@ -200,7 +200,7 @@ export class AuthController {
    */
   static async verifyEmail(req: Request, res: Response, next: NextFunction) {
     try {
-      const { token } = VerifyEmailSchema.parse(req.body);
+      const { token } = VerifyEmailSchema.parse(req.body) as any;
 
       await AuthService.verifyEmail(token);
 
@@ -220,7 +220,7 @@ export class AuthController {
    */
   static async resendVerification(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email } = ForgotPasswordSchema.parse(req.body); // Reuse schema
+      const { email } = ForgotPasswordSchema.parse(req.body) as any; // Reuse schema
 
       const verificationToken = await AuthService.resendVerification(email);
 
@@ -245,15 +245,16 @@ export class AuthController {
    * GET /auth/me
    * Get current user
    */
-  static async me(req: Request, res: Response, next: NextFunction) {
+  static async me(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.user) {
-        return res.status(401).json({
+        res.status(401).json({
           error: {
             code: 'UNAUTHORIZED',
             message: 'Not authenticated',
           },
         });
+        return;
       }
 
       res.status(200).json({

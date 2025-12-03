@@ -9,9 +9,17 @@ import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
 import ProfilePage from '@/pages/ProfilePage';
+import ProfileEditPage from '@/pages/ProfileEditPage';
+import PrivacySettingsPage from '@/pages/PrivacySettingsPage';
 import ConnectionsPage from '@/pages/ConnectionsPage';
 import SchedulePage from '@/pages/SchedulePage';
+import MySchedulePage from '@/pages/MySchedulePage';
 import MessagesPage from '@/pages/MessagesPage';
+import ScannerPage from '@/pages/ScannerPage';
+import OpportunitiesPage from '@/pages/OpportunitiesPage';
+import ProjectsPage from '@/pages/ProjectsPage';
+import PartnersPage from '@/pages/PartnersPage';
+import SettingsPage from '@/pages/SettingsPage';
 
 // Admin Pages
 import AdminDashboard from '@/pages/admin/AdminDashboard';
@@ -19,7 +27,11 @@ import SessionManagement from '@/pages/admin/SessionManagement';
 import SessionForm from '@/pages/admin/SessionForm';
 import UserManagement from '@/pages/admin/UserManagement';
 import Analytics from '@/pages/admin/Analytics';
-import Smartsheet from '@/pages/admin/Smartsheet';
+import SmartsheetPage from '@/pages/admin/SmartsheetPage';
+import AuditLogsPage from '@/pages/admin/AuditLogsPage';
+
+// Staff Pages
+import StaffCheckinPage from '@/pages/staff/StaffCheckinPage';
 
 function App() {
   return (
@@ -48,6 +60,30 @@ function App() {
           }
         />
         <Route
+          path="/profile/edit"
+          element={
+            <ProtectedRoute>
+              <ProfileEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/privacy-settings"
+          element={
+            <ProtectedRoute>
+              <PrivacySettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/scanner"
+          element={
+            <ProtectedRoute>
+              <ScannerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/connections"
           element={
             <ProtectedRoute>
@@ -64,10 +100,50 @@ function App() {
           }
         />
         <Route
+          path="/my-schedule"
+          element={
+            <ProtectedRoute>
+              <MySchedulePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/messages"
           element={
             <ProtectedRoute>
               <MessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/opportunities"
+          element={
+            <ProtectedRoute>
+              <OpportunitiesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute>
+              <ProjectsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/partners"
+          element={
+            <ProtectedRoute>
+              <PartnersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />
@@ -138,8 +214,28 @@ function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminLayout>
-                <Smartsheet />
+                <SmartsheetPage />
               </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/audit-logs"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <AuditLogsPage />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Staff routes (require staff/admin role) */}
+        <Route
+          path="/staff/checkin"
+          element={
+            <ProtectedRoute requireStaff>
+              <StaffCheckinPage />
             </ProtectedRoute>
           }
         />

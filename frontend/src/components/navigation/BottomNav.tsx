@@ -18,10 +18,10 @@ const navItems: NavItem[] = [
     label: 'Home',
   },
   {
-    path: '/scan',
+    path: '/scanner',
     icon: QrCode,
     label: 'Scan',
-    feature: 'qr_scanner',
+    feature: 'qrScanner',
   },
   {
     path: '/schedule',
@@ -51,7 +51,7 @@ export function BottomNav() {
   }
 
   const filteredNavItems = navItems.filter(item => {
-    if (item.feature === 'qr_scanner') {
+    if (item.feature === 'qrScanner') {
       return isQRAvailable;
     }
     return true;

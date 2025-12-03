@@ -121,7 +121,7 @@ export async function updateRsvp(req: Request, res: Response) {
     const { id } = req.params;
     const userId = req.user!.id;
 
-    const data = sessionService.updateRsvpSchema.parse(req.body);
+    const data = sessionService.updateRsvpSchema.parse(req.body) as any;
 
     const rsvp = await sessionService.updateRsvp(userId, id, data);
 
@@ -258,6 +258,33 @@ export async function getAttendees(req: Request, res: Response) {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch attendees',
+    });
+  }
+}
+
+/**
+ * GET /v1/sessions/my-schedule
+ * Get current user's schedule (RSVP'd sessions)
+ */
+export async function getMySchedule(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const filters = {
+      status: 'confirmed' as any,
+      upcoming: true,
+    };
+
+    const rsvps = await sessionService.getUserRsvps(userId, filters);
+
+    res.json({
+      success: true,
+      data: rsvps,
+      count: rsvps.length,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch schedule',
     });
   }
 }
