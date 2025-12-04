@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ChevronLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ProfileEditPage() {
@@ -40,22 +39,27 @@ export default function ProfileEditPage() {
   };
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-3xl font-bold">Edit Profile</h1>
-        </div>
+    <div className="min-h-screen bg-gradient-subtle pb-20 md:pb-24">
+      {/* Header */}
+      <div className="container mx-auto px-3 md:px-4 pt-4 md:pt-8 max-w-2xl">
+        <Card className="p-3 md:p-4 shadow-md bg-gradient-navy text-primary-foreground mb-3 md:mb-6">
+          <div className="flex items-center gap-2 md:gap-4">
+            <Link to="/profile">
+              <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 text-primary-foreground hover:bg-primary/20">
+                <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
+              </Button>
+            </Link>
+            <h1 className="text-base md:text-xl font-bold">Edit Profile</h1>
+          </div>
+        </Card>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+      {/* Main Content */}
+      <main className="container mx-auto px-3 md:px-4 max-w-2xl">
+        <form onSubmit={handleSubmit} className="space-y-3 md:space-y-6">
+          <Card className="p-4 md:p-6 shadow-md">
+            <h3 className="text-sm md:text-base font-semibold mb-4">Personal Information</h3>
+            <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name *</Label>
@@ -173,10 +177,10 @@ export default function ProfileEditPage() {
                   Save Changes
                 </Button>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </form>
-      </div>
-    </MainLayout>
+      </main>
+    </div>
   );
 }

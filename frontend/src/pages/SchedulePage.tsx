@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Filter, Search, Calendar } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Filter, Search, Calendar, ChevronLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { SessionCard } from '@/components/sessions/SessionCard';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { api } from '@/lib/api';
@@ -129,9 +131,18 @@ export default function SchedulePage() {
     <MainLayout>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-gradient-navy text-primary-foreground p-6 rounded-xl shadow-lg mb-6">
-          <h1 className="text-3xl font-bold mb-2">Event Schedule</h1>
-          <p className="text-primary-foreground/80">
+        <div className="bg-gradient-navy text-primary-foreground p-4 md:p-6 rounded-xl shadow-lg mb-6">
+          <div className="flex items-center gap-3 md:gap-4 mb-2">
+            <Link to="/">
+              <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 text-primary-foreground hover:bg-primary/20">
+                <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
+              </Button>
+            </Link>
+            <div className="flex-1">
+              <h1 className="text-xl md:text-3xl font-bold">Event Schedule</h1>
+            </div>
+          </div>
+          <p className="text-sm md:text-base text-primary-foreground/80 ml-14 md:ml-14">
             Browse sessions and RSVP to reserve your spot at NPS Tech Accelerator
           </p>
         </div>

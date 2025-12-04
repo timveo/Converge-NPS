@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, Star, MapPin, Building2 } from 'lucide-react';
+import { Search, Star, MapPin, Building2, ChevronLeft } from 'lucide-react';
 
 const mockPartners = [
   {
@@ -29,73 +29,80 @@ export default function PartnersPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Industry Partners</h1>
-          <p className="text-muted-foreground mt-1">
-            Connect with exhibiting companies and organizations
-          </p>
-        </div>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search partners..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
+    <div className="min-h-screen bg-gradient-subtle pb-24">
+      {/* Header */}
+      <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4">
+        <header className="bg-gradient-navy text-primary-foreground shadow-lg rounded-lg mb-4">
+          <div className="px-4 md:px-4 py-3 md:py-4">
+            <div className="flex items-center gap-3 md:gap-4">
+              <Link to="/">
+                <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 text-primary-foreground hover:bg-primary/20">
+                  <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
+                </Button>
+              </Link>
+              <div className="flex-1">
+                <h1 className="text-lg md:text-xl font-bold">Industry Partners</h1>
+                <p className="text-sm md:text-sm text-tech-cyan-light">
+                  Connect with exhibiting companies and organizations
+                </p>
               </div>
-              <Button variant="outline">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </header>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {mockPartners.map((partner) => (
-            <Card key={partner.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Building2 className="w-5 h-5 text-primary" />
-                      <CardTitle className="text-lg">{partner.name}</CardTitle>
-                    </div>
-                    <CardDescription>{partner.description}</CardDescription>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Star className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span>{partner.boothLocation}</span>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Technology Focus:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {partner.techFocus.map((tech) => (
-                      <Badge key={tech} variant="secondary">
-                        {tech}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <Badge variant="outline">{partner.type}</Badge>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Search */}
+      <div className="container mx-auto px-4 md:px-4 mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search partners..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
         </div>
       </div>
-    </MainLayout>
+
+      {/* Partners List */}
+      <main className="container mx-auto px-4 md:px-4 space-y-3 md:space-y-4">
+        {mockPartners.map((partner) => (
+          <Card key={partner.id} className="cursor-pointer transition-all hover:shadow-md active:scale-[0.98]">
+            <div className="p-4 md:p-6">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Building2 className="w-5 h-5 text-primary flex-shrink-0" />
+                    <h3 className="text-base md:text-lg font-semibold truncate">{partner.name}</h3>
+                  </div>
+                  <p className="text-sm md:text-sm text-muted-foreground">{partner.description}</p>
+                </div>
+                <Button variant="ghost" size="icon" className="flex-shrink-0">
+                  <Star className="w-4 h-4 md:w-5 md:h-5" />
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mb-3">
+                <MapPin className="w-3 h-3 md:w-4 md:h-4" />
+                <span>{partner.boothLocation}</span>
+              </div>
+
+              <div className="mb-3">
+                <p className="text-xs md:text-sm text-muted-foreground mb-2">Technology Focus:</p>
+                <div className="flex flex-wrap gap-1 md:gap-2">
+                  {partner.techFocus.map((tech) => (
+                    <Badge key={tech} variant="secondary" className="text-xs md:text-sm">
+                      {tech}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <Badge variant="outline" className="text-xs md:text-sm">{partner.type}</Badge>
+            </div>
+          </Card>
+        ))}
+      </main>
+    </div>
   );
 }
