@@ -48,6 +48,44 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        navy: {
+          DEFAULT: 'hsl(var(--navy))',
+          light: 'hsl(var(--navy-light))',
+        },
+        tech: {
+          cyan: 'hsl(var(--tech-cyan))',
+          'cyan-light': 'hsl(var(--tech-cyan-light))',
+        },
+        military: {
+          green: 'hsl(var(--military-green))',
+        },
+        nps: {
+          navy: 'hsl(var(--nps-navy))',
+          gold: 'hsl(var(--nps-gold))',
+        },
+        icon: {
+          navy: 'hsl(var(--icon-navy))',
+          teal: 'hsl(var(--icon-teal))',
+          emerald: 'hsl(var(--icon-emerald))',
+          cyan: 'hsl(var(--icon-cyan))',
+          mint: 'hsl(var(--icon-mint))',
+          burgundy: 'hsl(var(--icon-burgundy))',
+        },
+      },
+      backgroundImage: {
+        'gradient-navy': 'var(--gradient-navy)',
+        'gradient-tech': 'var(--gradient-tech)',
+        'gradient-subtle': 'var(--gradient-subtle)',
+      },
+      boxShadow: {
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        glow: 'var(--shadow-glow)',
+      },
+      transitionProperty: {
+        base: 'var(--transition-base)',
+        fast: 'var(--transition-fast)',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -63,10 +101,32 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        'fade-in': {
+          '0%': {
+            opacity: '0',
+            transform: 'translateY(10px)'
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'translateY(0)'
+          }
+        },
+        'scale-in': {
+          '0%': {
+            transform: 'scale(0.95)',
+            opacity: '0'
+          },
+          '100%': {
+            transform: 'scale(1)',
+            opacity: '1'
+          }
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-in': 'fade-in 0.3s ease-out',
+        'scale-in': 'scale-in 0.2s ease-out',
       },
       screens: {
         'mobile': { 'max': '767px' },

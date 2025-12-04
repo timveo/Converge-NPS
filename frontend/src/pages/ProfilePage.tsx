@@ -49,47 +49,47 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-3xl font-semibold">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-3xl font-semibold">
                     {user?.fullName?.charAt(0)}
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold">{user?.fullName}</h2>
-                    <p className="text-gray-600">{user?.role}</p>
+                    <p className="text-muted-foreground">{user?.role}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                   <div className="flex items-start gap-3">
-                    <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <Mail className="w-5 h-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-600">Email</p>
+                      <p className="text-sm text-muted-foreground">Email</p>
                       <p className="font-medium">{user?.email}</p>
                     </div>
                   </div>
 
                   {user?.phone && (
                     <div className="flex items-start gap-3">
-                      <Phone className="w-5 h-5 text-gray-400 mt-0.5" />
+                      <Phone className="w-5 h-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="text-sm text-gray-600">Phone</p>
+                        <p className="text-sm text-muted-foreground">Phone</p>
                         <p className="font-medium">{user.phone}</p>
                       </div>
                     </div>
                   )}
 
                   <div className="flex items-start gap-3">
-                    <Building className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <Building className="w-5 h-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-600">Organization</p>
+                      <p className="text-sm text-muted-foreground">Organization</p>
                       <p className="font-medium">{user?.organization}</p>
                     </div>
                   </div>
 
                   {user?.department && (
                     <div className="flex items-start gap-3">
-                      <Briefcase className="w-5 h-5 text-gray-400 mt-0.5" />
+                      <Briefcase className="w-5 h-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="text-sm text-gray-600">Department</p>
+                        <p className="text-sm text-muted-foreground">Department</p>
                         <p className="font-medium">{user.department}</p>
                       </div>
                     </div>
@@ -98,7 +98,7 @@ export default function ProfilePage() {
 
                 {user?.bio && (
                   <div className="pt-4 border-t">
-                    <p className="text-sm text-gray-600 mb-2">Bio</p>
+                    <p className="text-sm text-muted-foreground mb-2">Bio</p>
                     <p className="text-gray-900">{user.bio}</p>
                   </div>
                 )}
@@ -133,12 +133,12 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-white p-4 rounded-lg border-2 border-gray-200 flex items-center justify-center">
-                  <div className="w-48 h-48 bg-gray-100 rounded flex items-center justify-center">
-                    <QrCode className="w-32 h-32 text-gray-400" />
+                  <div className="w-48 h-48 bg-gradient-subtle rounded flex items-center justify-center">
+                    <QrCode className="w-32 h-32 text-muted-foreground" />
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-2">
+                  <p className="text-sm text-muted-foreground mb-2">
                     Show this QR code to quickly share your contact
                   </p>
                   <Button className="w-full">Download QR Code</Button>

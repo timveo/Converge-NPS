@@ -129,15 +129,15 @@ export default function SchedulePage() {
     <MainLayout>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Event Schedule</h1>
-          <p className="text-gray-600">
-            Browse sessions and RSVP to reserve your spot
+        <div className="bg-gradient-navy text-primary-foreground p-6 rounded-xl shadow-lg mb-6">
+          <h1 className="text-3xl font-bold mb-2">Event Schedule</h1>
+          <p className="text-primary-foreground/80">
+            Browse sessions and RSVP to reserve your spot at NPS Tech Accelerator
           </p>
         </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+      <div className="flex space-x-1 mb-6 bg-gradient-subtle p-1 rounded-lg">
         {TABS.map(tab => (
           <button
             key={tab.id}
@@ -145,8 +145,8 @@ export default function SchedulePage() {
             className={cn(
               'flex-1 py-2 px-4 rounded-md font-medium transition-colors',
               activeTab === tab.id
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-muted-foreground hover:text-gray-900'
             )}
           >
             {tab.label}
@@ -158,7 +158,7 @@ export default function SchedulePage() {
       <div className="mb-6 space-y-4">
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search sessions, speakers..."
@@ -188,7 +188,7 @@ export default function SchedulePage() {
                   'px-4 py-2 rounded-full font-medium transition-colors',
                   selectedTrack === track
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gradient-subtle text-gray-700 hover:bg-gray-200'
                 )}
               >
                 {track}
@@ -202,7 +202,7 @@ export default function SchedulePage() {
       {isLoading && (
         <div className="text-center py-12">
           <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="mt-4 text-gray-600">Loading sessions...</p>
+          <p className="mt-4 text-muted-foreground">Loading sessions...</p>
         </div>
       )}
 
@@ -220,7 +220,7 @@ export default function SchedulePage() {
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             No sessions found
           </h3>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Try adjusting your filters or check back later
           </p>
         </div>

@@ -42,7 +42,7 @@ export default function ConnectionsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">My Connections</h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-muted-foreground mt-1">
               {mockConnections.length} connections
             </p>
           </div>
@@ -56,7 +56,7 @@ export default function ConnectionsPage() {
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name or organization..."
                   value={searchTerm}
@@ -80,9 +80,9 @@ export default function ConnectionsPage() {
           <Card>
             <CardContent className="p-12">
               <div className="text-center">
-                <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No connections yet</h3>
-                <p className="text-gray-600 mb-4">
+                <p className="text-muted-foreground mb-4">
                   Start scanning QR codes to build your network
                 </p>
                 <Button>Scan QR Code</Button>
@@ -95,13 +95,13 @@ export default function ConnectionsPage() {
               <Card key={connection.id} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-semibold">
                       {connection.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold truncate">{connection.name}</h3>
-                      <p className="text-sm text-gray-600 truncate">{connection.role}</p>
-                      <p className="text-sm text-gray-500 truncate">{connection.organization}</p>
+                      <p className="text-sm text-muted-foreground truncate">{connection.role}</p>
+                      <p className="text-sm text-muted-foreground truncate">{connection.organization}</p>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-3">
@@ -111,7 +111,7 @@ export default function ConnectionsPage() {
                       </Badge>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-3">
+                  <p className="text-xs text-muted-foreground mt-3">
                     Connected on {new Date(connection.connectedAt).toLocaleDateString()}
                   </p>
                 </CardContent>

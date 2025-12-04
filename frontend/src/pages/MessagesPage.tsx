@@ -78,7 +78,7 @@ export default function MessagesPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Messages</h1>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Connect with attendees, speakers, and partners
         </p>
       </div>
@@ -86,7 +86,7 @@ export default function MessagesPage() {
       {/* Search */}
       <div className="mb-6">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search conversations..."
@@ -104,7 +104,7 @@ export default function MessagesPage() {
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             No conversations yet
           </h3>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Start connecting with people at the event!
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function MessagesPage() {
             >
               <div className="flex items-start space-x-3">
                 {/* Avatar */}
-                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-primary font-semibold flex-shrink-0">
                   {conversation.otherUser.fullName.charAt(0).toUpperCase()}
                 </div>
 
@@ -129,14 +129,14 @@ export default function MessagesPage() {
                       {conversation.otherUser.fullName}
                     </h3>
                     {conversation.lastMessage && (
-                      <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                      <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
                         {formatLastMessageTime(conversation.lastMessage.createdAt)}
                       </span>
                     )}
                   </div>
 
                   {conversation.otherUser.organization && (
-                    <p className="text-sm text-gray-500 mb-1">
+                    <p className="text-sm text-muted-foreground mb-1">
                       {conversation.otherUser.organization}
                     </p>
                   )}
@@ -147,7 +147,7 @@ export default function MessagesPage() {
                         'text-sm truncate',
                         conversation.unreadCount > 0
                           ? 'font-semibold text-gray-900'
-                          : 'text-gray-600'
+                          : 'text-muted-foreground'
                       )}
                     >
                       {conversation.lastMessage.content}

@@ -65,9 +65,9 @@ export default function ScannerPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
+        <div className="bg-gradient-navy text-primary-foreground p-6 rounded-xl shadow-lg">
           <h1 className="text-3xl font-bold">QR Scanner</h1>
-          <p className="text-gray-600 mt-1">Connect with attendees</p>
+          <p className="text-primary-foreground/80 mt-1">Connect with attendees at NPS Tech Accelerator</p>
         </div>
 
         {!scannedUser ? (
@@ -96,11 +96,11 @@ export default function ScannerPage() {
             {mode === 'qr' && hasCamera ? (
               <Card>
                 <CardContent className="p-6">
-                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                  <div className="aspect-square bg-gradient-subtle rounded-lg flex items-center justify-center border-2 border-primary/20">
                     <div className="text-center">
-                      <QrCode className="w-24 h-24 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">Point camera at QR code</p>
-                      <p className="text-sm text-gray-500 mt-2">
+                      <QrCode className="w-24 h-24 text-primary mx-auto mb-4" />
+                      <p className="text-foreground">Point camera at QR code</p>
+                      <p className="text-sm text-muted-foreground mt-2">
                         Camera access required
                       </p>
                     </div>
@@ -138,19 +138,19 @@ export default function ScannerPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-accent" />
                   Attendee Found
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-start gap-3">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-semibold">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-2xl font-semibold">
                     {scannedUser.name.charAt(0)}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold">{scannedUser.name}</h3>
-                    <p className="text-gray-600">{scannedUser.role}</p>
-                    <p className="text-gray-500">{scannedUser.organization}</p>
+                    <h3 className="text-xl font-bold text-foreground">{scannedUser.name}</h3>
+                    <p className="text-muted-foreground">{scannedUser.role}</p>
+                    <p className="text-muted-foreground">{scannedUser.organization}</p>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {scannedUser.interests.map((interest: string) => (
                         <Badge key={interest} variant="secondary">

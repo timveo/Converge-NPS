@@ -33,7 +33,7 @@ export default function PartnersPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Industry Partners</h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-muted-foreground mt-1">
             Connect with exhibiting companies and organizations
           </p>
         </div>
@@ -42,7 +42,7 @@ export default function PartnersPage() {
           <CardContent className="p-4">
             <div className="flex gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search partners..."
                   value={searchTerm}
@@ -65,7 +65,7 @@ export default function PartnersPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <Building2 className="w-5 h-5 text-blue-600" />
+                      <Building2 className="w-5 h-5 text-primary" />
                       <CardTitle className="text-lg">{partner.name}</CardTitle>
                     </div>
                     <CardDescription>{partner.description}</CardDescription>
@@ -77,11 +77,11 @@ export default function PartnersPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-gray-400" />
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
                   <span>{partner.boothLocation}</span>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">Technology Focus:</p>
+                  <p className="text-sm text-muted-foreground mb-2">Technology Focus:</p>
                   <div className="flex flex-wrap gap-1">
                     {partner.techFocus.map((tech) => (
                       <Badge key={tech} variant="secondary">
