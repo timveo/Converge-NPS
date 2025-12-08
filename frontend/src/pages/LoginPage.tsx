@@ -20,8 +20,10 @@ export default function LoginPage() {
       await login({ email, password });
       toast.success('Welcome back!');
       navigate('/');
-    } catch (error) {
-      toast.error('Invalid email or password');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      console.error('Error response:', error.response?.data);
+      toast.error(error.response?.data?.error?.message || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }

@@ -1,30 +1,22 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
-import {
-  ChevronLeft,
-  Mail,
-  Phone,
-  Building,
-  Briefcase,
-  Edit,
-  QrCode,
-  Shield,
-  Linkedin,
-  Globe,
-  LogOut,
-  Tag,
-} from 'lucide-react';
-import { useState } from 'react';
+import { ChevronLeft, Mail, Briefcase, Tag, Loader2, Linkedin, Globe, Shield, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [profileCompletion] = useState(75); // Mock profile completion
+  const { user, logout, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 md:h-8 md:w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -34,9 +26,39 @@ export default function ProfilePage() {
     );
   }
 
+  const calculateProfileCompletion = () => {
+    const fields = [
+      user.fullName,
+      user.role,
+      user.department,
+      user.organization,
+      user.linkedinUrl,
+      user.websiteUrl,
+      user.bio,
+      user.accelerationInterests && user.accelerationInterests.length > 0 ? "filled" : ""
+    ];
+
+    const filledFields = fields.filter(field => field && (typeof field === 'string' ? field.trim() !== "" : true));
+    const percentage = Math.round((filledFields.length / fields.length) * 100);
+
+    return {
+      percentage,
+      filledCount: filledFields.length,
+      totalCount: fields.length
+    };
+  };
+
+  const completion = calculateProfileCompletion();
+  const isAdmin = user.role?.toLowerCase().includes('admin') || user.role?.toLowerCase().includes('staff');
+
+  // Get initials from full name
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle pb-20 md:pb-24">
-      {/* Header */}
+      {/* Header - Compact on mobile, constrained width */}
       <div className="container mx-auto px-3 md:px-4 pt-4 md:pt-8 max-w-2xl">
         <Card className="p-3 md:p-4 shadow-md bg-gradient-navy text-primary-foreground mb-3 md:mb-6">
           <div className="flex items-center gap-2 md:gap-4">
@@ -50,111 +72,109 @@ export default function ProfilePage() {
         </Card>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Compact spacing on mobile */}
       <main className="container mx-auto px-3 md:px-4 max-w-2xl space-y-3 md:space-y-6">
         {/* Profile Completion Banner */}
-        {profileCompletion < 100 && (
+        {completion.percentage < 100 && (
           <Card className="p-4 md:p-4 shadow-md border-accent/30 bg-gradient-to-r from-accent/10 to-primary/10">
             <div className="flex items-center justify-between gap-3 md:gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2 md:gap-2 mb-2 md:mb-2">
                   <span className="text-sm md:text-sm font-semibold text-foreground">
-                    Profile {profileCompletion}% Complete
+                    Profile {completion.percentage}% Complete
                   </span>
                   <Badge variant="secondary" className="text-xs md:text-xs px-2 py-1">
-                    6/8
+                    {completion.filledCount}/{completion.totalCount}
                   </Badge>
                 </div>
-                <Progress value={profileCompletion} className="h-2 md:h-2 mb-2 md:mb-2" />
+                <Progress value={completion.percentage} className="h-2 md:h-2 mb-2 md:mb-2" />
                 <p className="text-xs md:text-xs text-muted-foreground">
                   Complete your profile to make better connections
                 </p>
               </div>
-              <Button size="sm" variant="outline" className="text-sm md:text-sm px-3 md:px-3" onClick={() => navigate("/profile/edit")}>
+              <Button size="sm" variant="outline" className="text-sm md:text-sm px-3 md:px-3" onClick={() => navigate("/settings")}>
                 Complete
               </Button>
             </div>
           </Card>
         )}
 
-        {/* Profile Overview Card */}
-        <Card className="p-4 md:p-6 shadow-md">
-          <div className="flex items-start gap-3 md:gap-4 mb-4 md:mb-6">
-            <Avatar className="h-16 w-16 md:h-20 md:w-20">
-              <AvatarFallback className="bg-primary text-primary-foreground font-bold text-2xl md:text-3xl">
-                {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
+        {/* Profile Header - Compact on mobile */}
+        <Card className="p-4 md:p-6 shadow-md border-border/50">
+          <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+            <div className="w-14 h-14 md:w-20 md:h-20 rounded-full bg-gradient-navy flex items-center justify-center text-primary-foreground font-bold text-lg md:text-2xl flex-shrink-0">
+              {getInitials(user.fullName || 'U')}
+            </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg md:text-2xl font-bold truncate">{user?.fullName}</h2>
-              <p className="text-sm md:text-base text-muted-foreground truncate">{user?.role}</p>
-              {user?.organization && (
-                <p className="text-sm md:text-base text-muted-foreground truncate">{user.organization}</p>
+              <h2 className="text-lg md:text-xl font-bold text-foreground truncate">{user.fullName}</h2>
+              {user.role && (
+                <p className="text-sm md:text-sm text-muted-foreground mt-1 md:mt-1">{user.role}</p>
+              )}
+              <div className="flex items-center gap-2 md:gap-2 mt-2 md:mt-2 text-sm md:text-sm text-muted-foreground">
+                <Mail className="h-4 w-4 md:h-4 md:w-4 text-accent flex-shrink-0" />
+                <span className="truncate">{user.email}</span>
+              </div>
+              {user.department && (
+                <div className="flex items-center gap-2 md:gap-2 mt-1.5 text-sm md:text-sm text-muted-foreground">
+                  <Briefcase className="h-4 w-4 md:h-4 md:w-4 text-accent flex-shrink-0" />
+                  <span className="truncate">{user.department}</span>
+                </div>
+              )}
+              {user.organization && (
+                <div className="flex items-center gap-2 md:gap-2 mt-1.5 text-sm md:text-sm text-muted-foreground">
+                  <Briefcase className="h-4 w-4 md:h-4 md:w-4 text-accent flex-shrink-0" />
+                  <span className="truncate">{user.organization}</span>
+                </div>
+              )}
+              {user.linkedinUrl && (
+                <div className="flex items-center gap-2 md:gap-2 mt-1.5 text-sm md:text-sm">
+                  <Linkedin className="h-4 w-4 md:h-4 md:w-4 text-accent flex-shrink-0" />
+                  <a
+                    href={user.linkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent hover:underline truncate"
+                  >
+                    LinkedIn
+                  </a>
+                </div>
+              )}
+              {user.websiteUrl && (
+                <div className="flex items-center gap-2 md:gap-2 mt-1.5 text-sm md:text-sm">
+                  <Globe className="h-4 w-4 md:h-4 md:w-4 text-accent flex-shrink-0" />
+                  <a
+                    href={user.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent hover:underline truncate"
+                  >
+                    Website
+                  </a>
+                </div>
               )}
             </div>
-            <Link to="/profile/edit">
-              <Button variant="outline" size="sm" className="flex-shrink-0">
-                <Edit className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Edit</span>
-              </Button>
-            </Link>
           </div>
 
-          {user?.bio && (
-            <div className="mb-4 md:mb-6">
-              <p className="text-sm md:text-base text-foreground">{user.bio}</p>
+          {user.bio && (
+            <div className="mt-3 md:mt-4">
+              <h4 className="text-xs md:text-sm font-semibold text-muted-foreground mb-2">Bio</h4>
+              <div className="p-2.5 md:p-4 bg-secondary/30 rounded-lg">
+                <p className="text-xs md:text-sm text-foreground">{user.bio}</p>
+              </div>
             </div>
           )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            <div className="flex items-start gap-2 md:gap-3">
-              <Mail className="w-4 h-4 md:w-5 md:h-5 text-primary mt-0.5 flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs md:text-sm text-muted-foreground">Email</p>
-                <p className="text-sm md:text-base font-medium truncate">{user?.email}</p>
-              </div>
-            </div>
-
-            {user?.phone && (
-              <div className="flex items-start gap-2 md:gap-3">
-                <Phone className="w-4 h-4 md:w-5 md:h-5 text-primary mt-0.5 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs md:text-sm text-muted-foreground">Phone</p>
-                  <p className="text-sm md:text-base font-medium truncate">{user.phone}</p>
-                </div>
-              </div>
-            )}
-
-            {user?.department && (
-              <div className="flex items-start gap-2 md:gap-3">
-                <Briefcase className="w-4 h-4 md:w-5 md:h-5 text-primary mt-0.5 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs md:text-sm text-muted-foreground">Department</p>
-                  <p className="text-sm md:text-base font-medium truncate">{user.department}</p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-start gap-2 md:gap-3">
-              <Building className="w-4 h-4 md:w-5 md:h-5 text-primary mt-0.5 flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs md:text-sm text-muted-foreground">Organization</p>
-                <p className="text-sm md:text-base font-medium truncate">{user?.organization}</p>
-              </div>
-            </div>
-          </div>
         </Card>
 
-        {/* Research Interests */}
-        {user?.accelerationInterests && user.accelerationInterests.length > 0 && (
-          <Card className="p-4 md:p-6 shadow-md">
-            <div className="flex items-center gap-2 mb-3 md:mb-4">
-              <Tag className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-              <h3 className="text-sm md:text-base font-semibold">Research Interests</h3>
+        {/* Acceleration Interests - Compact on mobile */}
+        {user.accelerationInterests && user.accelerationInterests.length > 0 && (
+          <Card className="p-4 md:p-6 shadow-md border-border/50">
+            <div className="flex items-center gap-2 md:gap-2 mb-3 md:mb-4">
+              <Tag className="h-5 w-5 md:h-5 md:w-5 text-accent" />
+              <h3 className="font-semibold text-base md:text-lg text-foreground">Acceleration Interests</h3>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 md:gap-2">
               {user.accelerationInterests.map((interest) => (
-                <Badge key={interest} variant="secondary" className="text-xs md:text-sm">
+                <Badge key={interest} className="bg-accent text-accent-foreground text-xs md:text-xs px-2.5 py-1">
                   {interest}
                 </Badge>
               ))}
@@ -162,61 +182,32 @@ export default function ProfilePage() {
           </Card>
         )}
 
-        {/* QR Code Card */}
-        <Card className="p-4 md:p-6 shadow-md">
-          <div className="flex items-center gap-2 mb-3 md:mb-4">
-            <QrCode className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-            <h3 className="text-sm md:text-base font-semibold">Your QR Badge</h3>
-          </div>
-          <div className="bg-white p-4 md:p-6 rounded-lg border-2 border-border flex items-center justify-center mb-3 md:mb-4">
-            <div className="w-40 h-40 md:w-48 md:h-48 bg-gradient-subtle rounded flex items-center justify-center">
-              <QrCode className="w-24 h-24 md:w-32 md:h-32 text-muted-foreground" />
+        {/* Admin Tools - Compact on mobile */}
+        {isAdmin && (
+          <Card className="p-4 md:p-6 shadow-md border-accent/30 bg-gradient-to-r from-accent/10 to-primary/10">
+            <div className="flex items-center gap-1.5 md:gap-2 mb-2.5 md:mb-4">
+              <Shield className="h-4 w-4 md:h-5 md:w-5 text-accent" />
+              <h3 className="font-semibold text-sm md:text-lg text-foreground">Admin Tools</h3>
+              <Badge variant="default" className="ml-auto text-[10px] md:text-xs">Admin</Badge>
             </div>
-          </div>
-          <p className="text-xs md:text-sm text-muted-foreground text-center mb-3 md:mb-4">
-            Show this QR code to quickly share your contact
-          </p>
-          <Button className="w-full">Download QR Code</Button>
-        </Card>
+            <p className="text-xs md:text-sm text-muted-foreground">
+              You have administrative privileges.
+            </p>
+          </Card>
+        )}
 
-        {/* Privacy Card */}
-        <Card className="p-4 md:p-6 shadow-md">
-          <div className="flex items-center gap-2 mb-3 md:mb-4">
-            <Shield className="h-4 w-4 md:h-5 md:h-5 text-primary" />
-            <h3 className="text-sm md:text-base font-semibold">Privacy Settings</h3>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs md:text-sm text-muted-foreground">Profile Visibility</span>
-              <Badge variant="default" className="text-xs md:text-sm">
-                {user?.privacy?.profileVisibility || 'Public'}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs md:text-sm text-muted-foreground">QR Scanning</span>
-              <Badge variant="default" className="text-xs md:text-sm">
-                {user?.privacy?.allowQrScanning ? 'Enabled' : 'Disabled'}
-              </Badge>
-            </div>
-            <Link to="/privacy-settings">
-              <Button variant="outline" size="sm" className="w-full text-xs md:text-sm">
-                Manage Privacy
-              </Button>
-            </Link>
-          </div>
-        </Card>
-
-        {/* Logout Button */}
-        <Card className="p-4 md:p-6 shadow-md">
+        {/* Sign Out */}
+        <Card className="p-4 md:p-6 shadow-md border-border/50">
           <Button
             variant="destructive"
-            className="w-full"
+            className="w-full gap-2 h-11 md:h-12 text-sm md:text-base"
             onClick={logout}
           >
-            <LogOut className="h-4 w-4 mr-2" />
+            <LogOut className="h-4 w-4 md:h-5 md:w-5" />
             Sign Out
           </Button>
         </Card>
+
       </main>
     </div>
   );

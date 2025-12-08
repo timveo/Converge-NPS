@@ -23,9 +23,9 @@ export default function ProtectedRoute({
     );
   }
 
-  // Redirect to login if not authenticated
+  // Redirect to auth page if not authenticated
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   // Check admin/staff role if required
