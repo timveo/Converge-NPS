@@ -60,6 +60,7 @@ COPY --from=backend-builder /app/backend/package.json ./backend/package.json
 COPY --from=backend-builder /app/backend/package-lock.json ./backend/package-lock.json
 COPY --from=backend-builder /app/backend/prisma ./backend/prisma
 COPY --from=backend-builder /app/backend/scripts ./backend/scripts
+RUN chmod +x ./backend/scripts/docker-entrypoint.sh
 COPY --from=backend-builder /app/backend/.env.example ./backend/.env.example
 
 # Frontend build
@@ -67,7 +68,7 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 # Helper scripts
 COPY docker/start.sh ./start.sh
-RUN chmod +x ./start.sh && chmod +x ./backend/scripts/docker-entrypoint.sh
+RUN chmod +x ./start.sh 
 
 ENV NODE_ENV=development \
     BACKEND_PORT=3000 \
