@@ -134,10 +134,10 @@ OPENAI_API_KEY=sk-...
 Or run in detached mode (containers run in the background)
 - docker-compose up -d
 
-2. Stop the application
+2. Stop the application  
 Stop containers and remove everything including volumes
 - docker compose down -v
-Stop containers without removing volumes (keeps local db and redis alive)
+Stop containers without removing volumes (keeps local db and redis alive)  
 - docker compose down
 
 ## 📚 Documentation
