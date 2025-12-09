@@ -101,20 +101,20 @@ project-name/
 
 ### Installation
 
-# 1. Clone the repository
-git clone https://github.com/username/project-name.git
-cd project-name
+1. Clone the repository
+- git clone https://github.com/username/project-name.git
+- cd project-name
 
-# 2. Install Docker Desktop
-https://www.docker.com/products/docker-desktop
-Make sure Docker is running
+2. Install Docker Desktop
+- https://www.docker.com/products/docker-desktop
+- Make sure Docker is running
 
-# 3. Copy environment variables
-cp .env.example .env
+3. Copy environment variables
+- cp .env.example .env
 
 ### Environment Variables
 
-# 1. Edit .env if needed
+1. Edit .env if needed
 
 ```bash
 # Backend (.env)
@@ -129,16 +129,16 @@ OPENAI_API_KEY=sk-...
 
 ### Running Locally
 
-# 1. Build and start the application from root
-docker-compose up --build
-# Or run in detached mode (containers run in the background)
-docker-compose up -d
+1. Build and start the application from root
+- docker-compose up --build
+Or run in detached mode (containers run in the background)
+- docker-compose up -d
 
-# 2. Stop the application
-# Stop containers and remove everything including volumes
-docker compose down -v
-# Stop containers without removing volumes (keeps local db and redis alive)
-docker compose down
+2. Stop the application
+Stop containers and remove everything including volumes
+- docker compose down -v
+Stop containers without removing volumes (keeps local db and redis alive)
+- docker compose down
 
 ## 📚 Documentation
 
