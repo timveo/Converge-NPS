@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import AdminLayout from '@/components/AdminLayout';
 
 // User Pages
 import AuthPage from '@/pages/AuthPage';
@@ -173,9 +172,7 @@ function App() {
           path="/admin"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <AdminDashboard />
-              </AdminLayout>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />
@@ -183,9 +180,7 @@ function App() {
           path="/admin/sessions"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <SessionManagement />
-              </AdminLayout>
+              <SessionManagement />
             </ProtectedRoute>
           }
         />
@@ -193,9 +188,7 @@ function App() {
           path="/admin/sessions/new"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <SessionForm />
-              </AdminLayout>
+              <SessionForm />
             </ProtectedRoute>
           }
         />
@@ -203,9 +196,7 @@ function App() {
           path="/admin/sessions/:id/edit"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <SessionForm />
-              </AdminLayout>
+              <SessionForm />
             </ProtectedRoute>
           }
         />
@@ -213,9 +204,7 @@ function App() {
           path="/admin/users"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <UserManagement />
-              </AdminLayout>
+              <UserManagement />
             </ProtectedRoute>
           }
         />
@@ -223,9 +212,7 @@ function App() {
           path="/admin/analytics"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <Analytics />
-              </AdminLayout>
+              <Analytics />
             </ProtectedRoute>
           }
         />
@@ -233,9 +220,7 @@ function App() {
           path="/admin/smartsheet"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <SmartsheetPage />
-              </AdminLayout>
+              <SmartsheetPage />
             </ProtectedRoute>
           }
         />
@@ -243,9 +228,7 @@ function App() {
           path="/admin/audit-logs"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <AuditLogsPage />
-              </AdminLayout>
+              <AuditLogsPage />
             </ProtectedRoute>
           }
         />

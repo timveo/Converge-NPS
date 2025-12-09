@@ -69,7 +69,7 @@ type CombinedItem = (Project & { sourceType: 'NPS' }) | (Opportunity & { sourceT
 export default function OpportunitiesPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const fromAdmin = location.state?.from === "admin";
+  const fromAdmin = location.state?.fromAdmin === true;
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);

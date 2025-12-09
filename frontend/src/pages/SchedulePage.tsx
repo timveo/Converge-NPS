@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Calendar, ChevronLeft, Search, X, List, CalendarDays, AlertTriangle, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,8 @@ interface RSVP {
 
 export default function SchedulePage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromAdmin = location.state?.fromAdmin === true;
   const [sessions, setSessions] = useState<Session[]>([]);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [loading, setLoading] = useState(true);
@@ -273,7 +275,7 @@ END:VCALENDAR`;
                 variant="ghost"
                 size="icon"
                 className="text-primary-foreground hover:bg-primary/20 h-11 w-11 md:h-10 md:w-10"
-                onClick={() => navigate('/')}
+                onClick={() => navigate(fromAdmin ? '/admin' : '/')}
               >
                 <ChevronLeft className="h-5 w-5 md:h-5 md:w-5" />
               </Button>
