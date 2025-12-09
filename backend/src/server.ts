@@ -9,7 +9,6 @@ import { createServer } from 'http';
 import { createApp } from './app';
 import logger from './utils/logger';
 import { PrismaClient } from '@prisma/client';
-// import { initializeSocketServer } from './socket'; // TEMPORARILY DISABLED - schema mismatch
 
 // Load environment variables
 dotenv.config();
@@ -30,45 +29,36 @@ async function startServer() {
     await prisma.$connect();
     logger.info('Database connected successfully');
 
-    // Create Express app
+    // Create Express app and HTTP server
     const app = createApp();
-
-    // Create HTTP server
     const httpServer = createServer(app);
 
-    // Initialize Socket.IO - TEMPORARILY DISABLED
-    // const io = initializeSocketServer(httpServer);
-    // logger.info('WebSocket server initialized');
-
     // Start listening
-    const server = httpServer.listen(PORT, HOST, () => {
+    httpServer.listen(PORT, HOST, () => {
       logger.info(`Server started successfully`, {
-        port: PORT,
         host: HOST,
+        port: PORT,
         environment: NODE_ENV,
         url: `http://${HOST}:${PORT}`,
       });
 
-      logger.info(`API endpoints available at:`, {
+      const endpoints = {
         base: `http://${HOST}:${PORT}`,
         health: `http://${HOST}:${PORT}/health`,
         auth: `http://${HOST}:${PORT}/api/v1/auth`,
         users: `http://${HOST}:${PORT}/api/v1/users`,
         connections: `http://${HOST}:${PORT}/api/v1/connections`,
-      });
+      };
+
+      logger.info(`API endpoints available at:\n${JSON.stringify(endpoints, null, 2)}`);
     });
 
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
       logger.info(`${signal} received. Starting graceful shutdown...`);
 
-      server.close(async () => {
+      httpServer.close(async () => {
         logger.info('HTTP server closed');
-
-        // Close Socket.IO - TEMPORARILY DISABLED
-        // io.close(() => {
-        //   logger.info('WebSocket server closed');
-        // });
 
         // Close database connection
         await prisma.$disconnect();
@@ -95,12 +85,12 @@ async function startServer() {
     });
 
     process.on('uncaughtException', (error: Error) => {
-      logger.error('Uncaught Exception', { error: error.message, stack: error.stack });
+      logger.error('Uncaught Exception', { message: error.message, stack: error.stack });
       process.exit(1);
     });
   } catch (error: any) {
     logger.error('Failed to start server', {
-      error: error.message,
+      message: error.message,
       stack: error.stack,
     });
     process.exit(1);

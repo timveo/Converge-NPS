@@ -1,10 +1,27 @@
+# Git metadata
 .git
-node_modules
-backend/node_modules
-frontend/node_modules
-backend/dist
-frontend/dev-dist
-backend/logs
-frontend/logs
+.gitignore
+
+# Logs and temp files
 *.log
-Dockerfile
+*.tmp
+*.swp
+
+# Node modules (they are handled per service)
+node_modules/
+
+# Build artifacts (frontend & backend will build inside their own Dockerfiles)
+frontend/dist
+backend/dist
+
+# Env files / secrets (optional)
+*.env
+.env.*
+
+# Docker-related files not needed inside build context
+docker-compose.override.yml
+docker-compose.prod.yml
+
+# OS files
+.DS_Store
+Thumbs.db

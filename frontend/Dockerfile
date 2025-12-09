@@ -1,50 +1,33 @@
-# Multi-stage Dockerfile for Converge-NPS Frontend
-# Optimized for production deployment (if self-hosting, otherwise use Vercel)
+# Stage 1: Build
+FROM node:18-bullseye AS builder
 
-# ========================================
-# Stage 1: Builder
-# ========================================
-FROM node:20-alpine AS builder
-
-# Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
 # Install dependencies
+COPY frontend/package*.json ./
 RUN npm ci
 
-# Copy source code
-COPY . .
+# Copy frontend source
+COPY frontend/ ./
 
-# Build React app with Vite
+# Build production frontend
 RUN npm run build
 
-# ========================================
-# Stage 2: Production (Nginx)
-# ========================================
-FROM nginx:alpine
+# Stage 2: Runtime
+FROM node:18-bullseye
 
-# Copy built application
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Install serve globally
+RUN npm install -g serve
 
-# Create nginx cache directories
-RUN mkdir -p /var/cache/nginx/client_temp && \
-    mkdir -p /var/cache/nginx/proxy_temp && \
-    mkdir -p /var/cache/nginx/fastcgi_temp && \
-    mkdir -p /var/cache/nginx/uwsgi_temp && \
-    mkdir -p /var/cache/nginx/scgi_temp
+# Copy build artifacts
+COPY --from=builder /app/dist ./dist
 
-# Expose port
-EXPOSE 80
+# Set environment
+ENV PORT=5173
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/health || exit 1
+EXPOSE 5173
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start frontend
+CMD ["serve", "-s", "dist", "-l", "5173", "--single"]

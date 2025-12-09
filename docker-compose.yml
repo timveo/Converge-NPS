@@ -1,35 +1,43 @@
-version: "3.9"
-
 services:
-  app:
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: backend/Dockerfile
       args:
-        VITE_API_BASE_URL: http://localhost:3000/api/v1
-    container_name: converge-nps-app
+        DATABASE_URL: postgresql://postgres:postgres@postgres:5432/converge_nps?schema=public
+    container_name: converge-nps-backend
     ports:
       - "3000:3000"
-      - "5173:5173"
     environment:
       NODE_ENV: development
       PORT: 3000
-      BACKEND_PORT: 3000
-      FRONTEND_PORT: 5173
-      VITE_API_BASE_URL: http://localhost:3000/api/v1
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/converge_nps?schema=public
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      FRONTEND_URL: http://localhost:5173
-      CORS_ORIGIN: http://localhost:5173,http://localhost:3000
       REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: http://localhost:5173,http://localhost:3000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:3000/api/v1
+    container_name: converge-nps-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      NODE_ENV: development
+      VITE_API_BASE_URL: http://localhost:3000/api/v1
+    depends_on:
+      - backend
 
   postgres:
     image: postgres:15
