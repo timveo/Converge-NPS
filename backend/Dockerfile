@@ -2,16 +2,11 @@
 FROM node:18-bullseye AS backend-builder
 WORKDIR /app/backend
 
-# Copy package.json first (for caching)
-COPY backend/package*.json ./
-
-# Install dependencies inside container
+COPY backend/package*.json /app/backend/
 RUN npm ci
 
-# Copy the rest of the backend code
-COPY backend/ ./
+COPY backend/ /app/backend/
 
-# Prisma generate & build
 RUN npx prisma generate
 RUN npm run build
 
@@ -24,15 +19,14 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy backend artifacts from builder (without host node_modules)
-COPY --from=backend-builder /app/backend/node_modules ./node_modules
-COPY --from=backend-builder /app/backend/dist ./dist
-COPY --from=backend-builder /app/backend/package*.json ./
-COPY --from=backend-builder /app/backend/prisma ./prisma
-COPY --from=backend-builder /app/backend/scripts ./scripts
-COPY --from=backend-builder /app/backend/.env.example ./
+COPY --from=backend-builder /app/backend/node_modules /app/backend/node_modules
+COPY --from=backend-builder /app/backend/dist /app/backend/dist
+COPY --from=backend-builder /app/backend/package*.json /app/backend/
+COPY --from=backend-builder /app/backend/prisma /app/backend/prisma
+COPY --from=backend-builder /app/backend/scripts /app/backend/scripts
+COPY --from=backend-builder /app/backend/.env.example /app/backend/
 
-RUN chmod +x ./scripts/docker-entrypoint.sh
+RUN chmod +x /app/backend/scripts/docker-entrypoint.sh
 
 ENTRYPOINT ["dumb-init", "--", "/app/backend/scripts/docker-entrypoint.sh"]
 CMD ["node", "dist/server.js"]
