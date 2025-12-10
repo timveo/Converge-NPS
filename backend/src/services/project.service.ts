@@ -552,7 +552,7 @@ export async function bookmarkOpportunity(userId: string, opportunityId: string)
   // Check if already bookmarked (using OpportunityInterest as bookmark)
   const existing = await prisma.opportunityInterest.findUnique({
     where: {
-      opportunityId_userId: {
+      userId_opportunityId: {
         opportunityId,
         userId,
       },
@@ -592,7 +592,7 @@ export async function bookmarkOpportunity(userId: string, opportunityId: string)
 export async function unbookmarkOpportunity(userId: string, opportunityId: string) {
   const bookmark = await prisma.opportunityInterest.findUnique({
     where: {
-      opportunityId_userId: {
+      userId_opportunityId: {
         opportunityId,
         userId,
       },
@@ -605,7 +605,7 @@ export async function unbookmarkOpportunity(userId: string, opportunityId: strin
 
   await prisma.opportunityInterest.delete({
     where: {
-      opportunityId_userId: {
+      userId_opportunityId: {
         opportunityId,
         userId,
       },

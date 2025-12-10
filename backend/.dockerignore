@@ -1,48 +1,24 @@
-# Dependencies
-node_modules
-npm-debug.log
-yarn-error.log
+# Node modules (should be installed inside Docker)
+node_modules/
 
-# Environment
+# Build output
+dist/
+
+# Local env files
 .env
-.env.local
-.env.*.local
+.env.*
 
-# Build outputs
-dist
-build
+# Logs
 *.log
 
-# IDE
-.vscode
-.idea
-*.swp
-*.swo
-*~
-
-# OS
+# OS / editor files
 .DS_Store
 Thumbs.db
 
-# Git
+# Git metadata (not needed in build context)
 .git
 .gitignore
 
-# Tests
-tests
-*.test.ts
-*.spec.ts
-coverage
-
-# Documentation
-README.md
-docs
-
-# CI/CD
-.github
-.gitlab-ci.yml
-
-# Docker
-Dockerfile
-.dockerignore
-docker-compose.yml
+# npm/yarn/pnpm leftovers
+npm-debug.log*
+yarn-error.log*

@@ -1,8 +1,11 @@
 import { Server, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { verify } from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
 import * as messageService from '../services/message.service';
 import logger from '../utils/logger';
+
+const prisma = new PrismaClient();
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -104,9 +107,13 @@ export function initializeSocketServer(httpServer: HTTPServer) {
         io.to(`conversation:${message.conversationId}`).emit('new_message', message);
 
         // Emit to recipient's personal room (for notification)
-        const recipientId = message.conversation.user1Id === userId
-          ? message.conversation.user2Id
-          : message.conversation.user1Id;
+        // Get conversation participants to find recipient
+        const participants = await prisma.conversationParticipant.findMany({
+          where: { conversationId: message.conversationId },
+          include: { user: true }
+        });
+        
+        const recipientId = participants.find(p => p.userId !== userId)?.userId;
 
         io.to(`user:${recipientId}`).emit('message_notification', {
           conversationId: message.conversationId,
@@ -123,7 +130,7 @@ export function initializeSocketServer(httpServer: HTTPServer) {
         socket.emit('message_sent', {
           messageId: message.id,
           conversationId: message.conversationId,
-          createdAt: message.createdAt,
+          sentAt: message.sentAt,
         });
       } catch (error: any) {
         logger.error('Failed to send message', { error, userId, data });
@@ -156,7 +163,7 @@ export function initializeSocketServer(httpServer: HTTPServer) {
      */
     socket.on('mark_as_read', async (data: { conversationId: string }) => {
       try {
-        await messageService.markMessagesAsRead(userId, data.conversationId);
+        await messageService.markConversationAsRead(userId, data.conversationId);
 
         // Notify other user
         socket.to(`conversation:${data.conversationId}`).emit('messages_read', {

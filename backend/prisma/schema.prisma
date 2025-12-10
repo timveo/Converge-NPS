@@ -3,12 +3,13 @@
 // Based on: DATABASE_SCHEMA.md
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // =============================================================================
@@ -16,83 +17,91 @@ datasource db {
 // =============================================================================
 
 enum AppRole {
-  student
-  faculty
-  industry
-  staff
-  admin
+  student
+  faculty
+  industry
+  staff
+  admin
 }
 
 enum ProfileVisibility {
-  public
-  private
+  public
+  private
 }
 
 enum ConnectionMethod {
-  qr_scan
-  manual_entry
+  qr_scan
+  manual_entry
 }
 
 enum RsvpStatus {
-  confirmed
-  waitlisted
-  cancelled
+  confirmed
+  waitlisted
+  cancelled
+}
+
+// Added to fix multiple TypeScript errors in admin.service.ts
+enum SessionStatus {
+  scheduled
+  in_progress
+  completed
+  cancelled
 }
 
 enum CheckInMethod {
-  qr_scan
-  manual_search
-  walk_in
+  qr_scan
+  manual_search
+  walk_in
 }
 
 enum ProjectStage {
-  concept
-  prototype
-  pilot_ready
-  deployed
+  concept
+  prototype
+  pilot_ready
+  deployed
 }
 
 enum OpportunityType {
-  funding
-  internship
-  competition
+  funding
+  internship
+  competition
 }
 
 enum OpportunityStatus {
-  active
-  closed
-  draft
+  active
+  closed
+  draft
 }
 
 enum SyncType {
-  import
-  export
+  import
+  export
 }
 
 enum SyncDirection {
-  download
-  upload
+  download
+  upload
 }
 
 enum SyncStatus {
-  pending
-  in_progress
-  success
-  partial
-  failed
+  pending
+  in_progress
+  success
+  partial
+  failed
 }
 
 enum OfflineOperationType {
-  qr_scan
-  message
-  rsvp
+  qr_scan
+  message
+  rsvp
 }
 
 enum OfflineQueueStatus {
-  pending
-  processing
-  completed
-  failed
+  pending
+  processing
+  completed
+  failed
 }
 
 // =============================================================================
@@ -100,141 +109,141 @@ enum OfflineQueueStatus {
 // =============================================================================
 
 model UserPassword {
-  userId       String   @id @map("user_id") @db.Uuid
-  passwordHash String   @map("password_hash") @db.Text
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userId       String   @id @map("user_id") @db.Uuid
+  passwordHash String   @map("password_hash") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@map("user_passwords")
+  @@map("user_passwords")
 }
 
 model EmailVerification {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId     String    @map("user_id") @db.Uuid
-  tokenHash  String    @map("token_hash") @db.Text
-  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
-  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(6)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @map("token_hash") @db.Text
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  @@index([userId])
-  @@index([tokenHash])
-  @@map("email_verifications")
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("email_verifications")
 }
 
 model UserSession {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId           String    @map("user_id") @db.Uuid
-  refreshTokenHash String    @map("refresh_token_hash") @db.Text
-  deviceInfo       String?   @map("device_info") @db.Text
-  ipAddress        String?   @map("ip_address") @db.Inet
-  lastActivity     DateTime  @default(now()) @map("last_activity") @db.Timestamptz(6)
-  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @map("refresh_token_hash") @db.Text
+  deviceInfo       String?   @map("device_info") @db.Text
+  ipAddress        String?   @map("ip_address") @db.Inet
+  lastActivity     DateTime  @default(now()) @map("last_activity") @db.Timestamptz(6)
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  @@index([userId])
-  @@index([refreshTokenHash])
-  @@map("user_sessions")
+  @@index([userId])
+  @@index([refreshTokenHash])
+  @@map("user_sessions")
 }
 
 model Profile {
-  id                    String            @id @db.Uuid
-  fullName              String            @map("full_name") @db.Text
-  email                 String            @unique @db.Text
-  phone                 String?           @db.Text
-  rank                  String?           @db.Text
-  organization          String?           @db.Text
-  department            String?           @db.Text
-  role                  String?           @db.Text
-  bio                   String?           @db.Text
-  avatarUrl             String?           @map("avatar_url") @db.Text
-  accelerationInterests String[]          @map("acceleration_interests")
-  linkedinUrl           String?           @map("linkedin_url") @db.Text
-  websiteUrl            String?           @map("website_url") @db.Text
+  id                    String            @id @db.Uuid
+  fullName              String            @map("full_name") @db.Text
+  email                 String            @unique @db.Text
+  phone                 String?           @db.Text
+  rank                  String?           @db.Text
+  organization          String?           @db.Text
+  department            String?           @db.Text
+  role                  String?           @db.Text
+  bio                   String?           @db.Text
+  avatarUrl             String?           @map("avatar_url") @db.Text
+  accelerationInterests String[]          @map("acceleration_interests")
+  linkedinUrl           String?           @map("linkedin_url") @db.Text
+  websiteUrl            String?           @map("website_url") @db.Text
 
-  // Privacy Controls (4 toggles from PRD)
-  profileVisibility     ProfileVisibility @default(public) @map("profile_visibility")
-  allowQrScanning       Boolean           @default(true) @map("allow_qr_scanning")
-  allowMessaging        Boolean           @default(true) @map("allow_messaging")
-  hideContactInfo       Boolean           @default(false) @map("hide_contact_info")
+  // Privacy Controls (4 toggles from PRD)
+  profileVisibility     ProfileVisibility @default(public) @map("profile_visibility")
+  allowQrScanning       Boolean           @default(true) @map("allow_qr_scanning")
+  allowMessaging        Boolean           @default(true) @map("allow_messaging")
+  hideContactInfo       Boolean           @default(false) @map("hide_contact_info")
 
-  // Onboarding
-  onboardingCompleted   Boolean           @default(false) @map("onboarding_completed")
-  onboardingStep        Int               @default(0) @map("onboarding_step")
+  // Onboarding
+  onboardingCompleted   Boolean           @default(false) @map("onboarding_completed")
+  onboardingStep        Int               @default(0) @map("onboarding_step")
 
-  // Timestamps
-  createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  // Timestamps
+  createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  userRoles             UserRole[]
-  qrCode                QrCode?
-  connectionsAsUser     Connection[]      @relation("UserConnections")
-  connectionsAsTarget   Connection[]      @relation("TargetUserConnections")
-  rsvps                 Rsvp[]
-  checkedIn             CheckIn?          @relation("CheckedInUser")
-  checkedInBy           CheckIn[]         @relation("CheckInStaff")
-  projectsAsPi          Project[]         @relation("ProjectPI")
-  projectBookmarks      ProjectBookmark[]
-  projectInterests      ProjectInterest[]
-  opportunities         Opportunity[]     @relation("OpportunityPoster")
-  opportunityInterests  OpportunityInterest[]
-  partnerFavorites      PartnerFavorite[]
-  conversationParticipants ConversationParticipant[]
-  messagesSent          Message[]         @relation("MessageSender")
-  messageReadReceipts   MessageReadReceipt[]
-  smartsheetSyncs       SmartsheetSync[]
-  auditLogs             AuditLog[]        @relation("AuditLogUser")
-  auditLogsTarget       AuditLog[]        @relation("AuditLogTarget")
-  offlineQueue          OfflineQueue[]
+  // Relations
+  userRoles             UserRole[]
+  qrCode                QrCode?
+  connectionsAsUser     Connection[]      @relation("UserConnections")
+  connectionsAsTarget   Connection[]      @relation("TargetUserConnections")
+  rsvps                 Rsvp[]
+  checkedIn             CheckIn?          @relation("CheckedInUser")
+  checkedInBy           CheckIn[]         @relation("CheckInStaff")
+  projectsAsPi          Project[]         @relation("ProjectPI")
+  projectBookmarks      ProjectBookmark[]
+  projectInterests      ProjectInterest[]
+  opportunities         Opportunity[]     @relation("OpportunityPoster")
+  opportunityInterests  OpportunityInterest[]
+  partnerFavorites      PartnerFavorite[]
+  conversationParticipants ConversationParticipant[]
+  messagesSent          Message[]         @relation("MessageSender")
+  messageReadReceipts   MessageReadReceipt[]
+  smartsheetSyncs       SmartsheetSync[]
+  auditLogs             AuditLog[]        @relation("AuditLogUser")
+  auditLogsTarget       AuditLog[]        @relation("AuditLogTarget")
+  offlineQueue          OfflineQueue[]
 
-  @@map("profiles")
+  @@map("profiles")
 }
 
 model UserRole {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  role      AppRole
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      AppRole
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  // Relations
-  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, role])
-  @@index([userId])
-  @@index([role])
-  @@map("user_roles")
+  @@unique([userId, role])
+  @@index([userId])
+  @@index([role])
+  @@map("user_roles")
 }
 
 model UserRoleHistory {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  role      AppRole
-  action    String   @db.Text // 'added' or 'removed'
-  changedBy String   @map("changed_by") @db.Uuid
-  changedAt DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
-  notes     String?  @db.Text
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      AppRole
+  action    String   @db.Text // 'added' or 'removed'
+  changedBy String   @map("changed_by") @db.Uuid
+  changedAt DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+  notes     String?  @db.Text
 
-  @@index([userId])
-  @@index([changedAt])
-  @@map("user_role_history")
+  @@index([userId])
+  @@index([changedAt])
+  @@map("user_role_history")
 }
 
 model QrCode {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String    @unique @map("user_id") @db.Uuid
-  qrCodeData     String    @map("qr_code_data") @db.Text
-  isActive       Boolean   @default(true) @map("is_active")
-  generatedAt    DateTime  @default(now()) @map("generated_at") @db.Timestamptz(6)
-  lastScannedAt  DateTime? @map("last_scanned_at") @db.Timestamptz(6)
-  scanCount      Int       @default(0) @map("scan_count")
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @unique @map("user_id") @db.Uuid
+  qrCodeData     String    @map("qr_code_data") @db.Text
+  isActive       Boolean   @default(true) @map("is_active")
+  generatedAt    DateTime  @default(now()) @map("generated_at") @db.Timestamptz(6)
+  lastScannedAt  DateTime? @map("last_scanned_at") @db.Timestamptz(6)
+  scanCount      Int       @default(0) @map("scan_count")
 
-  // Relations
-  user           Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations
+  user           Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([qrCodeData])
-  @@index([isActive])
-  @@map("qr_codes")
+  @@index([userId])
+  @@index([qrCodeData])
+  @@index([isActive])
+  @@map("qr_codes")
 }
 
 // =============================================================================
@@ -242,26 +251,26 @@ model QrCode {
 // =============================================================================
 
 model Connection {
-  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId              String           @map("user_id") @db.Uuid
-  connectedUserId     String           @map("connected_user_id") @db.Uuid
-  notes               String?          @db.Text
-  collaborativeIntents String[]        @map("collaborative_intents")
-  followUpReminder    DateTime?        @map("follow_up_reminder") @db.Timestamptz(6)
-  reminderSent        Boolean          @default(false) @map("reminder_sent")
-  connectionMethod    ConnectionMethod @default(qr_scan) @map("connection_method")
-  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String           @map("user_id") @db.Uuid
+  connectedUserId     String           @map("connected_user_id") @db.Uuid
+  notes               String?          @db.Text
+  collaborativeIntents String[]        @map("collaborative_intents")
+  followUpReminder    DateTime?        @map("follow_up_reminder") @db.Timestamptz(6)
+  reminderSent        Boolean          @default(false) @map("reminder_sent")
+  connectionMethod    ConnectionMethod @default(qr_scan) @map("connection_method")
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  // Relations
-  user                Profile          @relation("UserConnections", fields: [userId], references: [id], onDelete: Cascade)
-  connectedUser       Profile          @relation("TargetUserConnections", fields: [connectedUserId], references: [id], onDelete: Cascade)
+  // Relations
+  user                Profile          @relation("UserConnections", fields: [userId], references: [id], onDelete: Cascade)
+  connectedUser       Profile          @relation("TargetUserConnections", fields: [connectedUserId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, connectedUserId])
-  @@index([userId, createdAt])
-  @@index([connectedUserId])
-  @@index([collaborativeIntents], type: Gin)
-  @@index([followUpReminder])
-  @@map("connections")
+  @@unique([userId, connectedUserId])
+  @@index([userId, createdAt])
+  @@index([connectedUserId])
+  @@index([collaborativeIntents], type: Gin)
+  @@index([followUpReminder])
+  @@map("connections")
 }
 
 // =============================================================================
@@ -269,67 +278,70 @@ model Connection {
 // =============================================================================
 
 model Session {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title           String   @db.Text
-  description     String?  @db.Text
-  speaker         String?  @db.Text
-  location        String?  @db.Text
-  sessionType     String?  @map("session_type") @db.Text
-  startTime       DateTime @map("start_time") @db.Timestamptz(6)
-  endTime         DateTime @map("end_time") @db.Timestamptz(6)
-  capacity        Int      @default(50)
-  registeredCount Int      @default(0) @map("registered_count")
-  isFeatured      Boolean  @default(false) @map("is_featured")
-  requiresRsvp    Boolean  @default(true) @map("requires_rsvp")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String   @db.Text
+  description     String?  @db.Text
+  speaker         String?  @db.Text
+  location        String?  @db.Text
+  sessionType     String?  @map("session_type") @db.Text
+  startTime       DateTime @map("start_time") @db.Timestamptz(6)
+  endTime         DateTime @map("end_time") @db.Timestamptz(6)
+  capacity        Int      @default(50)
+  registeredCount Int      @default(0) @map("registered_count")
+  isFeatured      Boolean  @default(false) @map("is_featured")
+  requiresRsvp    Boolean  @default(true) @map("requires_rsvp")
+  // ADDED: Status field to fix multiple TS2353 errors in admin.service.ts
+  status          SessionStatus @default(scheduled)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  rsvps           Rsvp[]
+  // Relations
+  rsvps           Rsvp[]
 
-  @@index([startTime])
-  @@index([endTime])
-  @@index([isFeatured])
-  @@index([sessionType])
-  @@map("sessions")
+  @@index([startTime])
+  @@index([endTime])
+  @@index([isFeatured])
+  @@index([sessionType])
+  @@index([status]) // Added index for the new status field
+  @@map("sessions")
 }
 
 model Rsvp {
-  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String     @map("user_id") @db.Uuid
-  sessionId String     @map("session_id") @db.Uuid
-  status    RsvpStatus
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String     @map("user_id") @db.Uuid
+  sessionId String     @map("session_id") @db.Uuid
+  status    RsvpStatus
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  user      Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  // Relations
+  user      Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, sessionId])
-  @@index([userId, sessionId])
-  @@index([sessionId])
-  @@index([status])
-  @@map("rsvps")
+  @@unique([userId, sessionId])
+  @@index([userId, sessionId])
+  @@index([sessionId])
+  @@index([status])
+  @@map("rsvps")
 }
 
 model CheckIn {
-  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String        @unique @map("user_id") @db.Uuid
-  checkedInBy    String        @map("checked_in_by") @db.Uuid
-  checkInMethod  CheckInMethod @map("check_in_method")
-  isWalkIn       Boolean       @default(false) @map("is_walk_in")
-  checkedInAt    DateTime      @default(now()) @map("checked_in_at") @db.Timestamptz(6)
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String        @unique @map("user_id") @db.Uuid
+  checkedInBy    String        @map("checked_in_by") @db.Uuid
+  checkInMethod  CheckInMethod @map("check_in_method")
+  isWalkIn       Boolean       @default(false) @map("is_walk_in")
+  checkedInAt    DateTime      @default(now()) @map("checked_in_at") @db.Timestamptz(6)
 
-  // Relations
-  user           Profile       @relation("CheckedInUser", fields: [userId], references: [id], onDelete: Cascade)
-  staff          Profile       @relation("CheckInStaff", fields: [checkedInBy], references: [id])
+  // Relations
+  user           Profile       @relation("CheckedInUser", fields: [userId], references: [id], onDelete: Cascade)
+  staff          Profile       @relation("CheckInStaff", fields: [checkedInBy], references: [id])
 
-  @@index([userId])
-  @@index([checkedInBy])
-  @@index([checkedInAt])
-  @@index([isWalkIn])
-  @@map("check_ins")
+  @@index([userId])
+  @@index([checkedInBy])
+  @@index([checkedInAt])
+  @@index([isWalkIn])
+  @@map("check_ins")
 }
 
 // =============================================================================
@@ -337,338 +349,325 @@ model CheckIn {
 // =============================================================================
 
 model Project {
-  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title          String            @db.Text
-  description    String            @db.Text
-  piId           String            @map("pi_id") @db.Uuid
-  piRole         String?           @map("pi_role") @db.Text
-  department     String?           @db.Text
-  stage          ProjectStage
-  classification String            @default("Unclassified") @db.Text
-  researchAreas  String[]          @map("research_areas")
-  keywords       String[]
-  students       String[]
-  seeking        String[]
-  demoSchedule   String?           @map("demo_schedule") @db.Text
-  interestedCount Int              @default(0) @map("interested_count")
-  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title          String            @db.Text
+  description    String            @db.Text
+  piId           String            @map("pi_id") @db.Uuid
+  piRole         String?           @map("pi_role") @db.Text
+  department     String?           @db.Text
+  stage          ProjectStage
+  classification String            @default("Unclassified") @db.Text
+  researchAreas  String[]          @map("research_areas")
+  keywords       String[]
+  students       String[]
+  seeking        String[]
+  demoSchedule   String?           @map("demo_schedule") @db.Text
+  interestedCount Int              @default(0) @map("interested_count")
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  pi             Profile           @relation("ProjectPI", fields: [piId], references: [id])
-  bookmarks      ProjectBookmark[]
-  interests      ProjectInterest[]
+  // Relations
+  pi             Profile           @relation("ProjectPI", fields: [piId], references: [id])
+  bookmarks      ProjectBookmark[]
+  interests      ProjectInterest[]
 
-  @@index([piId])
-  @@index([stage])
-  @@index([classification])
-  @@index([department])
-  @@index([researchAreas], type: Gin)
-  @@index([seeking], type: Gin)
-  @@index([keywords], type: Gin)
-  @@map("projects")
+  @@index([piId])
+  @@index([stage])
+  @@index([classification])
+  @@index([department])
+  @@index([researchAreas], type: Gin)
+  @@index([seeking], type: Gin)
+  @@index([keywords], type: Gin)
+  @@map("projects")
 }
 
 model ProjectBookmark {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  projectId String   @map("project_id") @db.Uuid
-  notes     String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  notes     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  // Relations
-  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // Relations
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, projectId])
-  @@index([userId])
-  @@index([projectId])
-  @@map("project_bookmarks")
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+  @@map("project_bookmarks")
 }
 
 model ProjectInterest {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  projectId String   @map("project_id") @db.Uuid
-  message   String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  message   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  // Relations
-  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // Relations
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, projectId])
-  @@index([userId])
-  @@index([projectId])
-  @@map("project_interests")
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+  @@map("project_interests")
 }
 
 model Opportunity {
-  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type                OpportunityType
-  title               String                @db.Text
-  description         String?               @db.Text
-  sponsorOrganization String?               @map("sponsor_organization") @db.Text
-  sponsorContactId    String?               @map("sponsor_contact_id") @db.Uuid
-  postedBy            String                @map("posted_by") @db.Uuid
-  requirements        String?               @db.Text
-  benefits            String?               @db.Text
-  location            String?               @db.Text
-  duration            String?               @db.Text
-  deadline            DateTime?             @db.Timestamptz(6)
-  dodAlignment        String[]              @map("dod_alignment")
-  status              OpportunityStatus     @default(active)
-  featured            Boolean               @default(false)
-  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                OpportunityType
+  title               String                @db.Text
+  description         String?               @db.Text
+  sponsorOrganization String?               @map("sponsor_organization") @db.Text
+  sponsorContactId    String?               @map("sponsor_contact_id") @db.Uuid
+  postedBy            String                @map("posted_by") @db.Uuid
+  requirements        String?               @db.Text
+  benefits            String?               @db.Text
+  location            String?               @db.Text
+  duration            String?               @db.Text
+  deadline            DateTime?             @db.Timestamptz(6)
+  dodAlignment        String[]              @map("dod_alignment")
+  status              OpportunityStatus     @default(active)
+  featured            Boolean               @default(false)
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  poster              Profile               @relation("OpportunityPoster", fields: [postedBy], references: [id])
-  interests           OpportunityInterest[]
+  // Relations
+  poster              Profile               @relation("OpportunityPoster", fields: [postedBy], references: [id])
+  interests           OpportunityInterest[]
 
-  @@index([type])
-  @@index([status])
-  @@index([postedBy])
-  @@index([deadline])
-  @@index([featured])
-  @@index([dodAlignment], type: Gin)
-  @@map("opportunities")
+  @@index([type])
+  @@index([status])
+  @@index([postedBy])
+  @@index([deadline])
+  @@index([featured])
+  @@index([dodAlignment], type: Gin)
+  @@map("opportunities")
 }
 
 model OpportunityInterest {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  opportunityId String   @map("opportunity_id") @db.Uuid
-  userId        String   @map("user_id") @db.Uuid
-  status        String   @default("interested") @db.Text
-  message       String?  @db.Text
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  opportunityId String   @map("opportunity_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  status        String   @default("interested") @db.Text
+  message       String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  user          Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  user          Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([opportunityId, userId])
-  @@index([opportunityId])
-  @@index([userId])
-  @@index([status])
-  @@map("opportunity_interests")
+  @@unique([userId, opportunityId])
+  @@index([userId])
+  @@index([opportunityId])
+  @@map("opportunity_interests")
 }
 
 // =============================================================================
-// 5. INDUSTRY PARTNERS
+// 5. PARTNER & INDUSTRY MANAGEMENT
 // =============================================================================
 
-model IndustryPartner {
-  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyName           String            @unique @map("company_name") @db.Text
-  description           String?           @db.Text
-  logoUrl               String?           @map("logo_url") @db.Text
-  websiteUrl            String?           @map("website_url") @db.Text
-  organizationType      String?           @map("organization_type") @db.Text
-  primaryContactName    String?           @map("primary_contact_name") @db.Text
-  primaryContactTitle   String?           @map("primary_contact_title") @db.Text
-  primaryContactEmail   String?           @map("primary_contact_email") @db.Text
-  primaryContactPhone   String?           @map("primary_contact_phone") @db.Text
-  technologyFocusAreas  String[]          @map("technology_focus_areas")
-  seekingCollaboration  String[]          @map("seeking_collaboration")
-  dodSponsors           String?           @map("dod_sponsors") @db.Text
-  boothLocation         String?           @map("booth_location") @db.Text
-  teamMembers           Json?             @map("team_members")
-  hideContactInfo       Boolean           @default(false) @map("hide_contact_info")
-  createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+model Partner {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String            @unique @db.Text
+  description    String?           @db.Text
+  contactName    String?           @map("contact_name") @db.Text
+  contactEmail   String?           @map("contact_email") @db.Text
+  websiteUrl     String?           @map("website_url") @db.Text
+  logoUrl        String?           @map("logo_url") @db.Text
+  partnershipType String?           @map("partnership_type") @db.Text
+  researchAreas  String[]          @map("research_areas")
+  isFeatured     Boolean           @default(false) @map("is_featured")
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  favorites             PartnerFavorite[]
+  // Relations
+  favorites      PartnerFavorite[]
 
-  @@index([companyName])
-  @@index([organizationType])
-  @@index([technologyFocusAreas], type: Gin)
-  @@index([seekingCollaboration], type: Gin)
-  @@map("industry_partners")
+  @@index([isFeatured])
+  @@index([partnershipType])
+  @@index([researchAreas], type: Gin)
+  @@map("partners")
 }
 
 model PartnerFavorite {
-  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String          @map("user_id") @db.Uuid
-  partnerId String          @map("partner_id") @db.Uuid
-  notes     String?         @db.Text
-  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  partnerId String   @map("partner_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  // Relations
-  user      Profile         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  partner   IndustryPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  // Relations
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partner   Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, partnerId])
-  @@index([userId])
-  @@index([partnerId])
-  @@map("partner_favorites")
+  @@unique([userId, partnerId])
+  @@index([userId])
+  @@index([partnerId])
+  @@map("partner_favorites")
 }
 
 // =============================================================================
-// 6. MESSAGING
+// 6. MESSAGING & NOTIFICATIONS
 // =============================================================================
 
 model Conversation {
-  id        String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  createdAt DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subject       String?          @db.Text
+  isGroup       Boolean          @default(false) @map("is_group")
+  lastMessageAt DateTime         @default(now()) @map("last_message_at") @db.Timestamptz(6)
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  participants ConversationParticipant[]
-  messages     Message[]
+  // Relations
+  participants  ConversationParticipant[]
+  messages      Message[]
 
-  @@index([updatedAt])
-  @@map("conversations")
+  @@index([lastMessageAt])
+  @@map("conversations")
 }
 
 model ConversationParticipant {
-  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  conversationId String       @map("conversation_id") @db.Uuid
-  userId         String       @map("user_id") @db.Uuid
-  joinedAt       DateTime     @default(now()) @map("joined_at") @db.Timestamptz(6)
-  lastReadAt     DateTime?    @map("last_read_at") @db.Timestamptz(6)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  joinedAt       DateTime  @default(now()) @map("joined_at") @db.Timestamptz(6)
+  lastViewedAt   DateTime? @map("last_viewed_at") @db.Timestamptz(6)
+  isAdmin        Boolean   @default(false) @map("is_admin")
 
-  // Relations
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user           Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations
+  conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([conversationId, userId])
-  @@index([conversationId])
-  @@index([userId])
-  @@map("conversation_participants")
+  @@unique([conversationId, userId])
+  @@index([userId, lastViewedAt])
+  @@map("conversation_participants")
 }
 
 model Message {
-  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  conversationId String               @map("conversation_id") @db.Uuid
-  senderId       String               @map("sender_id") @db.Uuid
-  content        String               @db.Text
-  isEdited       Boolean              @default(false) @map("is_edited")
-  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  senderId       String    @map("sender_id") @db.Uuid
+  content        String    @db.Text
+  isRead         Boolean   @default(false) @map("is_read")
+  sentAt         DateTime  @default(now()) @map("sent_at") @db.Timestamptz(6)
 
-  // Relations
-  conversation   Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         Profile              @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  readReceipts   MessageReadReceipt[]
+  // Relations
+  conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       Profile          @relation("MessageSender", fields: [senderId], references: [id])
+  readReceipts MessageReadReceipt[]
 
-  @@index([conversationId, createdAt])
-  @@index([senderId, createdAt])
-  @@map("messages")
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([sentAt])
+  @@map("messages")
 }
 
 model MessageReadReceipt {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  messageId String   @map("message_id") @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  readAt    DateTime @default(now()) @map("read_at") @db.Timestamptz(6)
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId     String   @map("message_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  readAt        DateTime @default(now()) @map("read_at") @db.Timestamptz(6)
 
-  // Relations
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations
+  message       Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user          Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([messageId, userId])
-  @@index([messageId])
-  @@index([userId])
-  @@map("message_read_receipts")
+  @@unique([messageId, userId])
+  @@index([userId, readAt])
+  @@map("message_read_receipts")
+}
+
+model Notification {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  type      String      @db.Text // e.g., 'new_message', 'connection_request', 'follow_up_reminder'
+  content   String      @db.Text
+  isRead    Boolean     @default(false) @map("is_read")
+  targetId  String?     @map("target_id") @db.Uuid // ID of the related entity (e.g., ConversationId, ConnectionId)
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  // user      Profile   @relation(fields: [userId], references: [id], onDelete: Cascade) // Assuming Notification entity is implicitly linked to the Profile. If needed, this relation should be added.
+
+  @@index([userId, isRead])
+  @@index([targetId])
+  @@map("notifications")
 }
 
 // =============================================================================
-// 7. ADMIN & INTEGRATION
+// 7. DATA SYNC & OFFLINE QUEUE
 // =============================================================================
 
 model SmartsheetSync {
-  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  syncType       SyncType      @map("sync_type")
-  sheetName      String        @map("sheet_name") @db.Text
-  sheetId        String        @map("sheet_id") @db.Text
-  direction      SyncDirection
-  triggeredBy    String        @map("triggered_by") @db.Uuid
-  status         SyncStatus
-  totalRows      Int           @default(0) @map("total_rows")
-  processedCount Int           @default(0) @map("processed_count")
-  errorCount     Int           @default(0) @map("error_count")
-  errorDetails   String?       @map("error_details") @db.Text
-  startedAt      DateTime      @default(now()) @map("started_at") @db.Timestamptz(6)
-  completedAt    DateTime?     @map("completed_at") @db.Timestamptz(6)
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String          @map("user_id") @db.Uuid
+  syncType       SyncType        @map("sync_type")
+  direction      SyncDirection
+  entityType     String          @map("entity_type") @db.Text // e.g., 'users', 'projects', 'events'
+  status         SyncStatus      @default(pending)
+  processedCount Int             @default(0) @map("processed_count")
+  totalCount     Int             @default(0) @map("total_count")
+  errorDetails   String?         @map("error_details") @db.Text
+  startedAt      DateTime?       @map("started_at") @db.Timestamptz(6)
+  completedAt    DateTime?       @map("completed_at") @db.Timestamptz(6)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  // Relations
-  user           Profile       @relation(fields: [triggeredBy], references: [id])
+  // Relations
+  user           Profile         @relation(fields: [userId], references: [id])
 
-  @@index([sheetName])
-  @@index([startedAt])
-  @@index([status])
-  @@map("smartsheet_sync")
-}
-
-model AuditLog {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventType     String    @map("event_type") @db.Text
-  eventAction   String    @map("event_action") @db.Text
-  userId        String?   @map("user_id") @db.Uuid
-  targetUserId  String?   @map("target_user_id") @db.Uuid
-  resourceType  String?   @map("resource_type") @db.Text
-  resourceId    String?   @map("resource_id") @db.Uuid
-  ipAddress     String?   @map("ip_address") @db.Inet
-  userAgent     String?   @map("user_agent") @db.Text
-  metadata      Json?     @default("{}")
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  user          Profile?  @relation("AuditLogUser", fields: [userId], references: [id])
-  targetUser    Profile?  @relation("AuditLogTarget", fields: [targetUserId], references: [id])
-
-  @@index([eventType])
-  @@index([userId])
-  @@index([createdAt])
-  @@index([resourceType])
-  @@index([ipAddress])
-  @@map("audit_logs")
+  @@index([userId])
+  @@index([status])
+  @@index([syncType, entityType])
+  @@map("smartsheet_syncs")
 }
 
 model OfflineQueue {
-  id            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId        String                @map("user_id") @db.Uuid
-  deviceId      String?               @map("device_id") @db.Text
-  operationType OfflineOperationType  @map("operation_type")
-  operationData Json                  @map("operation_data")
-  status        OfflineQueueStatus    @default(pending)
-  retryCount    Int                   @default(0) @map("retry_count")
-  lastError     String?               @map("last_error") @db.Text
-  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  processedAt   DateTime?             @map("processed_at") @db.Timestamptz(6)
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String          @map("user_id") @db.Uuid
+  operationType OfflineOperationType @map("operation_type")
+  // FIX: Use Prisma 'Json' type for @db.Json native type
+  payload       Json            @db.Json // JSON object containing the data to be synced
+  status        OfflineQueueStatus @default(pending)
+  retryCount    Int             @default(0) @map("retry_count")
+  lastAttemptAt DateTime?       @map("last_attempt_at") @db.Timestamptz(6)
+  errorDetails  String?         @map("error_details") @db.Text
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  // Relations
-  user          Profile               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations
+  user          Profile         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([operationType])
-  @@map("offline_queue")
+  @@index([userId])
+  @@index([status])
+  @@index([operationType])
+  @@map("offline_queue")
 }
 
 // =============================================================================
-// 13. SMARTSHEET INTEGRATION
+// 8. AUDIT AND SYSTEM LOGGING
 // =============================================================================
 
-/// Smartsheet sync log for tracking data synchronization
-model SmartsheetSyncLog {
-  id            String    @id @default(uuid())
-  entityType    String    @map("entity_type")  // 'user', 'rsvp', 'connection', 'analytics'
-  entityId      String    @map("entity_id")
-  sheetId       String    @map("sheet_id")     // Smartsheet sheet ID
-  rowId         String?   @map("row_id")       // Smartsheet row ID (null if not yet created)
-  status        String    @default("pending")   // 'success', 'pending', 'error'
-  errorMessage  String?   @map("error_message") @db.Text
-  retryCount    Int       @default(0) @map("retry_count")
-  lastAttempt   DateTime  @default(now()) @map("last_attempt") @db.Timestamptz(6)
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+model AuditLog {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String          @map("user_id") @db.Uuid
+  targetId      String?         @map("target_id") @db.Uuid
+  entityType    String          @map("entity_type") @db.Text // e.g., 'Profile', 'Project', 'Session'
+  entityId      String          @map("entity_id") @db.Uuid
+  // FIX: 'action' is a String (Text in DB)
+  action        String          @db.Text // e.g., 'CREATE', 'UPDATE', 'DELETE', 'LOGIN'
+  // FIX: 'details' is JSON (Json in DB)
+  details       Json?           @db.Json // JSON object containing before/after data for updates
+  timestamp     DateTime        @default(now()) @db.Timestamptz(6)
 
-  @@index([entityType, entityId])
-  @@index([status])
-  @@index([lastAttempt])
-  @@map("smartsheet_sync_log")
+  // Relations
+  user          Profile         @relation("AuditLogUser", fields: [userId], references: [id])
+  targetUser    Profile?        @relation("AuditLogTarget", fields: [targetId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([timestamp])
+  @@map("audit_logs")
 }

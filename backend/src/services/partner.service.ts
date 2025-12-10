@@ -48,33 +48,31 @@ export async function listPartners(filters: PartnerFilters) {
 
   if (search) {
     where.OR = [
-      { companyName: { contains: search, mode: 'insensitive' } },
+      { name: { contains: search, mode: 'insensitive' } },
       { description: { contains: search, mode: 'insensitive' } },
-      { primaryContactName: { contains: search, mode: 'insensitive' } },
+      { contactName: { contains: search, mode: 'insensitive' } },
     ];
   }
 
   const [partners, total] = await Promise.all([
-    prisma.industryPartner.findMany({
+    prisma.partner.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { companyName: 'asc' },
+      orderBy: { name: 'asc' },
       select: {
         id: true,
-        companyName: true,
+        name: true,
         description: true,
         logoUrl: true,
         websiteUrl: true,
-        organizationType: true,
-        technologyFocusAreas: true,
-        seekingCollaboration: true,
-        boothLocation: true,
-        hideContactInfo: true,
+        partnershipType: true,
+        researchAreas: true,
+        isFeatured: true,
         createdAt: true,
       },
     }),
-    prisma.industryPartner.count({ where }),
+    prisma.partner.count({ where }),
   ]);
 
   return {
@@ -92,25 +90,19 @@ export async function listPartners(filters: PartnerFilters) {
  * Get partner by ID
  */
 export async function getPartnerById(partnerId: string, userId?: string) {
-  const partner = await prisma.industryPartner.findUnique({
+  const partner = await prisma.partner.findUnique({
     where: { id: partnerId },
     select: {
       id: true,
-      companyName: true,
+      name: true,
       description: true,
       logoUrl: true,
       websiteUrl: true,
-      organizationType: true,
-      primaryContactName: true,
-      primaryContactTitle: true,
-      primaryContactEmail: true,
-      primaryContactPhone: true,
-      technologyFocusAreas: true,
-      seekingCollaboration: true,
-      dodSponsors: true,
-      boothLocation: true,
-      teamMembers: true,
-      hideContactInfo: true,
+      partnershipType: true,
+      contactName: true,
+      contactEmail: true,
+      researchAreas: true,
+      isFeatured: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -120,11 +112,7 @@ export async function getPartnerById(partnerId: string, userId?: string) {
     throw new NotFoundError('Partner not found');
   }
 
-  // Hide contact info if privacy setting is enabled
-  if (partner.hideContactInfo) {
-    partner.primaryContactEmail = null;
-    partner.primaryContactPhone = null;
-  }
+  // Partner privacy logic removed - simplified model
 
   // Check if user has favorited this partner
   let isFavorited = false;
@@ -151,7 +139,7 @@ export async function getPartnerById(partnerId: string, userId?: string) {
  */
 export async function favoritePartner(userId: string, partnerId: string, notes?: string) {
   // Check if partner exists
-  const partner = await prisma.industryPartner.findUnique({
+  const partner = await prisma.partner.findUnique({
     where: { id: partnerId },
   });
 
@@ -177,16 +165,15 @@ export async function favoritePartner(userId: string, partnerId: string, notes?:
     data: {
       userId,
       partnerId,
-      notes: notes || null,
     },
     include: {
       partner: {
         select: {
           id: true,
-          companyName: true,
+          name: true,
           logoUrl: true,
-          organizationType: true,
-          technologyFocusAreas: true,
+          partnershipType: true,
+          researchAreas: true,
         },
       },
     },
@@ -232,14 +219,13 @@ export async function getUserFavorites(userId: string) {
       partner: {
         select: {
           id: true,
-          companyName: true,
+          name: true,
           description: true,
           logoUrl: true,
           websiteUrl: true,
-          organizationType: true,
-          technologyFocusAreas: true,
-          seekingCollaboration: true,
-          boothLocation: true,
+          partnershipType: true,
+          researchAreas: true,
+          isFeatured: true,
         },
       },
     },

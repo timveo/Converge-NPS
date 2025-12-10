@@ -1,0 +1,32 @@
+# Ignore node modules everywhere except what Docker picks per service
+**/node_modules/
+
+# Ignore frontend + backend build output
+frontend/dist
+backend/dist
+
+# Ignores virtual envs or python junk from your scripts
+__pycache__/
+*.pyc
+
+# Env files
+.env
+.env.*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Git metadata (optional, but usually safe)
+.git
+.gitignore
+
+# Docker cache files
+docker-compose.override.yml

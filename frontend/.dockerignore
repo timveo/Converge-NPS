@@ -1,53 +1,13 @@
-# Dependencies
+# Ignore noise & local-only files
 node_modules
-npm-debug.log
-yarn-error.log
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Build outputs
 dist
-build
+dev-dist
+.env
 *.log
 
-# IDE
-.vscode
-.idea
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Git
+# Ignore Git stuff
 .git
 .gitignore
 
-# Tests
-tests
-*.test.ts
-*.test.tsx
-*.spec.ts
-*.spec.tsx
-coverage
-
-# Documentation
-README.md
-docs
-
-# CI/CD
-.github
-.gitlab-ci.yml
-
-# Docker
-Dockerfile
-.dockerignore
-docker-compose.yml
-
-# Vercel
-.vercel
+# DO NOT IGNORE Dockerfile OR nginx.conf
+# DO NOT IGNORE docker-compose.yml

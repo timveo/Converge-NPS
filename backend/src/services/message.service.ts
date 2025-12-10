@@ -23,33 +23,38 @@ export const updateMessageStatusSchema = z.object({
  * Get or create conversation between two users
  */
 export async function getOrCreateConversation(userId1: string, userId2: string) {
-  // Check if conversation already exists (in either direction)
-  let conversation = await prisma.conversation.findFirst({
+  // Check if conversation already exists between these two users
+  const existingConversation = await prisma.conversation.findFirst({
     where: {
-      OR: [
-        { AND: [{ user1Id: userId1 }, { user2Id: userId2 }] },
-        { AND: [{ user1Id: userId2 }, { user2Id: userId1 }] },
-      ],
+      isGroup: false,
+      participants: {
+        every: {
+          userId: {
+            in: [userId1, userId2]
+          }
+        }
+      }
     },
     include: {
-      user1: {
-        select: {
-          id: true,
-          fullName: true,
-          avatarUrl: true,
-          organization: true,
-        },
-      },
-      user2: {
-        select: {
-          id: true,
-          fullName: true,
-          avatarUrl: true,
-          organization: true,
+      participants: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              avatarUrl: true,
+              organization: true,
+            },
+          },
         },
       },
     },
   });
+
+  // Filter for conversations with exactly these two participants
+  const conversation = existingConversation?.participants.length === 2 
+    ? existingConversation 
+    : null;
 
   if (conversation) {
     return conversation;
@@ -66,32 +71,61 @@ export async function getOrCreateConversation(userId1: string, userId2: string) 
   }
 
   // Create new conversation
-  conversation = await prisma.conversation.create({
+  const newConversation = await prisma.conversation.create({
     data: {
-      user1Id: userId1,
-      user2Id: userId2,
+      isGroup: false,
+      subject: '',
     },
     include: {
-      user1: {
-        select: {
-          id: true,
-          fullName: true,
-          avatarUrl: true,
-          organization: true,
-        },
-      },
-      user2: {
-        select: {
-          id: true,
-          fullName: true,
-          avatarUrl: true,
-          organization: true,
+      participants: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              avatarUrl: true,
+              organization: true,
+            },
+          },
         },
       },
     },
   });
 
-  return conversation;
+  // Add participants to the conversation
+  await prisma.conversationParticipant.createMany({
+    data: [
+      {
+        conversationId: newConversation.id,
+        userId: userId1,
+      },
+      {
+        conversationId: newConversation.id,
+        userId: userId2,
+      },
+    ],
+  });
+
+  // Refetch conversation with participants
+  const updatedConversation = await prisma.conversation.findUnique({
+    where: { id: newConversation.id },
+    include: {
+      participants: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              avatarUrl: true,
+              organization: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return updatedConversation;
 }
 
 /**
@@ -115,15 +149,16 @@ export async function sendMessage(senderId: string, data: {
   }
 
   // Verify sender is part of the conversation
-  const conversation = await prisma.conversation.findUnique({
-    where: { id: conversationId },
+  const participant = await prisma.conversationParticipant.findUnique({
+    where: {
+      conversationId_userId: {
+        conversationId,
+        userId: senderId,
+      },
+    },
   });
 
-  if (!conversation) {
-    throw new Error('Conversation not found');
-  }
-
-  if (conversation.user1Id !== senderId && conversation.user2Id !== senderId) {
+  if (!participant) {
     throw new Error('Unauthorized to send message in this conversation');
   }
 
@@ -133,7 +168,6 @@ export async function sendMessage(senderId: string, data: {
       conversationId,
       senderId,
       content: data.content,
-      status: 'sent',
     },
     include: {
       sender: {
@@ -145,11 +179,12 @@ export async function sendMessage(senderId: string, data: {
       },
       conversation: {
         include: {
-          user1: {
-            select: { id: true, fullName: true },
-          },
-          user2: {
-            select: { id: true, fullName: true },
+          participants: {
+            include: {
+              user: {
+                select: { id: true, fullName: true },
+              },
+            },
           },
         },
       },
@@ -177,15 +212,16 @@ export async function getConversationMessages(
   } = {}
 ) {
   // Verify user is part of conversation
-  const conversation = await prisma.conversation.findUnique({
-    where: { id: conversationId },
+  const participant = await prisma.conversationParticipant.findUnique({
+    where: {
+      conversationId_userId: {
+        conversationId,
+        userId,
+      },
+    },
   });
 
-  if (!conversation) {
-    throw new Error('Conversation not found');
-  }
-
-  if (conversation.user1Id !== userId && conversation.user2Id !== userId) {
+  if (!participant) {
     throw new Error('Unauthorized to view this conversation');
   }
 
@@ -198,7 +234,7 @@ export async function getConversationMessages(
     });
 
     if (beforeMessage) {
-      where.createdAt = { lt: beforeMessage.createdAt };
+      where.createdAt = { lt: beforeMessage.sentAt };
     }
   }
 
@@ -213,91 +249,97 @@ export async function getConversationMessages(
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { sentAt: 'desc' },
     take: options.limit || 50,
   });
 
   return messages.reverse(); // Return in chronological order
 }
-
-/**
+ /**
  * Get user's conversations
  */
 export async function getUserConversations(userId: string) {
-  const conversations = await prisma.conversation.findMany({
-    where: {
-      OR: [{ user1Id: userId }, { user2Id: userId }],
-    },
+  // Get conversation participants for this user
+  const userParticipants = await prisma.conversationParticipant.findMany({
+    where: { userId },
     include: {
-      user1: {
-        select: {
-          id: true,
-          fullName: true,
-          avatarUrl: true,
-          organization: true,
-        },
-      },
-      user2: {
-        select: {
-          id: true,
-          fullName: true,
-          avatarUrl: true,
-          organization: true,
-        },
-      },
-      messages: {
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        select: {
-          id: true,
-          content: true,
-          createdAt: true,
-          senderId: true,
-          status: true,
-        },
-      },
-      _count: {
-        select: {
+      conversation: {
+        include: {
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  avatarUrl: true,
+                  organization: true,
+                },
+              },
+            },
+          },
           messages: {
-            where: {
-              senderId: { not: userId },
-              status: { not: 'read' },
+            orderBy: { sentAt: 'desc' },
+            take: 1,
+            select: {
+              id: true,
+              sentAt: true,
+              isRead: true,
+            },
+          },
+          _count: {
+            select: {
+              messages: {
+                where: {
+                  isRead: false,
+                  senderId: { not: userId }, // Only count unread messages from others
+                },
+              },
             },
           },
         },
       },
     },
-    orderBy: { lastMessageAt: 'desc' },
   });
 
-  // Transform to include other participant and unread count
-  return conversations.map(conv => {
-    const otherUser = conv.user1Id === userId ? conv.user2 : conv.user1;
+  // Transform the data to match expected format
+  const conversations = userParticipants.map(p => {
+    const conversation = p.conversation;
+    const otherParticipant = conversation.participants.find(
+      participant => participant.userId !== userId
+    );
+    const otherUser = otherParticipant?.user;
+    const lastMessage = conversation.messages[0];
+
     return {
-      id: conv.id,
+      id: conversation.id,
       otherUser,
-      lastMessage: conv.messages[0] || null,
-      unreadCount: conv._count.messages,
-      lastMessageAt: conv.lastMessageAt,
+      lastMessage,
+      unreadCount: conversation._count.messages,
+      lastMessageAt: conversation.updatedAt,
     };
   });
+
+  return conversations.sort((a, b) => 
+    (b.lastMessage?.sentAt?.getTime() || 0) - (a.lastMessage?.sentAt?.getTime() || 0)
+  );
 }
 
 /**
- * Mark messages as read
+ * Mark conversation as read
  */
-export async function markMessagesAsRead(userId: string, conversationId: string) {
-  // Verify user is part of conversation
-  const conversation = await prisma.conversation.findUnique({
-    where: { id: conversationId },
+export async function markConversationAsRead(conversationId: string, userId: string) {
+  // Check if user is participant in conversation
+  const participant = await prisma.conversationParticipant.findUnique({
+    where: {
+      conversationId_userId: {
+        conversationId,
+        userId,
+      },
+    },
   });
 
-  if (!conversation) {
-    throw new Error('Conversation not found');
-  }
-
-  if (conversation.user1Id !== userId && conversation.user2Id !== userId) {
-    throw new Error('Unauthorized');
+  if (!participant) {
+    throw new Error('Not a participant in this conversation');
   }
 
   // Mark all messages from other user as read
@@ -305,10 +347,10 @@ export async function markMessagesAsRead(userId: string, conversationId: string)
     where: {
       conversationId,
       senderId: { not: userId },
-      status: { not: 'read' },
+      isRead: false,
     },
     data: {
-      status: 'read',
+      isRead: true,
     },
   });
 
@@ -316,12 +358,12 @@ export async function markMessagesAsRead(userId: string, conversationId: string)
 }
 
 /**
- * Update message status (for delivery/read receipts)
+ * Update message read status
  */
-export async function updateMessageStatus(messageId: string, status: 'sent' | 'delivered' | 'read') {
+export async function updateMessageReadStatus(messageId: string, isRead: boolean) {
   const message = await prisma.message.update({
     where: { id: messageId },
-    data: { status },
+    data: { isRead },
   });
 
   return message;
@@ -332,24 +374,39 @@ export async function updateMessageStatus(messageId: string, status: 'sent' | 'd
  */
 export async function deleteConversation(userId: string, conversationId: string) {
   // Verify user is part of conversation
-  const conversation = await prisma.conversation.findUnique({
-    where: { id: conversationId },
+  const participant = await prisma.conversationParticipant.findUnique({
+    where: {
+      conversationId_userId: {
+        conversationId,
+        userId,
+      },
+    },
   });
 
-  if (!conversation) {
-    throw new Error('Conversation not found');
+  if (!participant) {
+    throw new Error('Not a participant in this conversation');
   }
 
-  if (conversation.user1Id !== userId && conversation.user2Id !== userId) {
-    throw new Error('Unauthorized to delete this conversation');
-  }
-
-  // In a production app, you'd implement a soft delete mechanism
-  // For MVP, we'll just delete the conversation
-  // Note: This will cascade delete all messages due to Prisma schema
-  await prisma.conversation.delete({
-    where: { id: conversationId },
+  // Remove user from conversation (delete participant record)
+  await prisma.conversationParticipant.delete({
+    where: {
+      conversationId_userId: {
+        conversationId,
+        userId,
+      },
+    },
   });
+
+  // If no more participants, delete the conversation and messages
+  const remainingParticipants = await prisma.conversationParticipant.count({
+    where: { conversationId },
+  });
+
+  if (remainingParticipants === 0) {
+    await prisma.conversation.delete({
+      where: { id: conversationId },
+    });
+  }
 
   return { success: true };
 }
@@ -361,13 +418,14 @@ export async function getUnreadCount(userId: string) {
   const count = await prisma.message.count({
     where: {
       conversation: {
-        OR: [
-          { user1Id: userId },
-          { user2Id: userId },
-        ],
+        participants: {
+          some: {
+            userId,
+          },
+        },
       },
       senderId: { not: userId },
-      status: { not: 'read' },
+      isRead: false,
     },
   });
 
