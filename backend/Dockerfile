@@ -1,32 +1,41 @@
-# Stage 1: Builder
-FROM node:18-bullseye AS backend-builder
+# Stage 1: Dependencies (prod only)
+FROM node:18-bullseye-slim AS deps
 WORKDIR /app/backend
 
-COPY backend/package*.json /app/backend/
+COPY backend/package*.json ./
+RUN npm ci --only=production
+
+# Stage 2: Builder
+FROM node:18-bullseye-slim AS builder
+WORKDIR /app/backend
+
+COPY backend/package*.json ./
 RUN npm ci
 
-COPY backend/ /app/backend/
+COPY backend/ ./
 
-RUN npx prisma generate
-RUN npm run build
+RUN npx prisma generate \
+ && npm run build
 
-# Stage 2: Runtime
-FROM node:18-bullseye
+# Stage 3: Runtime (small, stable, glibc, OpenSSL)
+FROM node:18-bullseye-slim AS runtime
 WORKDIR /app/backend
 
+# ADD curl here so the healthcheck works
 RUN apt-get update && apt-get install -y \
-    libssl1.1 bash dumb-init \
-    postgresql-client \
+    dumb-init bash postgresql-client curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=backend-builder /app/backend/node_modules /app/backend/node_modules
-COPY --from=backend-builder /app/backend/dist /app/backend/dist
-COPY --from=backend-builder /app/backend/package*.json /app/backend/
-COPY --from=backend-builder /app/backend/prisma /app/backend/prisma
-COPY --from=backend-builder /app/backend/scripts /app/backend/scripts
-COPY --from=backend-builder /app/backend/.env.example /app/backend/
+# Copy node_modules INCLUDING generated Prisma client
+COPY --from=builder /app/backend/node_modules ./node_modules
 
-RUN chmod +x /app/backend/scripts/docker-entrypoint.sh
+# Copy build output and other required files
+COPY --from=builder /app/backend/dist ./dist
+COPY --from=builder /app/backend/prisma ./prisma
+COPY --from=builder /app/backend/package*.json ./
+COPY --from=builder /app/backend/scripts ./scripts
+
+RUN chmod +x ./scripts/docker-entrypoint.sh
 
 ENTRYPOINT ["dumb-init", "--", "/app/backend/scripts/docker-entrypoint.sh"]
 CMD ["node", "dist/server.js"]

@@ -1,37 +1,24 @@
 # Stage 1: Build
-FROM node:18-bullseye AS builder
+FROM node:18-alpine AS builder
+WORKDIR /app/frontend
 
-WORKDIR /app
-
-# Install dependencies
 COPY frontend/package*.json ./
 RUN npm ci
 
-# Copy frontend source
 COPY frontend/ ./
-
-# Pass build arguments
-ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-
-# Build production frontend
 RUN npm run build
 
-# Stage 2: Runtime
-FROM node:18-bullseye
+# Stage 2: Nginx runtime
+FROM nginx:1.27-alpine AS runtime
 
-WORKDIR /app
+# Remove default nginx files
+RUN rm -rf /usr/share/nginx/html/*
 
-# Install serve globally
-RUN npm install -g serve
+# Copy built files
+COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 
-# Copy build artifacts
-COPY --from=builder /app/dist ./dist
+# Copy custom nginx config if exists
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Set environment
-ENV PORT=5173
-
-EXPOSE 5173
-
-# Start frontend
-CMD ["serve", "-s", "dist", "-l", "5173", "--single"]
+# ✨ The missing line — forces nginx to start properly
+CMD ["nginx", "-g", "daemon off;"]

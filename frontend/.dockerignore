@@ -1,4 +1,13 @@
+# Ignore noise & local-only files
 node_modules
 dist
+dev-dist
 .env
 *.log
+
+# Ignore Git stuff
+.git
+.gitignore
+
+# DO NOT IGNORE Dockerfile OR nginx.conf
+# DO NOT IGNORE docker-compose.yml

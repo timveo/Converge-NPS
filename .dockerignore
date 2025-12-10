@@ -1,27 +1,32 @@
-# Git metadata
-.git
-.gitignore
+# Ignore node modules everywhere except what Docker picks per service
+**/node_modules/
 
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-
-# Node modules (they are handled per service)
-node_modules/
-
-# Build artifacts (frontend & backend will build inside their own Dockerfiles)
+# Ignore frontend + backend build output
 frontend/dist
 backend/dist
 
-# Env files / secrets (optional)
-*.env
+# Ignores virtual envs or python junk from your scripts
+__pycache__/
+*.pyc
+
+# Env files
+.env
 .env.*
 
-# Docker-related files not needed inside build context
-docker-compose.override.yml
-docker-compose.prod.yml
-
-# OS files
+# OS / IDE
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Git metadata (optional, but usually safe)
+.git
+.gitignore
+
+# Docker cache files
+docker-compose.override.yml

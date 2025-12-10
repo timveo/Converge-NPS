@@ -1,4 +1,24 @@
-node_modules
-dist
+# Node modules (should be installed inside Docker)
+node_modules/
+
+# Build output
+dist/
+
+# Local env files
 .env
+.env.*
+
+# Logs
 *.log
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+
+# Git metadata (not needed in build context)
+.git
+.gitignore
+
+# npm/yarn/pnpm leftovers
+npm-debug.log*
+yarn-error.log*

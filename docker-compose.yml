@@ -3,13 +3,12 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-      args:
-        DATABASE_URL: postgresql://postgres:postgres@postgres:5432/converge_nps?schema=public
     container_name: converge-nps-backend
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: development
+      HOST: 0.0.0.0
       PORT: 3000
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/converge_nps?schema=public
       POSTGRES_HOST: postgres
@@ -23,6 +22,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 
   frontend:
     build:
@@ -32,12 +37,13 @@ services:
         VITE_API_BASE_URL: http://localhost:3000/api/v1
     container_name: converge-nps-frontend
     ports:
-      - "5173:5173"
+      - "5173:80"
     environment:
       NODE_ENV: development
       VITE_API_BASE_URL: http://localhost:3000/api/v1
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   postgres:
     image: postgres:15
@@ -49,13 +55,13 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
@@ -63,13 +69,13 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
-    volumes:
-      - redis_data:/data
 
 volumes:
   postgres_data:
