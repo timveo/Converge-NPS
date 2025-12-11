@@ -12,6 +12,7 @@ async function main() {
     console.log('Clearing existing data...');
     await prisma.projectInterest.deleteMany();
     await prisma.message.deleteMany();
+    await prisma.conversationParticipant.deleteMany();
     await prisma.conversation.deleteMany();
     await prisma.rsvp.deleteMany();
     await prisma.connection.deleteMany();
@@ -19,6 +20,10 @@ async function main() {
     await prisma.session.deleteMany();
     await prisma.opportunity.deleteMany();
     await prisma.project.deleteMany();
+    await prisma.userRole.deleteMany();
+    await prisma.userPassword.deleteMany();
+    await prisma.emailVerification.deleteMany();
+    await prisma.userSession.deleteMany();
     await prisma.profile.deleteMany();
   }
 
@@ -111,6 +116,20 @@ async function main() {
     ],
   });
   console.log('✅ Created password records');
+
+  // Create user roles
+  console.log('Creating user roles...');
+  await prisma.userRole.createMany({
+    data: [
+      { userId: staff.id, role: 'admin' },
+      { userId: staff.id, role: 'staff' },
+      { userId: student1.id, role: 'student' },
+      { userId: student2.id, role: 'student' },
+      { userId: faculty.id, role: 'faculty' },
+      { userId: industry1.id, role: 'industry' },
+    ],
+  });
+  console.log('✅ Created user roles');
 
   // Generate QR codes for users
   console.log('Generating QR codes...');
