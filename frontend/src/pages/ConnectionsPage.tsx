@@ -107,7 +107,18 @@ export default function ConnectionsPage() {
     try {
       const response = await api.get('/connections/recommendations');
       const data = (response as any).data || [];
-      setRecommendations(data.slice(0, 3));
+      const mapped = data.map((rec: any) => ({
+        id: rec.id,
+        full_name: rec.fullName || rec.full_name || 'Unknown',
+        role: rec.role || '',
+        organization: rec.organization || '',
+        acceleration_interests: rec.accelerationInterests || rec.acceleration_interests || [],
+        score: rec.matchScore || rec.score || 0,
+        sharedInterests: rec.matchReasons || rec.sharedInterests || [],
+        mutualConnections: rec.mutualConnections || 0,
+        sameOrganization: rec.sameOrganization || false,
+      }));
+      setRecommendations(mapped.slice(0, 3));
     } catch (error) {
       console.error('Error fetching recommendations:', error);
     }
@@ -130,7 +141,7 @@ export default function ConnectionsPage() {
   const fetchConnections = async () => {
     try {
       const response = await api.get('/connections');
-      const data = (response as any).data || [];
+      const data = (response as any).connections || (response as any).data || [];
 
       const mappedConnections: Connection[] = data.map((conn: any) => ({
         id: conn.id,
