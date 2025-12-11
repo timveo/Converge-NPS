@@ -13,8 +13,32 @@ import {
   Database,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 
-const importJobs = [
+type ImportType = 'partners' | 'projects' | 'sessions' | 'opportunities' | 'attendees';
+
+interface ImportSummary {
+  imported: number;
+  updated: number;
+  failed: number;
+  errors?: Array<{ message?: string }>;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+interface ImportJob {
+  id: string;
+  type: string;
+  status: 'completed' | 'failed';
+  records: number;
+  lastRun: string;
+}
+
+const initialImportJobs: ImportJob[] = [
   {
     id: '1',
     type: 'Industry Partners',
@@ -38,16 +62,51 @@ const importJobs = [
   },
 ];
 
-export default function SmartsheetPage() {
-  const [importing, setImporting] = useState(false);
+const importOptions: Array<{ type: ImportType; label: string; description: string }> = [
+  { type: 'partners', label: 'Industry Partners', description: 'Company listings from Smartsheet' },
+  { type: 'projects', label: 'Research Projects', description: 'Academic project catalog' },
+  { type: 'sessions', label: 'Event Schedule', description: 'Sessions & agenda updates' },
+  { type: 'opportunities', label: 'Opportunities', description: 'Funding & internship posts' },
+  { type: 'attendees', label: 'Attendees', description: 'People directory & QR codes' },
+];
 
-  const handleImport = async (type: string) => {
-    setImporting(true);
-    // TODO: API call
-    setTimeout(() => {
-      toast.success(`${type} imported successfully!`);
-      setImporting(false);
-    }, 2000);
+export default function SmartsheetPage() {
+  const [importing, setImporting] = useState<ImportType | null>(null);
+  const [importJobs, setImportJobs] = useState<ImportJob[]>(initialImportJobs);
+
+  const handleImport = async (option: { type: ImportType; label: string }) => {
+    setImporting(option.type);
+    try {
+      const response = await api.post<ApiResponse<ImportSummary>>(`/admin/smartsheet/import/${option.type}`);
+      const result = response.data;
+
+      const summary =
+        `Import complete for ${option.label}\n\n` +
+        `Imported: ${result?.imported ?? 0}\n` +
+        `Updated: ${result?.updated ?? 0}\n` +
+        `Failed: ${result?.failed ?? 0}` +
+        (result?.errors && result.errors.length > 0
+          ? `\n\nErrors:\n${result.errors.slice(0, 3).map(e => e.message).join('\n')}`
+          : '');
+
+      toast.success(summary.replace(/\n/g, ' '));
+
+      const completedCount = (result?.imported ?? 0) + (result?.updated ?? 0);
+      setImportJobs(prev => [
+        {
+          id: crypto.randomUUID(),
+          type: option.label,
+          status: result.failed > 0 ? 'failed' : 'completed',
+          records: completedCount,
+          lastRun: new Date().toLocaleString(),
+        },
+        ...prev.slice(0, 4),
+      ]);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || `Failed to import ${option.label}`);
+    } finally {
+      setImporting(null);
+    }
   };
 
   return (
@@ -97,34 +156,26 @@ export default function SmartsheetPage() {
               </div>
             </CardHeader>
             <CardContent className="p-3 md:p-6 pt-0 space-y-2 md:space-y-3">
-              <Button
-                onClick={() => handleImport('Industry Partners')}
-                disabled={importing}
-                className="w-full h-10 md:h-11 text-sm"
-              >
-                {importing ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4 mr-2" />
-                )}
-                Import Industry Partners
-              </Button>
-              <Button
-                onClick={() => handleImport('Research Projects')}
-                disabled={importing}
-                className="w-full h-10 md:h-11 text-sm"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Import Research Projects
-              </Button>
-              <Button
-                onClick={() => handleImport('Event Schedule')}
-                disabled={importing}
-                className="w-full h-10 md:h-11 text-sm"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Import Event Schedule
-              </Button>
+              {importOptions.map(option => (
+                <Button
+                  key={option.type}
+                  onClick={() => handleImport(option)}
+                  disabled={importing !== null}
+                  className="w-full h-10 md:h-11 text-sm justify-between"
+                >
+                  <span className="flex items-center gap-2">
+                    {importing === option.type ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-4 h-4" />
+                    )}
+                    {`Import ${option.label}`}
+                  </span>
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                    {option.description}
+                  </span>
+                </Button>
+              ))}
             </CardContent>
           </Card>
 

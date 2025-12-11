@@ -13,14 +13,12 @@ const SHEET_IDS = {
   users: process.env.SMARTSHEET_USER_SHEET_ID || '',
   rsvps: process.env.SMARTSHEET_RSVP_SHEET_ID || '',
   connections: process.env.SMARTSHEET_CONNECTION_SHEET_ID || '',
-  analytics: process.env.SMARTSHEET_ANALYTICS_SHEET_ID || '',
-
+  attendees: process.env.SMARTSHEET_ATTENDEES_SHEET_ID || '',
   // Import sheets (inbound from Smartsheet to app)
   sessions: process.env.SMARTSHEET_SESSIONS_SHEET_ID || '',
   projects: process.env.SMARTSHEET_PROJECTS_SHEET_ID || '',
   opportunities: process.env.SMARTSHEET_OPPORTUNITIES_SHEET_ID || '',
   partners: process.env.SMARTSHEET_PARTNERS_SHEET_ID || '',
-  attendees: process.env.SMARTSHEET_ATTENDEES_SHEET_ID || '',
 };
 
 // Types
@@ -1297,6 +1295,7 @@ export async function importAttendees(): Promise<ImportResult> {
           role,
           linkedinUrl,
           websiteUrl,
+          accelerationInterests: [],
           profileVisibility: 'public' as any,
           allowQrScanning: true,
           allowMessaging: true,

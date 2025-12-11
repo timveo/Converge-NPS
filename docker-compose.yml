@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: converge-nps-backend
+    env_file:
+      - .env
     ports:
       - "3000:3000"
     environment:

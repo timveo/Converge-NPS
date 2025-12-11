@@ -42,12 +42,28 @@ interface SyncResult {
   errors: string[];
 }
 
+type ImportType = 'sessions' | 'projects' | 'opportunities' | 'partners' | 'attendees';
+
+interface ImportSummary {
+  imported: number;
+  updated: number;
+  failed: number;
+  errors?: Array<{ message?: string }>;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
 export default function Smartsheet() {
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [failedSyncs, setFailedSyncs] = useState<FailedSync[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [importing, setImporting] = useState<ImportType | null>(null);
 
   useEffect(() => {
     fetchStatus();
@@ -56,8 +72,8 @@ export default function Smartsheet() {
 
   const fetchStatus = async () => {
     try {
-      const response = await api.get('/admin/smartsheet/status');
-      setStatus(response.data.data);
+      const response = await api.get<ApiResponse<SyncStatus>>('/admin/smartsheet/status');
+      setStatus(response.data);
     } catch (error) {
       console.error('Failed to fetch sync status', error);
     } finally {
@@ -65,10 +81,41 @@ export default function Smartsheet() {
     }
   };
 
+  const handleImport = async (type: ImportType, label: string) => {
+    setImporting(type);
+    try {
+      const response = await api.post<ApiResponse<ImportSummary>>(`/admin/smartsheet/import/${type}`);
+      const result = response.data;
+
+      const summary =
+        `Import complete for ${label}\n\n` +
+        `Imported: ${result?.imported ?? 0}\n` +
+        `Updated: ${result?.updated ?? 0}\n` +
+        `Failed: ${result?.failed ?? 0}` +
+        (result?.errors && result.errors.length > 0
+          ? `\n\nErrors:\n${result.errors.slice(0, 3).map(e => e.message).join('\n')}`
+          : '');
+
+      alert(summary);
+    } catch (error: any) {
+      alert(error.response?.data?.error || `Failed to import ${label}`);
+    } finally {
+      setImporting(null);
+    }
+  };
+
+  const importOptions: Array<{ type: ImportType; label: string; description: string }> = [
+    { type: 'partners', label: 'Industry Partners', description: 'Company listings from Smartsheet' },
+    { type: 'projects', label: 'Research Projects', description: 'Academic project catalog' },
+    { type: 'sessions', label: 'Event Sessions', description: 'Schedule & agenda updates' },
+    { type: 'opportunities', label: 'Opportunities', description: 'Funding & internship posts' },
+    { type: 'attendees', label: 'Attendees', description: 'People directory & QR codes' },
+  ];
+
   const fetchFailedSyncs = async () => {
     try {
-      const response = await api.get('/admin/smartsheet/failed');
-      setFailedSyncs(response.data.data);
+      const response = await api.get<ApiResponse<FailedSync[]>>('/admin/smartsheet/failed');
+      setFailedSyncs(response.data);
     } catch (error) {
       console.error('Failed to fetch failed syncs', error);
     }
@@ -77,8 +124,8 @@ export default function Smartsheet() {
   const handleSync = async (type: 'users' | 'rsvps' | 'connections') => {
     setIsSyncing(type);
     try {
-      const response = await api.post(`/admin/smartsheet/sync/${type}`);
-      const result: SyncResult = response.data.data;
+      const response = await api.post<ApiResponse<SyncResult>>(`/admin/smartsheet/sync/${type}`);
+      const result = response.data;
 
       alert(
         `Sync complete!\n\n` +
@@ -101,8 +148,8 @@ export default function Smartsheet() {
   const handleRetry = async (syncId: string) => {
     setRetryingId(syncId);
     try {
-      await api.post(`/admin/smartsheet/retry/${syncId}`);
-      alert('Retry successful!');
+      const response = await api.post<ApiResponse<SyncResult>>(`/admin/smartsheet/retry/${syncId}`);
+      alert(response.message || 'Retry successful!');
       await fetchStatus();
       await fetchFailedSyncs();
     } catch (error: any) {
@@ -116,8 +163,8 @@ export default function Smartsheet() {
     if (!confirm('Clear all failed syncs? This cannot be undone.')) return;
 
     try {
-      const response = await api.delete('/admin/smartsheet/clear-failed');
-      alert(response.data.message);
+      const response = await api.delete<ApiResponse<{ count: number }>>('/admin/smartsheet/clear-failed');
+      alert(response.message || `Cleared ${response.data.count} failed syncs`);
       await fetchFailedSyncs();
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to clear failed syncs');
@@ -385,6 +432,48 @@ export default function Smartsheet() {
           </div>
         </div>
       )}
+
+      {/* Import Actions */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Import from Smartsheet</h2>
+            <p className="text-sm text-gray-600">
+              Pull the latest data from curated Smartsheet tabs into the platform database.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {importOptions.map(option => (
+            <div
+              key={option.type}
+              className="border border-gray-200 rounded-lg p-4 flex flex-col justify-between"
+            >
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">{option.label}</h3>
+                <p className="text-sm text-gray-600 mt-1">{option.description}</p>
+              </div>
+              <button
+                onClick={() => handleImport(option.type, option.label)}
+                disabled={importing !== null}
+                className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {importing === option.type ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Importing…</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Import Now</span>
+                  </>
+                )}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Failed Syncs */}
       {failedSyncs.length > 0 && (

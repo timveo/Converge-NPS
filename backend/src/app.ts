@@ -19,7 +19,7 @@ import sessionRoutes from './routes/session.routes';
 import projectRoutes from './routes/project.routes';
 // import messageRoutes from './routes/message.routes'; // TEMPORARILY DISABLED - schema mismatch
 // import adminRoutes from './routes/admin.routes'; // TEMPORARILY DISABLED - schema mismatch
-// import smartsheetRoutes from './routes/smartsheet.routes'; // TEMPORARILY DISABLED
+import smartsheetRoutes from './routes/smartsheet.routes';
 import partnerRoutes from './routes/partner.routes';
 import staffRoutes from './routes/staff.routes';
 import opportunityRoutes from './routes/opportunity.routes';
@@ -156,7 +156,7 @@ export function createApp(): Application {
   app.use(`${API_VERSION}/partners`, partnerRoutes);
   app.use(`${API_VERSION}/staff`, staffRoutes);
   // app.use(`${API_VERSION}/admin`, adminRoutes); // TEMPORARILY DISABLED - schema mismatch
-  // app.use(`${API_VERSION}/admin/smartsheet`, smartsheetRoutes); // TEMPORARILY DISABLED
+  app.use(`${API_VERSION}/admin/smartsheet`, smartsheetRoutes);
 
   // ===========================
   // 404 Handler
