@@ -49,7 +49,7 @@ class ApiClient {
           } catch (refreshError) {
             // Refresh failed, logout user
             this.clearTokens();
-            window.location.href = '/login';
+            window.location.href = '/auth';
             return Promise.reject(refreshError);
           }
         }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/card';
@@ -18,12 +19,18 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import Footer from '@/components/Footer';
+import { BottomNav } from '@/components/navigation/BottomNav';
+import QRCodeBadge from '@/components/QRCodeBadge';
+import ThemeToggle from '@/components/ThemeToggle';
+import OnboardingFlow from '@/components/OnboardingFlow';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
-  const isAdmin = false; // TODO: Implement admin check
-  const isStaffOrAdmin = false; // TODO: Implement staff check
+  const isAdmin = user?.roles?.includes('admin') || false;
+  const isStaffOrAdmin = user?.roles?.includes('staff') || user?.roles?.includes('admin') || false;
   const unreadCount = 0; // TODO: Implement unread count
 
   const profileData = user ? {
@@ -123,12 +130,24 @@ export default function DashboardPage() {
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 text-primary-foreground hover:bg-primary/20"
+                      onClick={() => setShowOnboarding(true)}
                     >
                       <HelpCircle className="h-5 w-5 text-white" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <p>Help</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="h-9 w-9 flex items-center justify-center">
+                      <ThemeToggle />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Theme</p>
                   </TooltipContent>
                 </Tooltip>
 
@@ -154,14 +173,14 @@ export default function DashboardPage() {
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link to="/profile/edit">
+                    <Link to="/settings">
                       <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 text-primary-foreground hover:bg-primary/20">
                         <SettingsIcon className="h-5 w-5 md:h-6 md:w-6" />
                       </Button>
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    <p>Edit Profile</p>
+                    <p>Settings</p>
                   </TooltipContent>
                 </Tooltip>
 
@@ -199,12 +218,24 @@ export default function DashboardPage() {
                       variant="ghost"
                       size="icon"
                       className="text-primary-foreground hover:bg-primary/20"
+                      onClick={() => setShowOnboarding(true)}
                     >
                       <HelpCircle className="h-8 w-8 text-white" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <p>Help & Tutorial</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <ThemeToggle />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Toggle Theme</p>
                   </TooltipContent>
                 </Tooltip>
 
@@ -230,7 +261,7 @@ export default function DashboardPage() {
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link to="/profile/edit">
+                    <Link to="/settings">
                       <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/20">
                         <SettingsIcon className="h-6 w-6" />
                       </Button>
@@ -273,10 +304,10 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        {/* QR Code Badge - TODO: Implement with Converge-NPS API */}
-        {/* <Card className="p-3 md:p-6 mb-4 md:mb-8 shadow-md">
+        {/* QR Code Badge */}
+        <Card className="p-3 md:p-6 mb-4 md:mb-8 shadow-md">
           <QRCodeBadge user={profileData} isOffline={false} />
-        </Card> */}
+        </Card>
 
         {/* Scan to Connect Card */}
         <Card className="p-4 md:p-6 mb-4 md:mb-8 shadow-md bg-gradient-to-br from-accent/5 to-primary/5 border-accent/30">
@@ -328,7 +359,29 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+
+        {/* Footer */}
+        <Footer />
       </main>
+
+      {/* Bottom Navigation for Mobile */}
+      <BottomNav />
+
+      {/* Onboarding Flow Modal */}
+      <OnboardingFlow
+        open={showOnboarding}
+        onComplete={() => setShowOnboarding(false)}
+        userProfile={user ? {
+          id: user.id,
+          full_name: user.fullName || '',
+          first_name: user.fullName?.split(' ')[0] || null,
+          last_name: user.fullName?.split(' ').slice(1).join(' ') || null,
+          role: user.role || null,
+          organization: user.organization || null,
+          bio: user.bio || null,
+        } : null}
+        testMode={true}
+      />
     </div>
   );
 }

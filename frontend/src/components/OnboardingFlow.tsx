@@ -18,7 +18,6 @@ import {
   Loader2
 } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface OnboardingFlowProps {
@@ -158,23 +157,14 @@ const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: Onb
   };
 
   const handleNext = async () => {
-    // If on step 0, save profile data first
+    // If on step 0, save profile data first (disabled - using testMode)
+    // TODO: Implement profile saving with backend API when needed
     if (currentStep === 0 && !testMode) {
       setIsSaving(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { error } = await supabase
-            .from('profiles')
-            .update({
-              rank: rank.trim() || null,
-              role: role.trim(),
-              acceleration_interests: accelerationInterests.length > 0 ? accelerationInterests : null
-            })
-            .eq('id', user.id);
-          
-          if (error) throw error;
-        }
+        // Profile saving functionality is disabled
+        // This would save rank, role, and acceleration_interests to backend
+        console.log('Profile save would happen here:', { rank, role, accelerationInterests });
       } catch (error) {
         toast.error("Error saving profile", {
           description: "Please try again"
@@ -184,7 +174,7 @@ const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: Onb
       }
       setIsSaving(false);
     }
-    
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -237,8 +227,8 @@ const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: Onb
             </div>
           )}
 
-          {/* Step 1: Profile Information Form */}
-          {currentStep === 0 && (
+          {/* Step 1: Profile Information Form - hidden in test mode */}
+          {currentStep === 0 && !testMode && (
             <div className="mt-3 md:mt-4 space-y-3 md:space-y-4">
               <div className="space-y-1 md:space-y-2">
                 <Label htmlFor="rank" className="text-xs md:text-sm">Military Rank / Title</Label>
@@ -318,7 +308,7 @@ const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: Onb
             {currentStep === 0 && (
               <Button
                 onClick={handleNext}
-                disabled={!step1Complete || isSaving}
+                disabled={(!step1Complete && !testMode) || isSaving}
                 className="gap-1.5 md:gap-2 flex-1 h-11 md:h-10 text-xs md:text-sm"
               >
                 {isSaving ? (

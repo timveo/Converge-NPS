@@ -1,8 +1,17 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Upload, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  ChevronLeft,
+  Download,
+  Upload,
+  RefreshCw,
+  CheckCircle,
+  AlertCircle,
+  Database,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 const importJobs = [
@@ -42,119 +51,151 @@ export default function SmartsheetPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Smartsheet Integration</h1>
-        <p className="text-gray-600 mt-1">
-          Import and export data from Smartsheet
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Upload className="w-5 h-5 text-blue-600" />
-              <CardTitle>Import from Smartsheet</CardTitle>
-            </div>
-            <CardDescription>
-              Pull data from Smartsheet into the platform
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button
-              onClick={() => handleImport('Industry Partners')}
-              disabled={importing}
-              className="w-full"
-            >
-              {importing ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Upload className="w-4 h-4 mr-2" />
-              )}
-              Import Industry Partners
-            </Button>
-            <Button
-              onClick={() => handleImport('Research Projects')}
-              disabled={importing}
-              className="w-full"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Import Research Projects
-            </Button>
-            <Button
-              onClick={() => handleImport('Event Schedule')}
-              disabled={importing}
-              className="w-full"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Import Event Schedule
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Download className="w-5 h-5 text-green-600" />
-              <CardTitle>Export to Smartsheet</CardTitle>
-            </div>
-            <CardDescription>
-              Push data from platform to Smartsheet
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full">
-              <Download className="w-4 h-4 mr-2" />
-              Export Registrations
-            </Button>
-            <Button variant="outline" className="w-full">
-              <Download className="w-4 h-4 mr-2" />
-              Export Connections
-            </Button>
-            <Button variant="outline" className="w-full">
-              <Download className="w-4 h-4 mr-2" />
-              Export RSVPs
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Import History</CardTitle>
-          <CardDescription>Recent import operations</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {importJobs.map((job) => (
-              <div
-                key={job.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  {job.status === 'completed' ? (
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-red-600" />
-                  )}
-                  <div>
-                    <p className="font-medium">{job.type}</p>
-                    <p className="text-sm text-gray-600">
-                      {job.records} records • {job.lastRun}
-                    </p>
-                  </div>
-                </div>
-                <Badge
-                  variant={job.status === 'completed' ? 'default' : 'destructive'}
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
+      {/* Header */}
+      <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4 max-w-6xl">
+        <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg sticky top-0 z-10 rounded-lg">
+          <div className="px-3 md:px-4 py-2 md:py-4">
+            <div className="flex items-center gap-2 md:gap-4">
+              <Link to="/admin">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/20 h-11 w-11 md:h-10 md:w-10"
                 >
-                  {job.status}
-                </Badge>
+                  <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
+                </Button>
+              </Link>
+              <div className="flex-1">
+                <h1 className="text-base md:text-xl font-bold flex items-center gap-1.5 md:gap-2">
+                  <Database className="h-4 w-4 md:h-5 md:w-5" />
+                  Smartsheet Integration
+                </h1>
+                <p className="text-xs md:text-sm text-blue-200">
+                  Import and export data from Smartsheet
+                </p>
               </div>
-            ))}
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </header>
+      </div>
+
+      <main className="container mx-auto px-3 md:px-4 py-3 md:py-6 max-w-6xl space-y-3 md:space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
+          <Card className="shadow-md border-gray-200">
+            <CardHeader className="p-3 md:p-6">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Upload className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm md:text-base">Import from Smartsheet</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">
+                    Pull data from Smartsheet into the platform
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-3 md:p-6 pt-0 space-y-2 md:space-y-3">
+              <Button
+                onClick={() => handleImport('Industry Partners')}
+                disabled={importing}
+                className="w-full h-10 md:h-11 text-sm"
+              >
+                {importing ? (
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                Import Industry Partners
+              </Button>
+              <Button
+                onClick={() => handleImport('Research Projects')}
+                disabled={importing}
+                className="w-full h-10 md:h-11 text-sm"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Import Research Projects
+              </Button>
+              <Button
+                onClick={() => handleImport('Event Schedule')}
+                disabled={importing}
+                className="w-full h-10 md:h-11 text-sm"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Import Event Schedule
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md border-gray-200">
+            <CardHeader className="p-3 md:p-6">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                  <Download className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm md:text-base">Export to Smartsheet</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">
+                    Push data from platform to Smartsheet
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-3 md:p-6 pt-0 space-y-2 md:space-y-3">
+              <Button variant="outline" className="w-full h-10 md:h-11 text-sm">
+                <Download className="w-4 h-4 mr-2" />
+                Export Registrations
+              </Button>
+              <Button variant="outline" className="w-full h-10 md:h-11 text-sm">
+                <Download className="w-4 h-4 mr-2" />
+                Export Connections
+              </Button>
+              <Button variant="outline" className="w-full h-10 md:h-11 text-sm">
+                <Download className="w-4 h-4 mr-2" />
+                Export RSVPs
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="shadow-md border-gray-200">
+          <CardHeader className="p-3 md:p-6">
+            <CardTitle className="text-sm md:text-lg">Import History</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Recent import operations</CardDescription>
+          </CardHeader>
+          <CardContent className="p-3 md:p-6 pt-0">
+            <div className="space-y-2 md:space-y-3">
+              {importJobs.map((job) => (
+                <div
+                  key={job.id}
+                  className="flex items-center justify-between p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-2 md:gap-3">
+                    {job.status === 'completed' ? (
+                      <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-600 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-red-600 flex-shrink-0" />
+                    )}
+                    <div>
+                      <p className="font-medium text-sm md:text-base">{job.type}</p>
+                      <p className="text-xs md:text-sm text-gray-600">
+                        {job.records} records • {job.lastRun}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant={job.status === 'completed' ? 'default' : 'destructive'}
+                    className="text-xs"
+                  >
+                    {job.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }

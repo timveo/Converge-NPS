@@ -2,11 +2,10 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import AdminLayout from '@/components/AdminLayout';
 
 // User Pages
-import LoginPage from '@/pages/LoginPage';
-import RegisterPage from '@/pages/RegisterPage';
+import AuthPage from '@/pages/AuthPage';
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import DashboardPage from '@/pages/DashboardPage';
 import ProfilePage from '@/pages/ProfilePage';
 import ProfileEditPage from '@/pages/ProfileEditPage';
@@ -17,6 +16,8 @@ import MySchedulePage from '@/pages/MySchedulePage';
 import MessagesPage from '@/pages/MessagesPage';
 import ScannerPage from '@/pages/ScannerPage';
 import OpportunitiesPage from '@/pages/OpportunitiesPage';
+import SubmitOpportunityPage from '@/pages/SubmitOpportunityPage';
+import IndustryPage from '@/pages/IndustryPage';
 import ProjectsPage from '@/pages/ProjectsPage';
 import PartnersPage from '@/pages/PartnersPage';
 import SettingsPage from '@/pages/SettingsPage';
@@ -39,8 +40,10 @@ function App() {
       <OfflineIndicator />
       <Routes>
         {/* Public routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/login" element={<AuthPage />} />
+        <Route path="/register" element={<AuthPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         {/* Protected user routes */}
         <Route
@@ -124,6 +127,22 @@ function App() {
           }
         />
         <Route
+          path="/opportunities/submit"
+          element={
+            <ProtectedRoute>
+              <SubmitOpportunityPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/industry"
+          element={
+            <ProtectedRoute>
+              <IndustryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/projects"
           element={
             <ProtectedRoute>
@@ -153,9 +172,7 @@ function App() {
           path="/admin"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <AdminDashboard />
-              </AdminLayout>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />
@@ -163,9 +180,7 @@ function App() {
           path="/admin/sessions"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <SessionManagement />
-              </AdminLayout>
+              <SessionManagement />
             </ProtectedRoute>
           }
         />
@@ -173,9 +188,7 @@ function App() {
           path="/admin/sessions/new"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <SessionForm />
-              </AdminLayout>
+              <SessionForm />
             </ProtectedRoute>
           }
         />
@@ -183,9 +196,7 @@ function App() {
           path="/admin/sessions/:id/edit"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <SessionForm />
-              </AdminLayout>
+              <SessionForm />
             </ProtectedRoute>
           }
         />
@@ -193,9 +204,7 @@ function App() {
           path="/admin/users"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <UserManagement />
-              </AdminLayout>
+              <UserManagement />
             </ProtectedRoute>
           }
         />
@@ -203,9 +212,7 @@ function App() {
           path="/admin/analytics"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <Analytics />
-              </AdminLayout>
+              <Analytics />
             </ProtectedRoute>
           }
         />
@@ -213,9 +220,7 @@ function App() {
           path="/admin/smartsheet"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <SmartsheetPage />
-              </AdminLayout>
+              <SmartsheetPage />
             </ProtectedRoute>
           }
         />
@@ -223,9 +228,7 @@ function App() {
           path="/admin/audit-logs"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <AuditLogsPage />
-              </AdminLayout>
+              <AuditLogsPage />
             </ProtectedRoute>
           }
         />
