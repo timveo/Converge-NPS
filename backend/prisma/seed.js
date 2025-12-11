@@ -1,5 +1,6 @@
-import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+// @ts-nocheck
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcrypt');
 
 const prisma = new PrismaClient();
 
@@ -9,17 +10,16 @@ async function main() {
   // Clear existing data (development only!)
   if (process.env.NODE_ENV !== 'production') {
     console.log('Clearing existing data...');
-    await prisma.opportunityApplications.deleteMany();
-    await prisma.projectInterests.deleteMany();
-    await prisma.messages.deleteMany();
-    await prisma.conversations.deleteMany();
-    await prisma.rsvps.deleteMany();
-    await prisma.connections.deleteMany();
-    await prisma.qrCodes.deleteMany();
-    await prisma.sessions.deleteMany();
-    await prisma.industryOpportunities.deleteMany();
-    await prisma.researchProjects.deleteMany();
-    await prisma.profiles.deleteMany();
+    await prisma.projectInterest.deleteMany();
+    await prisma.message.deleteMany();
+    await prisma.conversation.deleteMany();
+    await prisma.rsvp.deleteMany();
+    await prisma.connection.deleteMany();
+    await prisma.qrCode.deleteMany();
+    await prisma.session.deleteMany();
+    await prisma.opportunity.deleteMany();
+    await prisma.project.deleteMany();
+    await prisma.profile.deleteMany();
   }
 
   // Create test users
@@ -27,12 +27,11 @@ async function main() {
 
   const passwordHash = await bcrypt.hash('password123', 12);
 
-  const admin = await prisma.profiles.create({
+  const staff = await prisma.profile.create({
     data: {
-      id: 'admin-001',
+      id: '550e8400-e29b-41d4-a716-446655440001',
       fullName: 'Admin User',
       email: 'admin@converge-nps.com',
-      passwordHash,
       role: 'admin',
       organization: 'Naval Postgraduate School',
       bio: 'System administrator and event organizer',
@@ -42,65 +41,56 @@ async function main() {
     },
   });
 
-  const student1 = await prisma.profiles.create({
+  const student1 = await prisma.profile.create({
     data: {
-      id: 'student-001',
+      id: '550e8400-e29b-41d4-a716-446655440002',
       fullName: 'Alice Johnson',
       email: 'alice@nps.edu',
-      passwordHash,
       role: 'student',
       organization: 'Naval Postgraduate School',
       bio: 'PhD candidate specializing in AI/ML',
-      linkedin: 'https://linkedin.com/in/alicejohnson',
-      github: 'https://github.com/alicejohnson',
       profileVisibility: 'public',
       allowQrScanning: true,
       allowMessaging: true,
     },
   });
 
-  const student2 = await prisma.profiles.create({
+  const student2 = await prisma.profile.create({
     data: {
-      id: 'student-002',
+      id: '550e8400-e29b-41d4-a716-446655440003',
       fullName: 'Bob Smith',
       email: 'bob@nps.edu',
-      passwordHash,
       role: 'student',
       organization: 'Naval Postgraduate School',
-      bio: 'Master\'s student focused on cybersecurity',
-      linkedin: 'https://linkedin.com/in/bobsmith',
+      bio: 'Graduate student in cybersecurity',
       profileVisibility: 'public',
       allowQrScanning: true,
       allowMessaging: true,
     },
   });
 
-  const faculty = await prisma.profiles.create({
+  const faculty = await prisma.profile.create({
     data: {
-      id: 'faculty-001',
+      id: '550e8400-e29b-41d4-a716-446655440004',
       fullName: 'Dr. Carol Williams',
       email: 'carol@nps.edu',
-      passwordHash,
       role: 'faculty',
       organization: 'Naval Postgraduate School',
-      bio: 'Professor of Computer Science, AI researcher',
-      linkedin: 'https://linkedin.com/in/carolwilliams',
+      bio: 'Professor specializing in autonomous systems',
       profileVisibility: 'public',
       allowQrScanning: true,
       allowMessaging: true,
     },
   });
 
-  const industry1 = await prisma.profiles.create({
+  const industry1 = await prisma.profile.create({
     data: {
-      id: 'industry-001',
+      id: '550e8400-e29b-41d4-a716-446655440005',
       fullName: 'David Chen',
       email: 'david@techcorp.com',
-      passwordHash,
       role: 'industry',
       organization: 'TechCorp Solutions',
-      bio: 'VP of Engineering, interested in defense tech partnerships',
-      linkedin: 'https://linkedin.com/in/davidchen',
+      bio: 'Defense contractor specializing in AI/ML solutions',
       profileVisibility: 'public',
       allowQrScanning: true,
       allowMessaging: true,
@@ -109,16 +99,29 @@ async function main() {
 
   console.log('✅ Created 5 test users');
 
+  // Create password records for all users
+  console.log('Creating password records...');
+  await prisma.userPassword.createMany({
+    data: [
+      { userId: staff.id, passwordHash },
+      { userId: student1.id, passwordHash },
+      { userId: student2.id, passwordHash },
+      { userId: faculty.id, passwordHash },
+      { userId: industry1.id, passwordHash },
+    ],
+  });
+  console.log('✅ Created password records');
+
   // Generate QR codes for users
   console.log('Generating QR codes...');
 
-  await prisma.qrCodes.createMany({
+  await prisma.qrCode.createMany({
     data: [
-      { userId: admin.id, code: `QR-ADMIN-${Date.now()}` },
-      { userId: student1.id, code: `QR-STU1-${Date.now()}` },
-      { userId: student2.id, code: `QR-STU2-${Date.now()}` },
-      { userId: faculty.id, code: `QR-FAC1-${Date.now()}` },
-      { userId: industry1.id, code: `QR-IND1-${Date.now()}` },
+      { userId: staff.id, qrCodeData: `QR-ADMIN-${Date.now()}` },
+      { userId: student1.id, qrCodeData: `QR-STU1-${Date.now()}` },
+      { userId: student2.id, qrCodeData: `QR-STU2-${Date.now()}` },
+      { userId: faculty.id, qrCodeData: `QR-FAC1-${Date.now()}` },
+      { userId: industry1.id, qrCodeData: `QR-IND1-${Date.now()}` },
     ],
   });
 
@@ -130,7 +133,7 @@ async function main() {
   const eventDate = new Date('2026-01-28T09:00:00Z');
 
   const sessions = await Promise.all([
-    prisma.sessions.create({
+    prisma.session.create({
       data: {
         title: 'Opening Keynote: The Future of Defense Technology',
         description: 'Join us for an inspiring keynote address on emerging defense technologies and their impact on national security.',
@@ -138,12 +141,12 @@ async function main() {
         startTime: new Date('2026-01-28T09:00:00Z'),
         endTime: new Date('2026-01-28T10:00:00Z'),
         location: 'Main Auditorium',
-        track: 'Other',
+        sessionType: 'Other',
         capacity: 500,
         status: 'scheduled',
       },
     }),
-    prisma.sessions.create({
+    prisma.session.create({
       data: {
         title: 'AI/ML in Autonomous Systems',
         description: 'Exploring the latest advances in AI and machine learning for autonomous military systems.',
@@ -151,12 +154,12 @@ async function main() {
         startTime: new Date('2026-01-28T10:30:00Z'),
         endTime: new Date('2026-01-28T11:30:00Z'),
         location: 'Room 101',
-        track: 'AI/ML',
+        sessionType: 'AI/ML',
         capacity: 50,
         status: 'scheduled',
       },
     }),
-    prisma.sessions.create({
+    prisma.session.create({
       data: {
         title: 'Cybersecurity Threats and Mitigation',
         description: 'A deep dive into current cybersecurity threats facing defense systems and mitigation strategies.',
@@ -164,12 +167,12 @@ async function main() {
         startTime: new Date('2026-01-28T10:30:00Z'),
         endTime: new Date('2026-01-28T11:30:00Z'),
         location: 'Room 102',
-        track: 'Cybersecurity',
+        sessionType: 'Cybersecurity',
         capacity: 40,
         status: 'scheduled',
       },
     }),
-    prisma.sessions.create({
+    prisma.session.create({
       data: {
         title: 'Data Science for Maritime Operations',
         description: 'Leveraging data science and analytics to enhance maritime operational effectiveness.',
@@ -177,12 +180,12 @@ async function main() {
         startTime: new Date('2026-01-28T13:00:00Z'),
         endTime: new Date('2026-01-28T14:00:00Z'),
         location: 'Room 103',
-        track: 'Data Science',
+        sessionType: 'Data Science',
         capacity: 45,
         status: 'scheduled',
       },
     }),
-    prisma.sessions.create({
+    prisma.session.create({
       data: {
         title: 'Autonomous Underwater Vehicles',
         description: 'The latest developments in autonomous underwater vehicle technology and applications.',
@@ -190,12 +193,12 @@ async function main() {
         startTime: new Date('2026-01-28T14:30:00Z'),
         endTime: new Date('2026-01-28T15:30:00Z'),
         location: 'Room 101',
-        track: 'Autonomous Systems',
+        sessionType: 'Autonomous Systems',
         capacity: 35,
         status: 'scheduled',
       },
     }),
-    prisma.sessions.create({
+    prisma.session.create({
       data: {
         title: 'Networking Reception',
         description: 'Join fellow attendees, speakers, and industry partners for networking and refreshments.',
@@ -203,7 +206,7 @@ async function main() {
         startTime: new Date('2026-01-28T17:00:00Z'),
         endTime: new Date('2026-01-28T19:00:00Z'),
         location: 'Terrace',
-        track: 'Other',
+        sessionType: 'Other',
         capacity: 200,
         status: 'scheduled',
       },
@@ -215,17 +218,17 @@ async function main() {
   // Create RSVPs
   console.log('Creating RSVPs...');
 
-  await prisma.rsvps.createMany({
+  await prisma.rsvp.createMany({
     data: [
-      { userId: student1.id, sessionId: sessions[0].id, status: 'attending' },
-      { userId: student1.id, sessionId: sessions[1].id, status: 'attending' },
-      { userId: student1.id, sessionId: sessions[5].id, status: 'maybe' },
-      { userId: student2.id, sessionId: sessions[0].id, status: 'attending' },
-      { userId: student2.id, sessionId: sessions[2].id, status: 'attending' },
-      { userId: faculty.id, sessionId: sessions[0].id, status: 'attending' },
-      { userId: faculty.id, sessionId: sessions[1].id, status: 'attending' },
-      { userId: industry1.id, sessionId: sessions[0].id, status: 'attending' },
-      { userId: industry1.id, sessionId: sessions[3].id, status: 'attending' },
+      { userId: student1.id, sessionId: sessions[0].id, status: 'confirmed' },
+      { userId: student1.id, sessionId: sessions[1].id, status: 'confirmed' },
+      { userId: student1.id, sessionId: sessions[5].id, status: 'waitlisted' },
+      { userId: student2.id, sessionId: sessions[0].id, status: 'confirmed' },
+      { userId: student2.id, sessionId: sessions[2].id, status: 'confirmed' },
+      { userId: faculty.id, sessionId: sessions[0].id, status: 'confirmed' },
+      { userId: faculty.id, sessionId: sessions[1].id, status: 'confirmed' },
+      { userId: industry1.id, sessionId: sessions[0].id, status: 'confirmed' },
+      { userId: industry1.id, sessionId: sessions[3].id, status: 'confirmed' },
     ],
   });
 
@@ -235,34 +238,31 @@ async function main() {
   console.log('Creating research projects...');
 
   const projects = await Promise.all([
-    prisma.researchProjects.create({
+    prisma.project.create({
       data: {
         title: 'Quantum Computing for Cryptography',
         description: 'Exploring quantum computing applications in military cryptography systems.',
-        submittedBy: faculty.id,
-        category: 'Cybersecurity',
-        status: 'active',
-        tags: ['quantum', 'cryptography', 'security'],
+        piId: faculty.id,
+        stage: 'concept',
+        keywords: ['quantum', 'cryptography', 'security'],
       },
     }),
-    prisma.researchProjects.create({
+    prisma.project.create({
       data: {
         title: 'AI-Powered Threat Detection',
         description: 'Machine learning models for real-time threat detection in naval operations.',
-        submittedBy: student1.id,
-        category: 'AI/ML',
-        status: 'proposed',
-        tags: ['ai', 'ml', 'threat-detection'],
+        piId: student1.id,
+        stage: 'prototype',
+        keywords: ['ai', 'ml', 'threat-detection'],
       },
     }),
-    prisma.researchProjects.create({
+    prisma.project.create({
       data: {
         title: 'Swarm Robotics for Maritime Surveillance',
         description: 'Coordinated autonomous surface vehicles for wide-area maritime surveillance.',
-        submittedBy: student2.id,
-        category: 'Autonomous Systems',
-        status: 'active',
-        tags: ['swarm', 'robotics', 'surveillance'],
+        piId: student2.id,
+        stage: 'pilot_ready',
+        keywords: ['swarm', 'robotics', 'surveillance'],
       },
     }),
   ]);
@@ -270,7 +270,7 @@ async function main() {
   console.log('✅ Created 3 research projects');
 
   // Create project interests
-  await prisma.projectInterests.createMany({
+  await prisma.projectInterest.createMany({
     data: [
       { userId: student2.id, projectId: projects[0].id, message: 'Very interested in collaborating on this!' },
       { userId: industry1.id, projectId: projects[1].id, message: 'Our company could provide resources for this research.' },
@@ -284,30 +284,24 @@ async function main() {
   console.log('Creating industry opportunities...');
 
   const opportunities = await Promise.all([
-    prisma.industryOpportunities.create({
+    prisma.opportunity.create({
       data: {
         title: 'Software Engineer - Defense Systems',
         description: 'Join our team building next-generation defense software systems.',
         postedBy: industry1.id,
-        companyName: 'TechCorp Solutions',
-        type: 'full_time',
-        category: 'AI/ML',
-        status: 'open',
-        location: 'San Diego, CA',
-        salary: '$120,000 - $150,000',
+        type: 'funding',
+        status: 'active',
+        sponsorOrganization: 'TechCorp Solutions',
       },
     }),
-    prisma.industryOpportunities.create({
+    prisma.opportunity.create({
       data: {
         title: 'Summer Internship - Cybersecurity Research',
         description: 'Hands-on cybersecurity research internship for graduate students.',
         postedBy: industry1.id,
-        companyName: 'TechCorp Solutions',
         type: 'internship',
-        category: 'Cybersecurity',
-        status: 'open',
-        location: 'Remote',
-        salary: '$8,000/month',
+        status: 'active',
+        sponsorOrganization: 'TechCorp Solutions',
       },
     }),
   ]);
@@ -317,12 +311,12 @@ async function main() {
   // Create connections
   console.log('Creating connections...');
 
-  await prisma.connections.createMany({
+  await prisma.connection.createMany({
     data: [
-      { scannerId: student1.id, scannedId: student2.id, method: 'qr_scan' },
-      { scannerId: student1.id, scannedId: faculty.id, method: 'qr_scan' },
-      { scannerId: student2.id, scannedId: industry1.id, method: 'manual_entry' },
-      { scannerId: faculty.id, scannedId: industry1.id, method: 'qr_scan' },
+      { userId: student1.id, connectedUserId: student2.id, connectionMethod: 'qr_scan' },
+      { userId: student1.id, connectedUserId: faculty.id, connectionMethod: 'qr_scan' },
+      { userId: student2.id, connectedUserId: industry1.id, connectionMethod: 'manual_entry' },
+      { userId: faculty.id, connectedUserId: industry1.id, connectionMethod: 'qr_scan' },
     ],
   });
 
@@ -331,60 +325,60 @@ async function main() {
   // Create conversations and messages
   console.log('Creating conversations and messages...');
 
-  const conversation1 = await prisma.conversations.create({
-    data: {
-      user1Id: student1.id,
-      user2Id: student2.id,
-    },
+  const conversation1 = await prisma.conversation.create({
+    data: {},
   });
 
-  const conversation2 = await prisma.conversations.create({
-    data: {
-      user1Id: student1.id,
-      user2Id: faculty.id,
-    },
+  const conversation2 = await prisma.conversation.create({
+    data: {},
   });
 
-  await prisma.messages.createMany({
+  // Add participants to conversations
+  await prisma.conversationParticipant.createMany({
+    data: [
+      { conversationId: conversation1.id, userId: student1.id },
+      { conversationId: conversation1.id, userId: student2.id },
+      { conversationId: conversation2.id, userId: student1.id },
+      { conversationId: conversation2.id, userId: faculty.id },
+    ],
+  });
+
+  await prisma.message.createMany({
     data: [
       {
         conversationId: conversation1.id,
         senderId: student1.id,
         content: 'Hey Bob! Great to meet you at the conference.',
-        status: 'read',
-        createdAt: new Date(Date.now() - 3600000),
+        isRead: true,
       },
       {
         conversationId: conversation1.id,
         senderId: student2.id,
         content: 'Likewise! Your research on AI sounds fascinating.',
-        status: 'read',
-        createdAt: new Date(Date.now() - 3000000),
+        isRead: true,
       },
       {
         conversationId: conversation1.id,
         senderId: student1.id,
         content: 'Thanks! Would love to collaborate sometime.',
-        status: 'delivered',
-        createdAt: new Date(Date.now() - 1800000),
+        isRead: false,
       },
       {
         conversationId: conversation2.id,
         senderId: student1.id,
         content: 'Dr. Williams, I\'d like to discuss your keynote session.',
-        status: 'sent',
-        createdAt: new Date(Date.now() - 600000),
+        isRead: false,
       },
     ],
   });
 
   // Update conversation lastMessageAt
-  await prisma.conversations.update({
+  await prisma.conversation.update({
     where: { id: conversation1.id },
     data: { lastMessageAt: new Date(Date.now() - 1800000) },
   });
 
-  await prisma.conversations.update({
+  await prisma.conversation.update({
     where: { id: conversation2.id },
     data: { lastMessageAt: new Date(Date.now() - 600000) },
   });

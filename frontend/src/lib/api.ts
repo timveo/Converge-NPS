@@ -2,7 +2,6 @@ import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import type { ApiResponse, AuthTokens } from '@/types';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
-console.log('API Base URL:', BASE_URL);
 
 class ApiClient {
   private client: AxiosInstance;

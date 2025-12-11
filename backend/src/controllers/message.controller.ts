@@ -132,7 +132,7 @@ export async function markAsRead(req: Request, res: Response) {
     const userId = req.user!.id;
     const { id: conversationId } = req.params;
 
-    await messageService.markMessagesAsRead(userId, conversationId);
+    await messageService.markConversationAsRead(userId, conversationId);
 
     res.json({
       success: true,

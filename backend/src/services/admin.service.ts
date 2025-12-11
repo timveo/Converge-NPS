@@ -64,6 +64,7 @@ export async function createSession(data: z.infer<typeof createSessionSchema>) {
 
   const session = await prisma.session.create({
     data: {
+      title: data.title || 'Untitled Session',
       ...data,
       startTime: start,
       endTime: end,
@@ -215,9 +216,7 @@ export async function listUsers(filters: {
         createdAt: true,
         _count: {
           select: {
-            connections: true,
             rsvps: true,
-            messagesSent: true,
           },
         },
       },
@@ -240,24 +239,18 @@ export async function getUserDetails(userId: string) {
     include: {
       _count: {
         select: {
-          connections: true,
           rsvps: true,
-          messagesSent: true,
-          projectsSubmitted: true,
-          projectInterests: true,
         },
       },
     },
   });
 
-  if (!user) {
-    throw new Error('User not found');
-  }
+if (!user) {
+throw new Error('User not found');
+}
 
-  // Remove sensitive data
-  const { passwordHash, ...userWithoutPassword } = user;
-
-  return userWithoutPassword;
+// Return user data (Profile model doesn't have passwordHash)
+return user;
 }
 
 /**
@@ -348,9 +341,9 @@ export async function getDashboardStats() {
       _count: true,
     }),
 
-    // Sessions by track
+    // Sessions by type
     prisma.session.groupBy({
-      by: ['track'],
+      by: ['sessionType'],
       where: { status: { not: 'cancelled' } },
       _count: true,
     }),
@@ -387,8 +380,8 @@ export async function getDashboardStats() {
       role: r.role,
       count: r._count,
     })),
-    sessionsByTrack: sessionsByTrack.map(s => ({
-      track: s.track,
+    sessionsByType: sessionsByTrack.map(s => ({
+      type: s.sessionType,
       count: s._count,
     })),
   };
@@ -411,7 +404,7 @@ export async function getRsvpStats() {
         _count: {
           select: {
             rsvps: {
-              where: { status: 'attending' },
+              where: { status: 'confirmed' },
             },
           },
         },
@@ -455,7 +448,7 @@ export async function getActivityReport(days: number = 7) {
   ] = await Promise.all([
     prisma.profile.count({ where: { createdAt: { gte: since } } }),
     prisma.connection.count({ where: { createdAt: { gte: since } } }),
-    prisma.message.count({ where: { createdAt: { gte: since } } }),
+    prisma.message.count({ where: { sentAt: { gte: since } } }),
     prisma.rsvp.count({ where: { createdAt: { gte: since } } }),
     prisma.project.count({ where: { createdAt: { gte: since } } }),
   ]);
@@ -517,7 +510,7 @@ export async function getAuditLogs(filters?: {
       where,
       skip: offset,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { timestamp: 'desc' },
       include: {
         user: {
           select: {
