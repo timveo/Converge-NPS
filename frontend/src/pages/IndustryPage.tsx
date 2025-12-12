@@ -109,7 +109,7 @@ export default function IndustryPage() {
   const fetchPartners = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/industry-partners');
+      const response = await api.get('/partners');
       const data = (response as any).data?.data || (response as any).data || [];
 
       // Map API response to expected interface

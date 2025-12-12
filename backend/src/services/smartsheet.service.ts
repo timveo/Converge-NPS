@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import axios, { AxiosInstance } from 'axios';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -13,14 +14,12 @@ const SHEET_IDS = {
   users: process.env.SMARTSHEET_USER_SHEET_ID || '',
   rsvps: process.env.SMARTSHEET_RSVP_SHEET_ID || '',
   connections: process.env.SMARTSHEET_CONNECTION_SHEET_ID || '',
-  analytics: process.env.SMARTSHEET_ANALYTICS_SHEET_ID || '',
-
+  attendees: process.env.SMARTSHEET_ATTENDEES_SHEET_ID || '',
   // Import sheets (inbound from Smartsheet to app)
   sessions: process.env.SMARTSHEET_SESSIONS_SHEET_ID || '',
   projects: process.env.SMARTSHEET_PROJECTS_SHEET_ID || '',
   opportunities: process.env.SMARTSHEET_OPPORTUNITIES_SHEET_ID || '',
   partners: process.env.SMARTSHEET_PARTNERS_SHEET_ID || '',
-  attendees: process.env.SMARTSHEET_ATTENDEES_SHEET_ID || '',
 };
 
 // Types
@@ -912,7 +911,7 @@ export async function importProjects(): Promise<ImportResult> {
             // Create placeholder profile for PI
             piProfile = await prisma.profile.create({
               data: {
-                id: undefined, // Let DB generate
+                id: randomUUID(),
                 fullName: piName,
                 email: piEmail,
                 organization: department || undefined,
@@ -1180,13 +1179,9 @@ export async function importPartners(): Promise<ImportResult> {
           partnershipType: organizationType,
           websiteUrl: website,
           researchAreas: technologyFocus,
+          contactName,
+          contactEmail,
           isFeatured: false,
-          primaryContactName: contactName,
-          primaryContactTitle: contactTitle,
-          primaryContactEmail: contactEmail,
-          primaryContactPhone: contactPhone,
-          dodSponsors,
-          hideContactInfo: false,
         };
 
         if (partner) {
@@ -1297,6 +1292,7 @@ export async function importAttendees(): Promise<ImportResult> {
           role,
           linkedinUrl,
           websiteUrl,
+          accelerationInterests: [],
           profileVisibility: 'public' as any,
           allowQrScanning: true,
           allowMessaging: true,
