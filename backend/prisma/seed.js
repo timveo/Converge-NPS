@@ -131,6 +131,20 @@ async function main() {
   });
   console.log('✅ Created user roles');
 
+  // Create email verifications (mark all as verified for test accounts)
+  console.log('Creating email verifications...');
+  const now = new Date();
+  await prisma.emailVerification.createMany({
+    data: [
+      { userId: staff.id, tokenHash: 'verified', expiresAt: now, verifiedAt: now },
+      { userId: student1.id, tokenHash: 'verified', expiresAt: now, verifiedAt: now },
+      { userId: student2.id, tokenHash: 'verified', expiresAt: now, verifiedAt: now },
+      { userId: faculty.id, tokenHash: 'verified', expiresAt: now, verifiedAt: now },
+      { userId: industry1.id, tokenHash: 'verified', expiresAt: now, verifiedAt: now },
+    ],
+  });
+  console.log('✅ Created email verifications');
+
   // Generate QR codes for users
   console.log('Generating QR codes...');
 
