@@ -1,11 +1,18 @@
 # Stage 1: Build
 FROM node:18-alpine AS builder
-WORKDIR /app/frontend
+WORKDIR /app
 
-COPY frontend/package*.json ./
+COPY package*.json ./
 RUN npm ci
 
-COPY frontend/ ./
+COPY . ./
+
+# Set build-time environment variables for Vite
+ARG VITE_API_BASE_URL=https://converge-nps-production.up.railway.app/api
+ARG VITE_WS_URL=wss://converge-nps-production.up.railway.app
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_WS_URL=$VITE_WS_URL
+
 RUN npm run build
 
 # Stage 2: Nginx runtime
@@ -15,10 +22,11 @@ FROM nginx:1.27-alpine AS runtime
 RUN rm -rf /usr/share/nginx/html/*
 
 # Copy built files
-COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy custom nginx config if exists
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# ✨ The missing line — forces nginx to start properly
+EXPOSE 80
+
 CMD ["nginx", "-g", "daemon off;"]
