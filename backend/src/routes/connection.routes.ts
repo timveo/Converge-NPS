@@ -26,6 +26,12 @@ router.post('/qr-scan', ConnectionController.qrScan);
 router.post('/manual', ConnectionController.manualEntry);
 
 /**
+ * POST /connections
+ * Create connection by user ID (for recommendations)
+ */
+router.post('/', ConnectionController.createByUserId);
+
+/**
  * GET /connections/recommendations
  * Get connection recommendations (must come before /:id route)
  */

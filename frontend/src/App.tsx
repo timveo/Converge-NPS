@@ -14,6 +14,7 @@ import ConnectionsPage from '@/pages/ConnectionsPage';
 import SchedulePage from '@/pages/SchedulePage';
 import MySchedulePage from '@/pages/MySchedulePage';
 import MessagesPage from '@/pages/MessagesPage';
+import ChatPage from '@/pages/ChatPage';
 import ScannerPage from '@/pages/ScannerPage';
 import OpportunitiesPage from '@/pages/OpportunitiesPage';
 import SubmitOpportunityPage from '@/pages/SubmitOpportunityPage';
@@ -115,6 +116,14 @@ function App() {
           element={
             <ProtectedRoute>
               <MessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages/:conversationId"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
             </ProtectedRoute>
           }
         />

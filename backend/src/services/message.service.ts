@@ -211,17 +211,31 @@ export async function getConversationMessages(
     before?: string; // message ID for cursor-based pagination
   } = {}
 ) {
-  // Verify user is part of conversation
-  const participant = await prisma.conversationParticipant.findUnique({
-    where: {
-      conversationId_userId: {
-        conversationId,
-        userId,
+  // Verify user is part of conversation and get conversation info
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    include: {
+      participants: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              avatarUrl: true,
+              organization: true,
+            },
+          },
+        },
       },
     },
   });
 
-  if (!participant) {
+  if (!conversation) {
+    throw new Error('Conversation not found');
+  }
+
+  const isParticipant = conversation.participants.some(p => p.userId === userId);
+  if (!isParticipant) {
     throw new Error('Unauthorized to view this conversation');
   }
 
@@ -253,7 +267,17 @@ export async function getConversationMessages(
     take: options.limit || 50,
   });
 
-  return messages.reverse(); // Return in chronological order
+  // Find the other user in the conversation
+  const otherParticipant = conversation.participants.find(p => p.userId !== userId);
+  const otherUser = otherParticipant?.user;
+
+  return {
+    messages: messages.reverse(), // Return in chronological order
+    conversation: {
+      id: conversation.id,
+      otherUser,
+    },
+  };
 }
  /**
  * Get user's conversations
@@ -282,7 +306,9 @@ export async function getUserConversations(userId: string) {
             take: 1,
             select: {
               id: true,
+              content: true,
               sentAt: true,
+              senderId: true,
               isRead: true,
             },
           },
@@ -319,9 +345,16 @@ export async function getUserConversations(userId: string) {
     };
   });
 
-  return conversations.sort((a, b) => 
-    (b.lastMessage?.sentAt?.getTime() || 0) - (a.lastMessage?.sentAt?.getTime() || 0)
-  );
+  // Sort by last message time or conversation update time for conversations with no messages
+  return conversations.sort((a, b) => {
+    const aTime = a.lastMessage?.sentAt
+      ? new Date(a.lastMessage.sentAt).getTime()
+      : new Date(a.lastMessageAt).getTime();
+    const bTime = b.lastMessage?.sentAt
+      ? new Date(b.lastMessage.sentAt).getTime()
+      : new Date(b.lastMessageAt).getTime();
+    return bTime - aTime;
+  });
 }
 
 /**

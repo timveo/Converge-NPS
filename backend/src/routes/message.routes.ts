@@ -18,6 +18,9 @@ router.get('/unread-count', authenticate, messageController.getUnreadCount);
  * Conversation routes
  */
 
+// POST /v1/conversations - Create or get conversation with a user
+router.post('/conversations', authenticate, messageController.getOrCreateConversation);
+
 // GET /v1/conversations - Get user's conversations
 router.get('/conversations', authenticate, messageController.getConversations);
 
