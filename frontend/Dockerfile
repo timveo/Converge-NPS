@@ -24,9 +24,11 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copy built files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy custom nginx config if exists
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config as template (will substitute $PORT at runtime)
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-EXPOSE 80
+# Railway provides PORT env var, default to 80 for local dev
+ENV PORT=80
 
-CMD ["nginx", "-g", "daemon off;"]
+# Use nginx's built-in envsubst on startup
+CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
