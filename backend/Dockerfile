@@ -2,17 +2,17 @@
 FROM node:18-bullseye-slim AS deps
 WORKDIR /app/backend
 
-COPY backend/package*.json ./
+COPY package*.json ./
 RUN npm ci --only=production
 
 # Stage 2: Builder
 FROM node:18-bullseye-slim AS builder
 WORKDIR /app/backend
 
-COPY backend/package*.json ./
+COPY package*.json ./
 RUN npm ci
 
-COPY backend/ ./
+COPY . ./
 
 RUN npx prisma generate \
  && npm run build
