@@ -12,12 +12,12 @@ async function main() {
   if (existingUsers > 0) {
     console.log('Database already seeded. Checking for missing email verifications...');
 
-    // Find users without email verification and add them
-    const usersWithoutVerification = await prisma.profile.findMany({
-      where: {
-        emailVerification: null
-      }
-    });
+    // Find users without email verification using raw query
+    const usersWithoutVerification = await prisma.$queryRaw`
+      SELECT p.id FROM profiles p
+      LEFT JOIN email_verifications ev ON p.id = ev.user_id
+      WHERE ev.id IS NULL
+    `;
 
     if (usersWithoutVerification.length > 0) {
       console.log(`Adding email verifications for ${usersWithoutVerification.length} users...`);
