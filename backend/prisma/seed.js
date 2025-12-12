@@ -7,6 +7,40 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seed...');
 
+  // Check if already seeded
+  const existingUsers = await prisma.profile.count();
+  if (existingUsers > 0) {
+    console.log('Database already seeded. Checking for missing email verifications...');
+
+    // Find users without email verification and add them
+    const usersWithoutVerification = await prisma.profile.findMany({
+      where: {
+        emailVerification: null
+      }
+    });
+
+    if (usersWithoutVerification.length > 0) {
+      console.log(`Adding email verifications for ${usersWithoutVerification.length} users...`);
+      const now = new Date();
+      for (const user of usersWithoutVerification) {
+        await prisma.emailVerification.create({
+          data: {
+            userId: user.id,
+            tokenHash: 'verified',
+            expiresAt: now,
+            verifiedAt: now
+          }
+        });
+      }
+      console.log('✅ Added missing email verifications');
+    } else {
+      console.log('All users have email verifications.');
+    }
+
+    console.log('Skipping full seed (data already exists).');
+    return;
+  }
+
   // Clear existing data (development only!)
   if (process.env.NODE_ENV !== 'production') {
     console.log('Clearing existing data...');
