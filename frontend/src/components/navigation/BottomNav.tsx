@@ -43,7 +43,7 @@ const navItems: NavItem[] = [
 export function BottomNav() {
   const location = useLocation();
   const deviceType = useDeviceType();
-  const isQRAvailable = useFeature('qr_scanner');
+  const isQRAvailable = useFeature('qrScanner');
 
   // Only show on mobile and tablet
   if (deviceType === 'desktop') {

@@ -37,7 +37,7 @@ interface RecentCheckIn {
 
 export default function StaffCheckinPage() {
   const [scanning, setScanning] = useState(false);
-  const [lastScan, setLastScan] = useState<LastScan | null>(null);
+  const [lastScan, _setLastScan] = useState<LastScan | null>(null);
   const [stats, setStats] = useState<Stats>({ total_registered: 0, checked_in: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
   const [recentCheckIns, setRecentCheckIns] = useState<RecentCheckIn[]>([]);

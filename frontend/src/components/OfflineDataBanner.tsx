@@ -3,8 +3,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getPendingScansCount } from '@/lib/offlineQueue';
-import { forceSyncNow } from '@/lib/syncService';
+import { offlineQueue } from '@/lib/offlineQueue';
 
 export const OfflineDataBanner = () => {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -20,7 +19,7 @@ export const OfflineDataBanner = () => {
 
     // Check pending count
     const updatePendingCount = async () => {
-      const count = await getPendingScansCount();
+      const count = await offlineQueue.getPendingCount();
       setPendingCount(count);
     };
 
@@ -37,8 +36,9 @@ export const OfflineDataBanner = () => {
   const handleSyncNow = async () => {
     setSyncing(true);
     try {
-      await forceSyncNow();
-      const count = await getPendingScansCount();
+      // Trigger sync by dispatching online event
+      window.dispatchEvent(new Event('online'));
+      const count = await offlineQueue.getPendingCount();
       setPendingCount(count);
     } finally {
       setSyncing(false);

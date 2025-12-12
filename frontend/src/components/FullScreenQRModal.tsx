@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Copy, Download, Share2, WifiOff, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -14,7 +14,6 @@ import {
   User,
   Settings as SettingsIcon,
   HelpCircle,
-  Bell,
   Shield,
   ClipboardCheck,
 } from 'lucide-react';

@@ -143,7 +143,7 @@ const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: Onb
     }
   ];
 
-  const currentStepData = steps[currentStep];
+  const currentStepData = steps[currentStep]!;
   const progress = ((currentStep + 1) / steps.length) * 100;
   const Icon = currentStepData.icon;
   const isFinalStep = 'isFinalStep' in currentStepData && currentStepData.isFinalStep;

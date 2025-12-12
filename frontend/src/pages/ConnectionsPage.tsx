@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, MessageSquare, Calendar, CheckCircle2, Loader2, Trash2, Users, QrCode, Sparkles, Download, FileText, Bell, BellOff, Search, X, SlidersHorizontal, Lock, Edit, Save, Building, BookOpen, Link as LinkIcon, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
+import { ChevronLeft, MessageSquare, CheckCircle2, Loader2, Trash2, Users, QrCode, Sparkles, Download, FileText, Bell, BellOff, Search, X, SlidersHorizontal, Lock, Edit, Save, BookOpen, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
