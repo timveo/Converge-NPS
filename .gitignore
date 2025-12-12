@@ -1,0 +1,94 @@
+############################
+# OS / Editor junk
+############################
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.log
+
+.vscode/
+.idea/
+*.iml
+
+############################
+# Node / JS
+############################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+dist/
+build/
+coverage/
+.next/
+out/
+
+############################
+# Prisma
+############################
+prisma/migrations/
+*.db
+*.db-journal
+
+############################
+# Environment / secrets
+############################
+.env
+.env.*
+!.env.example
+
+############################
+# Docker / Compose
+############################
+docker-compose.override.yml
+*.pid
+
+############################
+# Kubernetes
+############################
+.kube/
+*.kubeconfig
+
+############################
+# JVM diagnostics / dumps
+############################
+*.hprof
+*.jfr
+*.heapdump
+*.threaddump
+k8s_jvm_dumps/
+jvm_dumps/
+heap_dumps/
+
+############################
+# Test artifacts
+############################
+test-results/
+playwright-report/
+cypress/videos/
+cypress/screenshots/
+
+############################
+# Build artifacts (misc)
+############################
+*.tgz
+*.tar
+*.zip
+
+############################
+# Local tooling
+############################
+.sdkman/
+.gradle/
+.mvn/
+target/
+
+############################
+# Logs
+############################
+logs/
+*.log
