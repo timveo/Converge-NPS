@@ -9,9 +9,9 @@ backend/dist
 __pycache__/
 *.pyc
 
-# Env files
-.env
-.env.*
+# Env files (anywhere in the tree)
+**/.env
+**/.env.*
 
 # OS / IDE
 .DS_Store

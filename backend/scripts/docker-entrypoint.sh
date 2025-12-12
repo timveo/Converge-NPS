@@ -3,8 +3,14 @@ set -euo pipefail
 
 BACKEND_DIR="/app/backend"
 
+# Debug: show all environment variables starting with DATABASE or POSTGRES
+echo "=== Environment Debug ==="
+env | grep -E '^(DATABASE|POSTGRES|REDIS)' || echo "No database env vars found"
+echo "=== End Debug ==="
+
 # Use DATABASE_URL if already set (e.g., from Railway), otherwise construct it
 if [ -z "${DATABASE_URL:-}" ]; then
+  echo "DATABASE_URL not set, constructing from components..."
   POSTGRES_HOST=${POSTGRES_HOST:-"postgres"}
   POSTGRES_PORT=${POSTGRES_PORT:-"5432"}
   POSTGRES_USER=${POSTGRES_USER:-"postgres"}
@@ -12,6 +18,8 @@ if [ -z "${DATABASE_URL:-}" ]; then
   DATABASE_NAME=${DATABASE_NAME:-"converge_nps"}
   DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${DATABASE_NAME}?schema=public"
   export DATABASE_URL
+else
+  echo "DATABASE_URL already set from environment"
 fi
 
 wait_for_db() {
