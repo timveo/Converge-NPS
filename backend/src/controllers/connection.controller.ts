@@ -95,6 +95,47 @@ export class ConnectionController {
   }
 
   /**
+   * POST /connections
+   * Create connection by user ID (for recommendations)
+   */
+  static async createByUserId(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Not authenticated' },
+        });
+      }
+
+      const { connectedUserId } = req.body;
+
+      if (!connectedUserId) {
+        return res.status(400).json({
+          error: { code: 'INVALID_REQUEST', message: 'connectedUserId is required' },
+        });
+      }
+
+      const connection = await ConnectionService.createConnection({
+        userId: req.user.id,
+        connectedUserId,
+        collaborativeIntents: [],
+        connectionMethod: 'manual_entry',
+      });
+
+      logger.info('Connection created via recommendation', {
+        userId: req.user.id,
+        connectedUserId,
+      });
+
+      res.status(201).json({
+        message: 'Connection created successfully',
+        connection,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /connections
    * Get all connections for current user
    */

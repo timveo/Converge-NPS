@@ -163,7 +163,7 @@ export function initializeSocketServer(httpServer: HTTPServer) {
      */
     socket.on('mark_as_read', async (data: { conversationId: string }) => {
       try {
-        await messageService.markConversationAsRead(userId, data.conversationId);
+        await messageService.markConversationAsRead(data.conversationId, userId);
 
         // Notify other user
         socket.to(`conversation:${data.conversationId}`).emit('messages_read', {
