@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, ArrowLeft, Circle } from 'lucide-react';
+import { Send, ChevronLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface Message {
   id: string;
   conversationId: string;
   senderId: string;
   content: string;
-  status: 'sent' | 'delivered' | 'read';
-  createdAt: string;
+  isRead: boolean;
+  sentAt: string;
   sender: {
     id: string;
     fullName: string;
@@ -45,19 +47,28 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   // Fetch conversation and messages
   useEffect(() => {
     if (!conversationId) return;
 
     const fetchData = async () => {
       try {
-        // Fetch messages
-        const messagesRes = await api.get(`/conversations/${conversationId}/messages`);
-        setMessages(messagesRes.data.data);
+        const messagesRes = await api.get<{ success: boolean; data: Message[]; conversation: Conversation }>(`/messages/conversations/${conversationId}/messages`);
+        setMessages(messagesRes.data || []);
+        if (messagesRes.conversation) {
+          setConversation(messagesRes.conversation);
+        }
 
-        // Mark as read
-        await api.post(`/conversations/${conversationId}/read`);
-
+        await api.post(`/messages/conversations/${conversationId}/read`);
         setIsLoading(false);
       } catch (error) {
         console.error('Failed to fetch conversation', error);
@@ -72,22 +83,17 @@ export default function ChatPage() {
   useEffect(() => {
     if (!socket || !conversationId) return;
 
-    // Join conversation room
     socket.emit('join_conversation', conversationId);
 
-    // Listen for new messages
     socket.on('new_message', (message: Message) => {
       if (message.conversationId === conversationId) {
         setMessages(prev => [...prev, message]);
-
-        // Mark as read
         if (message.senderId !== user?.id) {
           socket.emit('mark_as_read', { conversationId });
         }
       }
     });
 
-    // Listen for typing indicators
     socket.on('user_typing', ({ userId }: { userId: string }) => {
       if (userId !== user?.id) {
         setIsTyping(true);
@@ -100,16 +106,14 @@ export default function ChatPage() {
       }
     });
 
-    // Listen for read receipts
     socket.on('messages_read', () => {
       setMessages(prev =>
         prev.map(msg =>
-          msg.senderId === user?.id ? { ...msg, status: 'read' } : msg
+          msg.senderId === user?.id ? { ...msg, isRead: true } : msg
         )
       );
     });
 
-    // Cleanup
     return () => {
       socket.emit('leave_conversation', conversationId);
       socket.off('new_message');
@@ -134,29 +138,24 @@ export default function ChatPage() {
       conversationId,
       senderId: user!.id,
       content: newMessage,
-      status: 'sent',
-      createdAt: new Date().toISOString(),
+      isRead: false,
+      sentAt: new Date().toISOString(),
       sender: {
         id: user!.id,
         fullName: user!.fullName,
       },
     };
 
-    // Optimistically add message
     setMessages(prev => [...prev, tempMessage]);
     setNewMessage('');
 
-    // Send via Socket.IO
     if (socket && isConnected) {
       socket.emit('send_message', {
         conversationId,
         content: tempMessage.content,
       });
-
-      // Stop typing indicator
       socket.emit('typing_stop', { conversationId });
     } else {
-      // Fallback to HTTP if socket not connected
       try {
         await api.post('/messages', {
           conversationId,
@@ -164,7 +163,6 @@ export default function ChatPage() {
         });
       } catch (error) {
         console.error('Failed to send message', error);
-        // Remove temp message on error
         setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
       }
     }
@@ -175,12 +173,10 @@ export default function ChatPage() {
 
     socket.emit('typing_start', { conversationId });
 
-    // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Stop typing after 2 seconds of inactivity
     typingTimeoutRef.current = setTimeout(() => {
       socket.emit('typing_stop', { conversationId });
     }, 2000);
@@ -188,118 +184,126 @@ export default function ChatPage() {
 
   const formatMessageTime = (dateString: string) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffInSeconds = (now.getTime() - date.getTime()) / 1000;
-
-    if (diffInSeconds < 60) {
-      return 'Just now';
-    } else if (diffInSeconds < 3600) {
-      return `${Math.floor(diffInSeconds / 60)}m ago`;
-    } else if (diffInSeconds < 86400) {
-      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    }) + ', ' + date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center h-[100dvh]">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center space-x-3">
-          <button
+    <div className="flex flex-col h-[100dvh] bg-gray-100">
+      {/* Header - Navy gradient matching the design */}
+      <header className="bg-gradient-navy text-primary-foreground px-4 py-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => navigate('/messages')}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="text-primary-foreground hover:bg-primary/20"
           >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
 
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
-            {conversation?.otherUser.fullName.charAt(0).toUpperCase()}
-          </div>
+          <Avatar className="h-10 w-10 border-2 border-primary-foreground/20">
+            <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground text-sm font-semibold">
+              {conversation?.otherUser?.fullName ? getInitials(conversation.otherUser.fullName) : '?'}
+            </AvatarFallback>
+          </Avatar>
 
-          <div className="flex-1">
-            <h2 className="font-semibold text-gray-900">
-              {conversation?.otherUser.fullName}
-            </h2>
-            <p className="text-sm text-gray-500">
-              {conversation?.otherUser.organization}
+          <div className="flex-1 min-w-0">
+            <h1 className="font-bold text-lg truncate">
+              {conversation?.otherUser?.fullName || 'Unknown'}
+            </h1>
+            <p className="text-sm text-tech-cyan-light truncate">
+              {conversation?.otherUser?.organization || ''}
             </p>
           </div>
-
-          {/* Online Status */}
-          <div className="flex items-center space-x-1 text-sm text-gray-500">
-            <Circle className={cn('w-2 h-2', isConnected ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400')} />
-            <span>{isConnected ? 'Online' : 'Offline'}</span>
-          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Messages */}
+      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => {
-          const isOwn = message.senderId === user?.id;
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            <p>No messages yet. Start the conversation!</p>
+          </div>
+        ) : (
+          messages.map((message) => {
+            const isOwn = message.senderId === user?.id;
 
-          return (
-            <div
-              key={message.id}
-              className={cn(
-                'flex',
-                isOwn ? 'justify-end' : 'justify-start'
-              )}
-            >
-              <div className={cn('max-w-[70%]', isOwn ? 'items-end' : 'items-start')}>
+            return (
+              <div
+                key={message.id}
+                className={cn(
+                  'flex flex-col',
+                  isOwn ? 'items-end' : 'items-start'
+                )}
+              >
+                {/* Sender name for received messages */}
+                {!isOwn && (
+                  <span className="text-sm font-semibold text-primary mb-1 ml-1">
+                    {message.sender?.fullName || conversation?.otherUser?.fullName}
+                  </span>
+                )}
+
+                {/* Message bubble */}
                 <div
                   className={cn(
-                    'rounded-2xl px-4 py-2',
+                    'max-w-[80%] rounded-2xl px-4 py-3 shadow-sm',
                     isOwn
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-900 border border-gray-200'
+                      ? 'bg-primary text-primary-foreground rounded-br-md'
+                      : 'bg-white text-foreground rounded-bl-md border border-border'
                   )}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  <p className="text-sm leading-relaxed">{message.content}</p>
                 </div>
-                <div className="flex items-center space-x-1 mt-1 px-2">
-                  <span className="text-xs text-gray-500">
-                    {formatMessageTime(message.createdAt)}
-                  </span>
-                  {isOwn && (
-                    <span className="text-xs text-gray-500">
-                      {message.status === 'read' ? '• Read' : '• Sent'}
-                    </span>
+
+                {/* Timestamp */}
+                <div className={cn(
+                  'flex items-center gap-1 mt-1 text-xs text-muted-foreground',
+                  isOwn ? 'mr-1' : 'ml-1'
+                )}>
+                  <span>{formatMessageTime(message.sentAt)}</span>
+                  {isOwn && message.isRead && (
+                    <span className="text-primary">✓</span>
                   )}
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
 
         {/* Typing Indicator */}
         {isTyping && (
-          <div className="flex items-center space-x-2 text-gray-500 text-sm">
-            <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div className="flex items-start">
+            <div className="bg-white rounded-2xl rounded-bl-md px-4 py-3 shadow-sm border border-border">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
             </div>
-            <span>typing...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="bg-white border-t border-gray-200 p-4">
-        <form onSubmit={handleSendMessage} className="flex space-x-2">
+      {/* Input Area */}
+      <div className="bg-white border-t border-border p-4 shrink-0 safe-bottom">
+        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
           <input
             type="text"
             value={newMessage}
@@ -308,15 +312,16 @@ export default function ChatPage() {
               handleTyping();
             }}
             placeholder="Type a message..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-3 bg-muted border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
           />
-          <button
+          <Button
             type="submit"
             disabled={!newMessage.trim()}
-            className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            size="icon"
+            className="h-11 w-11 rounded-full shrink-0"
           >
-            <Send className="w-5 h-5" />
-          </button>
+            <Send className="h-5 w-5" />
+          </Button>
         </form>
       </div>
     </div>

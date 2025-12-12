@@ -56,13 +56,57 @@ export async function sendMessage(req: Request, res: Response) {
 }
 
 /**
+ * POST /v1/conversations
+ * Get or create a conversation with another user
+ */
+export async function getOrCreateConversation(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const { recipientId, participantId } = req.body;
+
+    const otherUserId = recipientId || participantId;
+    console.log('Creating/getting conversation:', { userId, otherUserId });
+
+    if (!otherUserId) {
+      return res.status(400).json({
+        success: false,
+        error: 'recipientId or participantId is required',
+      });
+    }
+
+    const conversation = await messageService.getOrCreateConversation(userId, otherUserId);
+    console.log('Conversation created/found:', conversation?.id);
+
+    res.json({
+      success: true,
+      data: conversation,
+    });
+  } catch (error: any) {
+    console.error('Error creating conversation:', error);
+    if (error.message.includes('does not allow messaging')) {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create conversation',
+    });
+  }
+}
+
+/**
  * GET /v1/conversations
  * Get user's conversations
  */
 export async function getConversations(req: Request, res: Response) {
   try {
     const userId = req.user!.id;
+    console.log('Fetching conversations for user:', userId);
     const conversations = await messageService.getUserConversations(userId);
+    console.log('Found conversations:', conversations.length);
 
     res.json({
       success: true,
@@ -70,6 +114,7 @@ export async function getConversations(req: Request, res: Response) {
       count: conversations.length,
     });
   } catch (error: any) {
+    console.error('Error fetching conversations:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch conversations',
@@ -87,7 +132,7 @@ export async function getMessages(req: Request, res: Response) {
     const { id: conversationId } = req.params;
     const { limit, before } = req.query;
 
-    const messages = await messageService.getConversationMessages(
+    const result = await messageService.getConversationMessages(
       userId,
       conversationId,
       {
@@ -98,8 +143,9 @@ export async function getMessages(req: Request, res: Response) {
 
     res.json({
       success: true,
-      data: messages,
-      count: messages.length,
+      data: result.messages,
+      conversation: result.conversation,
+      count: result.messages.length,
     });
   } catch (error: any) {
     if (error.message === 'Conversation not found') {
@@ -132,7 +178,7 @@ export async function markAsRead(req: Request, res: Response) {
     const userId = req.user!.id;
     const { id: conversationId } = req.params;
 
-    await messageService.markConversationAsRead(userId, conversationId);
+    await messageService.markConversationAsRead(conversationId, userId);
 
     res.json({
       success: true,

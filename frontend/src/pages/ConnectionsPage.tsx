@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, MessageSquare, Calendar, CheckCircle2, Loader2, Trash2, Users, QrCode, Sparkles, Download, FileText, Bell, BellOff, Search, X, SlidersHorizontal, Lock, Edit, Save, Building, BookOpen, Link as LinkIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, MessageSquare, Calendar, CheckCircle2, Loader2, Trash2, Users, QrCode, Sparkles, Download, FileText, Bell, BellOff, Search, X, SlidersHorizontal, Lock, Edit, Save, Building, BookOpen, Link as LinkIcon, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -132,7 +132,8 @@ export default function ConnectionsPage() {
       setRecommendations(prev => prev.filter(rec => rec.id !== userId));
       fetchConnections();
     } catch (error: any) {
-      toast.error('Failed to create connection');
+      const message = error.response?.data?.error || 'Failed to add connection';
+      toast.error(message);
     } finally {
       setConnectingUser(null);
     }
@@ -232,13 +233,13 @@ export default function ConnectionsPage() {
   const handleStartMessage = async (e: React.MouseEvent, userId: string) => {
     e.stopPropagation();
     try {
-      const response = await api.post('/conversations', { participantId: userId });
-      const conversation = (response as any).data;
-      if (conversation?.id) {
-        navigate(`/messages/${conversation.id}`);
-      }
-    } catch (error) {
-      toast.error('Failed to start conversation');
+      // Create the conversation first
+      await api.post('/messages/conversations', { recipientId: userId });
+      // Then navigate to messages page where the new conversation will appear
+      navigate('/messages');
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to start conversation';
+      toast.error(message);
     }
   };
 
@@ -659,7 +660,10 @@ export default function ConnectionsPage() {
                     {connectingUser === rec.id ? (
                       <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 animate-spin" />
                     ) : (
-                      'Connect'
+                      <>
+                        <UserPlus className="h-3.5 w-3.5 mr-1" />
+                        Connect
+                      </>
                     )}
                   </Button>
                   <Button
