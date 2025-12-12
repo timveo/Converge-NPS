@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import axios, { AxiosInstance } from 'axios';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -910,7 +911,7 @@ export async function importProjects(): Promise<ImportResult> {
             // Create placeholder profile for PI
             piProfile = await prisma.profile.create({
               data: {
-                id: undefined, // Let DB generate
+                id: randomUUID(),
                 fullName: piName,
                 email: piEmail,
                 organization: department || undefined,
@@ -1178,13 +1179,9 @@ export async function importPartners(): Promise<ImportResult> {
           partnershipType: organizationType,
           websiteUrl: website,
           researchAreas: technologyFocus,
+          contactName,
+          contactEmail,
           isFeatured: false,
-          primaryContactName: contactName,
-          primaryContactTitle: contactTitle,
-          primaryContactEmail: contactEmail,
-          primaryContactPhone: contactPhone,
-          dodSponsors,
-          hideContactInfo: false,
         };
 
         if (partner) {

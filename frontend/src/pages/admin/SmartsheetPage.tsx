@@ -38,36 +38,13 @@ interface ImportJob {
   lastRun: string;
 }
 
-const initialImportJobs: ImportJob[] = [
-  {
-    id: '1',
-    type: 'Industry Partners',
-    status: 'completed',
-    records: 45,
-    lastRun: '2026-01-20 10:30 AM',
-  },
-  {
-    id: '2',
-    type: 'Research Projects',
-    status: 'completed',
-    records: 52,
-    lastRun: '2026-01-20 10:32 AM',
-  },
-  {
-    id: '3',
-    type: 'Event Schedule',
-    status: 'completed',
-    records: 87,
-    lastRun: '2026-01-20 10:35 AM',
-  },
-];
+const initialImportJobs: ImportJob[] = [];
 
-const importOptions: Array<{ type: ImportType; label: string; description: string }> = [
+const importOptions: Array<{ type: Exclude<ImportType, 'opportunities'>; label: string; description: string }> = [
   { type: 'partners', label: 'Industry Partners', description: 'Company listings from Smartsheet' },
   { type: 'projects', label: 'Research Projects', description: 'Academic project catalog' },
   { type: 'sessions', label: 'Event Schedule', description: 'Sessions & agenda updates' },
-  { type: 'opportunities', label: 'Opportunities', description: 'Funding & internship posts' },
-  { type: 'attendees', label: 'Attendees', description: 'People directory & QR codes' },
+  // We now export attendees instead of importing them.
 ];
 
 export default function SmartsheetPage() {
@@ -196,15 +173,7 @@ export default function SmartsheetPage() {
             <CardContent className="p-3 md:p-6 pt-0 space-y-2 md:space-y-3">
               <Button variant="outline" className="w-full h-10 md:h-11 text-sm">
                 <Download className="w-4 h-4 mr-2" />
-                Export Registrations
-              </Button>
-              <Button variant="outline" className="w-full h-10 md:h-11 text-sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export Connections
-              </Button>
-              <Button variant="outline" className="w-full h-10 md:h-11 text-sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export RSVPs
+                Export Attendees
               </Button>
             </CardContent>
           </Card>
@@ -216,34 +185,38 @@ export default function SmartsheetPage() {
             <CardDescription className="text-xs md:text-sm">Recent import operations</CardDescription>
           </CardHeader>
           <CardContent className="p-3 md:p-6 pt-0">
-            <div className="space-y-2 md:space-y-3">
-              {importJobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="flex items-center justify-between p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-2 md:gap-3">
-                    {job.status === 'completed' ? (
-                      <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-600 flex-shrink-0" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-red-600 flex-shrink-0" />
-                    )}
-                    <div>
-                      <p className="font-medium text-sm md:text-base">{job.type}</p>
-                      <p className="text-xs md:text-sm text-gray-600">
-                        {job.records} records • {job.lastRun}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={job.status === 'completed' ? 'default' : 'destructive'}
-                    className="text-xs"
+            {importJobs.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-6">No imports have been run yet.</p>
+            ) : (
+              <div className="space-y-2 md:space-y-3">
+                {importJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="flex items-center justify-between p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    {job.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
+                    <div className="flex items-center gap-2 md:gap-3">
+                      {job.status === 'completed' ? (
+                        <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-600 flex-shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-red-600 flex-shrink-0" />
+                      )}
+                      <div>
+                        <p className="font-medium text-sm md:text-base">{job.type}</p>
+                        <p className="text-xs md:text-sm text-gray-600">
+                          {job.records} records • {job.lastRun}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={job.status === 'completed' ? 'default' : 'destructive'}
+                      className="text-xs"
+                    >
+                      {job.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
