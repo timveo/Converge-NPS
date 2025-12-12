@@ -31,9 +31,9 @@ describe('Smartsheet Service', () => {
         github: 'https://github.com/alice',
       };
 
-      (prisma.profiles.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (prisma.smartsheetSyncLog.findFirst as jest.Mock).mockResolvedValue(null);
-      (prisma.smartsheetSyncLog.create as jest.Mock).mockResolvedValue({
+      (prisma.profile.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      (prisma.smartsheetSync.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.smartsheetSync.create as jest.Mock).mockResolvedValue({
         id: 'log-1',
         entityType: 'user',
         entityId: 'user-1',
@@ -48,7 +48,7 @@ describe('Smartsheet Service', () => {
     });
 
     it('should handle user not found error', async () => {
-      (prisma.profiles.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.profile.findUnique as jest.Mock).mockResolvedValue(null);
 
       const result = await smartsheetService.syncUserToSmartsheet('non-existent');
 
@@ -63,9 +63,9 @@ describe('Smartsheet Service', () => {
         email: 'test@test.com',
       };
 
-      (prisma.profiles.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (prisma.smartsheetSyncLog.findFirst as jest.Mock).mockResolvedValue(null);
-      (prisma.smartsheetSyncLog.create as jest.Mock).mockResolvedValue({
+      (prisma.profile.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      (prisma.smartsheetSync.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.smartsheetSync.create as jest.Mock).mockResolvedValue({
         id: 'log-1',
         status: 'error',
       });
@@ -73,7 +73,7 @@ describe('Smartsheet Service', () => {
       // This will fail because we're not mocking the HTTP client properly
       const result = await smartsheetService.syncUserToSmartsheet('user-1');
 
-      expect(prisma.smartsheetSyncLog.create).toHaveBeenCalledWith(
+      expect(prisma.smartsheetSync.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             status: 'error',
@@ -90,29 +90,29 @@ describe('Smartsheet Service', () => {
         { id: 'user-2', fullName: 'Bob', email: 'bob@test.com' },
       ];
 
-      (prisma.profiles.findMany as jest.Mock).mockResolvedValue(mockUsers);
-      (prisma.profiles.findUnique as jest.Mock).mockImplementation((args) => {
+      (prisma.profile.findMany as jest.Mock).mockResolvedValue(mockUsers);
+      (prisma.profile.findUnique as jest.Mock).mockImplementation((args) => {
         return Promise.resolve(mockUsers.find(u => u.id === args.where.id));
       });
-      (prisma.smartsheetSyncLog.findFirst as jest.Mock).mockResolvedValue(null);
-      (prisma.smartsheetSyncLog.create as jest.Mock).mockResolvedValue({
+      (prisma.smartsheetSync.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.smartsheetSync.create as jest.Mock).mockResolvedValue({
         status: 'error', // Will fail without proper HTTP mock
       });
 
       const result = await smartsheetService.syncAllUsers();
 
       expect(result.total).toBe(2);
-      expect(prisma.profiles.findMany).toHaveBeenCalled();
+      expect(prisma.profile.findMany).toHaveBeenCalled();
     });
   });
 
   describe('getSyncStatus', () => {
     it('should return sync status for all entity types', async () => {
-      (prisma.profiles.count as jest.Mock).mockResolvedValue(100);
-      (prisma.rsvps.count as jest.Mock).mockResolvedValue(50);
-      (prisma.connections.count as jest.Mock).mockResolvedValue(75);
+      (prisma.profile.count as jest.Mock).mockResolvedValue(100);
+      (prisma.rsvp.count as jest.Mock).mockResolvedValue(50);
+      (prisma.connection.count as jest.Mock).mockResolvedValue(75);
 
-      (prisma.smartsheetSyncLog.groupBy as jest.Mock).mockImplementation((args) => {
+      (prisma.smartsheetSync.groupBy as jest.Mock).mockImplementation((args) => {
         if (args.where.entityType === 'user') {
           return Promise.resolve([
             { status: 'success', _count: 80 },
@@ -123,7 +123,7 @@ describe('Smartsheet Service', () => {
         return Promise.resolve([]);
       });
 
-      (prisma.smartsheetSyncLog.findFirst as jest.Mock).mockResolvedValue({
+      (prisma.smartsheetSync.findFirst as jest.Mock).mockResolvedValue({
         lastAttempt: new Date(),
       });
 
@@ -159,7 +159,7 @@ describe('Smartsheet Service', () => {
         },
       ];
 
-      (prisma.smartsheetSyncLog.findMany as jest.Mock).mockResolvedValue(mockFailedSyncs);
+      (prisma.smartsheetSync.findMany as jest.Mock).mockResolvedValue(mockFailedSyncs);
 
       const result = await smartsheetService.getFailedSyncs();
 
@@ -184,27 +184,27 @@ describe('Smartsheet Service', () => {
         email: 'test@test.com',
       };
 
-      (prisma.smartsheetSyncLog.findUnique as jest.Mock).mockResolvedValue(mockSyncLog);
-      (prisma.smartsheetSyncLog.update as jest.Mock).mockResolvedValue({
+      (prisma.smartsheetSync.findUnique as jest.Mock).mockResolvedValue(mockSyncLog);
+      (prisma.smartsheetSync.update as jest.Mock).mockResolvedValue({
         ...mockSyncLog,
         retryCount: 2,
       });
-      (prisma.profiles.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (prisma.smartsheetSyncLog.findFirst as jest.Mock).mockResolvedValue(null);
-      (prisma.smartsheetSyncLog.create as jest.Mock).mockResolvedValue({
+      (prisma.profile.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      (prisma.smartsheetSync.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.smartsheetSync.create as jest.Mock).mockResolvedValue({
         status: 'error',
       });
 
       const result = await smartsheetService.retrySyncItem('log-1');
 
-      expect(prisma.smartsheetSyncLog.update).toHaveBeenCalledWith({
+      expect(prisma.smartsheetSync.update).toHaveBeenCalledWith({
         where: { id: 'log-1' },
         data: { retryCount: 2 },
       });
     });
 
     it('should return error if sync log not found', async () => {
-      (prisma.smartsheetSyncLog.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.smartsheetSync.findUnique as jest.Mock).mockResolvedValue(null);
 
       const result = await smartsheetService.retrySyncItem('non-existent');
 
@@ -215,12 +215,12 @@ describe('Smartsheet Service', () => {
 
   describe('clearFailedSyncs', () => {
     it('should delete all failed syncs', async () => {
-      (prisma.smartsheetSyncLog.deleteMany as jest.Mock).mockResolvedValue({ count: 10 });
+      (prisma.smartsheetSync.deleteMany as jest.Mock).mockResolvedValue({ count: 10 });
 
       const result = await smartsheetService.clearFailedSyncs();
 
       expect(result).toBe(10);
-      expect(prisma.smartsheetSyncLog.deleteMany).toHaveBeenCalledWith({
+      expect(prisma.smartsheetSync.deleteMany).toHaveBeenCalledWith({
         where: { status: 'error' },
       });
     });
