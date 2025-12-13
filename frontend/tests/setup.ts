@@ -3,7 +3,7 @@
  * Runs before all tests
  */
 
-import { expect, afterEach, vi, beforeEach } from 'vitest';
+import { afterEach, vi, beforeEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
@@ -41,7 +41,7 @@ global.IntersectionObserver = class IntersectionObserver {
     return [];
   }
   unobserve() {}
-} as any;
+} as unknown as typeof IntersectionObserver;
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
@@ -49,7 +49,7 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
   observe() {}
   unobserve() {}
-} as any;
+} as unknown as typeof ResizeObserver;
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -101,7 +101,7 @@ Element.prototype.scrollIntoView = vi.fn();
 
 // Suppress console errors during tests
 const originalError = console.error;
-console.error = (...args: any[]) => {
+console.error = (...args: unknown[]) => {
   if (
     typeof args[0] === 'string' &&
     (args[0].includes('Warning: ReactDOM.render is no longer supported') ||

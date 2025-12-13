@@ -26,7 +26,8 @@ describe('Utils', () => {
     });
 
     it('should handle conditional classes', () => {
-      const result = cn('foo', false && 'bar', 'baz');
+      const condition = false;
+      const result = cn('foo', condition && 'bar', 'baz');
       expect(result).toBe('foo baz');
     });
 

@@ -2,7 +2,7 @@
  * useDeviceType Hook Unit Tests
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useDeviceType } from '../../src/hooks/useDeviceType';
 
@@ -28,7 +28,7 @@ describe('useDeviceType', () => {
 
   it('should return initial device type', async () => {
     const { getDeviceType } = await import('@/lib/deviceDetection');
-    (getDeviceType as any).mockReturnValue('desktop');
+    (getDeviceType as Mock).mockReturnValue('desktop');
 
     const { result } = renderHook(() => useDeviceType());
 
@@ -37,7 +37,7 @@ describe('useDeviceType', () => {
 
   it('should return mobile device type', async () => {
     const { getDeviceType } = await import('@/lib/deviceDetection');
-    (getDeviceType as any).mockReturnValue('mobile');
+    (getDeviceType as Mock).mockReturnValue('mobile');
 
     const { result } = renderHook(() => useDeviceType());
 
@@ -46,7 +46,7 @@ describe('useDeviceType', () => {
 
   it('should return tablet device type', async () => {
     const { getDeviceType } = await import('@/lib/deviceDetection');
-    (getDeviceType as any).mockReturnValue('tablet');
+    (getDeviceType as Mock).mockReturnValue('tablet');
 
     const { result } = renderHook(() => useDeviceType());
 
@@ -69,14 +69,14 @@ describe('useDeviceType', () => {
 
   it('should update device type on resize', async () => {
     const { getDeviceType } = await import('@/lib/deviceDetection');
-    (getDeviceType as any).mockReturnValue('desktop');
+    (getDeviceType as Mock).mockReturnValue('desktop');
 
     const { result } = renderHook(() => useDeviceType());
 
     expect(result.current).toBe('desktop');
 
     // Simulate resize to mobile
-    (getDeviceType as any).mockReturnValue('mobile');
+    (getDeviceType as Mock).mockReturnValue('mobile');
 
     act(() => {
       resizeHandler();

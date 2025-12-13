@@ -43,11 +43,6 @@ describe('ThemeToggle', () => {
   });
 
   it('should toggle to light when currently dark', () => {
-    vi.mocked(vi.importActual('next-themes') as any).useTheme = () => ({
-      theme: 'dark',
-      setTheme: mockSetTheme,
-    });
-
     vi.doMock('next-themes', () => ({
       useTheme: () => ({
         theme: 'dark',
