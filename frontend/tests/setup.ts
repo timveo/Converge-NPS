@@ -3,13 +3,18 @@
  * Runs before all tests
  */
 
-import { expect, afterEach, vi } from 'vitest';
+import { expect, afterEach, vi, beforeEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 // Cleanup after each test
 afterEach(() => {
   cleanup();
+});
+
+// Reset localStorage before each test
+beforeEach(() => {
+  localStorage.clear();
 });
 
 // Mock matchMedia
@@ -38,6 +43,14 @@ global.IntersectionObserver = class IntersectionObserver {
   unobserve() {}
 } as any;
 
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  constructor() {}
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+} as any;
+
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -53,12 +66,27 @@ const localStorageMock = (() => {
     clear: () => {
       store = {};
     },
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index: number) => Object.keys(store)[index] || null,
   };
 })();
 
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
+
+// Mock crypto.randomUUID
+if (!crypto.randomUUID) {
+  Object.defineProperty(crypto, 'randomUUID', {
+    value: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    }),
+  });
+}
 
 // Mock environment variables
 vi.mock('process', () => ({
@@ -67,3 +95,20 @@ vi.mock('process', () => ({
     VITE_WS_URL: 'http://localhost:3000',
   },
 }));
+
+// Mock scrollIntoView
+Element.prototype.scrollIntoView = vi.fn();
+
+// Suppress console errors during tests
+const originalError = console.error;
+console.error = (...args: any[]) => {
+  if (
+    typeof args[0] === 'string' &&
+    (args[0].includes('Warning: ReactDOM.render is no longer supported') ||
+     args[0].includes('Warning: An update to') ||
+     args[0].includes('act(...)'))
+  ) {
+    return;
+  }
+  originalError.call(console, ...args);
+};
