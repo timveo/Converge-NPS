@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles } from "lucide-react";
+import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -262,31 +262,6 @@ export default function IndustryPage() {
       </div>
 
       <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
-        {/* AI Recommendations */}
-        {visibleRecommendations.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Sparkles className="h-4 w-4 text-accent" />
-              <span>Recommended for you</span>
-            </div>
-            <div className="grid gap-2">
-              {visibleRecommendations.map((rec) => (
-                <RecommendationCard
-                  key={rec.id}
-                  title={rec.title}
-                  reason={rec.reason}
-                  matchScore={rec.relevanceScore / 10}
-                  tags={rec.tags}
-                  type="Partner"
-                  onClick={() => handleRecommendationClick(rec)}
-                  onDismiss={() => dismiss(rec.id)}
-                  compact
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 md:h-4 md:w-4 text-muted-foreground" />
@@ -455,6 +430,38 @@ export default function IndustryPage() {
         </Card>
       </div>
 
+      {/* AI Recommendations */}
+      {visibleRecommendations.length > 0 && !showFavoritesOnly && (
+        <div className="container mx-auto px-4 md:px-4 mb-3 md:mb-4">
+          <Card className="p-4 md:p-6 bg-gradient-to-br from-accent/5 to-primary/5 border-accent/30">
+            <div className="flex items-center gap-2 md:gap-2 mb-3 md:mb-4">
+              <Sparkles className="h-5 w-5 md:h-5 md:w-5 text-accent" />
+              <h2 className="text-base md:text-lg font-semibold">Recommended Partners</h2>
+            </div>
+            <div className="space-y-2 md:space-y-3">
+              {visibleRecommendations.map((rec) => {
+                const partner = partners.find(p =>
+                  p.company_name.toLowerCase() === rec.title.toLowerCase() || p.id === rec.id
+                );
+                return (
+                  <RecommendationCard
+                    key={rec.id}
+                    title={rec.title}
+                    reason={rec.reason}
+                    matchScore={rec.relevanceScore / 10}
+                    tags={partner?.technology_focus_areas || rec.tags}
+                    maxTags={2}
+                    onClick={() => handleRecommendationClick(rec)}
+                    onDismiss={() => dismiss(rec.id)}
+                    compact
+                  />
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Results count */}
       <div className="container mx-auto px-4 md:px-4 mb-3 md:mb-4">
         <p className="text-sm md:text-sm text-muted-foreground">
@@ -584,6 +591,53 @@ export default function IndustryPage() {
                           <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
                             <MapPin className="h-4 w-4 text-accent" />
                             <span>Booth: {partner.booth_location}</span>
+                          </div>
+                        )}
+
+                        {/* Primary Contact Section */}
+                        {!partner.hide_contact_info && partner.primary_contact_name && (
+                          <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Primary Contact</p>
+                            <p className="text-sm font-medium text-foreground">{partner.primary_contact_name}</p>
+                            {partner.primary_contact_title && <p className="text-xs text-muted-foreground mb-2">{partner.primary_contact_title}</p>}
+
+                            <div className="flex flex-col gap-1.5 mt-2">
+                              {partner.primary_contact_email && (
+                                <a
+                                  href={`mailto:${partner.primary_contact_email}`}
+                                  className="flex items-center gap-2 text-xs text-primary hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Mail className="h-3 w-3" />
+                                  {partner.primary_contact_email}
+                                </a>
+                              )}
+                              {partner.primary_contact_phone && (
+                                <a
+                                  href={`tel:${partner.primary_contact_phone}`}
+                                  className="flex items-center gap-2 text-xs text-primary hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Phone className="h-3 w-3" />
+                                  {partner.primary_contact_phone}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Team Members */}
+                        {partner.team_members && Array.isArray(partner.team_members) && partner.team_members.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Team Members</p>
+                            <div className="grid gap-2">
+                              {partner.team_members.map((member: any, idx: number) => (
+                                <div key={idx} className="text-sm p-2 bg-muted/30 rounded">
+                                  <p className="font-medium text-foreground">{member.name || member}</p>
+                                  {member.title && <p className="text-xs text-muted-foreground">{member.title}</p>}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
 
