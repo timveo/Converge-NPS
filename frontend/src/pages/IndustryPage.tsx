@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus } from "lucide-react";
+import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,18 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { RecommendationCard } from "@/components/RecommendationCard";
+import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
+
+interface Recommendation {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  reason: string;
+  relevanceScore: number;
+  tags: string[];
+}
 
 const TECHNOLOGY_AREAS = ["AI/ML", "Autonomy", "Cybersecurity", "Quantum", "Space", "Biotechnology", "Energy", "Materials Science", "Communications", "Electronic Warfare", "Robotics", "Data Analytics"];
 const SEEKING_OPTIONS = ["Research partnerships", "Student interns", "Pilot programs", "Data access", "Funding opportunities", "Technology licensing"];
@@ -47,6 +59,8 @@ export default function IndustryPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [expandedPartners, setExpandedPartners] = useState<Set<string>>(new Set());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const { dismiss, isDismissed } = useDismissedRecommendations('industry');
 
   const toggleExpanded = (partnerId: string) => {
     setExpandedPartners(prev => {
@@ -104,7 +118,36 @@ export default function IndustryPage() {
 
   useEffect(() => {
     fetchPartners();
+    fetchRecommendations();
   }, []);
+
+  const fetchRecommendations = async () => {
+    try {
+      const response = await api.post('/recommendations', { type: 'industry_partner' });
+      const data = (response as any)?.recommendations || [];
+      setRecommendations(data);
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+    }
+  };
+
+  const visibleRecommendations = recommendations
+    .filter(rec => !isDismissed(rec.id))
+    .slice(0, 3);
+
+  const handleRecommendationClick = (rec: Recommendation) => {
+    // Find the partner and scroll to it, or expand it
+    const partner = partners.find(p =>
+      p.company_name.toLowerCase() === rec.title.toLowerCase() ||
+      p.id === rec.id
+    );
+    if (partner) {
+      setExpandedPartners(prev => new Set([...prev, partner.id]));
+      // Scroll to the partner card
+      const element = document.getElementById(`partner-${partner.id}`);
+      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   const fetchPartners = async () => {
     try {
@@ -387,6 +430,38 @@ export default function IndustryPage() {
         </Card>
       </div>
 
+      {/* AI Recommendations */}
+      {visibleRecommendations.length > 0 && !showFavoritesOnly && (
+        <div className="container mx-auto px-4 md:px-4 mb-3 md:mb-4">
+          <Card className="p-4 md:p-6 bg-gradient-to-br from-accent/5 to-primary/5 border-accent/30">
+            <div className="flex items-center gap-2 md:gap-2 mb-3 md:mb-4">
+              <Sparkles className="h-5 w-5 md:h-5 md:w-5 text-accent" />
+              <h2 className="text-base md:text-lg font-semibold">Recommended Partners</h2>
+            </div>
+            <div className="space-y-2 md:space-y-3">
+              {visibleRecommendations.map((rec) => {
+                const partner = partners.find(p =>
+                  p.company_name.toLowerCase() === rec.title.toLowerCase() || p.id === rec.id
+                );
+                return (
+                  <RecommendationCard
+                    key={rec.id}
+                    title={rec.title}
+                    reason={rec.reason}
+                    matchScore={rec.relevanceScore / 10}
+                    tags={partner?.technology_focus_areas || rec.tags}
+                    maxTags={2}
+                    onClick={() => handleRecommendationClick(rec)}
+                    onDismiss={() => dismiss(rec.id)}
+                    compact
+                  />
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Results count */}
       <div className="container mx-auto px-4 md:px-4 mb-3 md:mb-4">
         <p className="text-sm md:text-sm text-muted-foreground">
@@ -428,7 +503,7 @@ export default function IndustryPage() {
             const isExpanded = expandedPartners.has(partner.id);
             return (
               <Collapsible key={partner.id} open={isExpanded} onOpenChange={() => toggleExpanded(partner.id)}>
-                <Card className="shadow-md border-border/50 hover:shadow-lg transition-all duration-300">
+                <Card id={`partner-${partner.id}`} className="shadow-md border-border/50 hover:shadow-lg transition-all duration-300">
                   <div className="p-4 md:p-6">
                     {/* Header row with logo, name, tags, and favorite */}
                     <div className="flex items-start gap-3 md:gap-4">
@@ -516,6 +591,53 @@ export default function IndustryPage() {
                           <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
                             <MapPin className="h-4 w-4 text-accent" />
                             <span>Booth: {partner.booth_location}</span>
+                          </div>
+                        )}
+
+                        {/* Primary Contact Section */}
+                        {!partner.hide_contact_info && partner.primary_contact_name && (
+                          <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Primary Contact</p>
+                            <p className="text-sm font-medium text-foreground">{partner.primary_contact_name}</p>
+                            {partner.primary_contact_title && <p className="text-xs text-muted-foreground mb-2">{partner.primary_contact_title}</p>}
+
+                            <div className="flex flex-col gap-1.5 mt-2">
+                              {partner.primary_contact_email && (
+                                <a
+                                  href={`mailto:${partner.primary_contact_email}`}
+                                  className="flex items-center gap-2 text-xs text-primary hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Mail className="h-3 w-3" />
+                                  {partner.primary_contact_email}
+                                </a>
+                              )}
+                              {partner.primary_contact_phone && (
+                                <a
+                                  href={`tel:${partner.primary_contact_phone}`}
+                                  className="flex items-center gap-2 text-xs text-primary hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Phone className="h-3 w-3" />
+                                  {partner.primary_contact_phone}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Team Members */}
+                        {partner.team_members && Array.isArray(partner.team_members) && partner.team_members.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Team Members</p>
+                            <div className="grid gap-2">
+                              {partner.team_members.map((member: any, idx: number) => (
+                                <div key={idx} className="text-sm p-2 bg-muted/30 rounded">
+                                  <p className="font-medium text-foreground">{member.name || member}</p>
+                                  {member.title && <p className="text-xs text-muted-foreground">{member.title}</p>}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
 
