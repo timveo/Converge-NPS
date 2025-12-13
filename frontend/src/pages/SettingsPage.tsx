@@ -102,7 +102,7 @@ export default function SettingsPage() {
     setOriginalInterests(nextInterests);
     setEmail(user.email || "");
     setPhone(user.phone || "");
-    setShareEmail(user.privacy?.showEmail !== false);
+    setShareEmail(!user.privacy?.hideContactInfo);
     setAllowQrScan(user.privacy?.allowQrScanning !== false);
   }, [user]);
 

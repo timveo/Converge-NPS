@@ -15,7 +15,7 @@ process.env.API_URL = 'http://localhost:3000';
 // Mock Prisma Client
 jest.mock('@prisma/client', () => {
   const mockPrismaClient = {
-    profiles: {
+    profile: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
@@ -24,7 +24,7 @@ jest.mock('@prisma/client', () => {
       count: jest.fn(),
       groupBy: jest.fn(),
     },
-    sessions: {
+    session: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
@@ -33,7 +33,7 @@ jest.mock('@prisma/client', () => {
       count: jest.fn(),
       groupBy: jest.fn(),
     },
-    rsvps: {
+    rsvp: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
@@ -43,7 +43,7 @@ jest.mock('@prisma/client', () => {
       count: jest.fn(),
       groupBy: jest.fn(),
     },
-    connections: {
+    connection: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
@@ -52,20 +52,20 @@ jest.mock('@prisma/client', () => {
       delete: jest.fn(),
       count: jest.fn(),
     },
-    messages: {
+    message: {
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       count: jest.fn(),
     },
-    conversations: {
+    conversation: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
     },
-    researchProjects: {
+    project: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
@@ -73,7 +73,7 @@ jest.mock('@prisma/client', () => {
       delete: jest.fn(),
       count: jest.fn(),
     },
-    smartsheetSyncLog: {
+    smartsheetSync: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),

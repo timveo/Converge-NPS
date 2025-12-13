@@ -2,7 +2,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, Download } from 'lucide-react';
+import { Clock, MapPin, Download } from 'lucide-react';
 
 const mockSchedule = [
   {

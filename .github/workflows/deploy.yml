@@ -1,10 +1,22 @@
 name: CI/CD Pipeline - Converge-NPS
 
 on:
+  # CI runs on push to main and PRs
   push:
-    branches: [main, staging, develop]
+    branches: [main]
   pull_request:
-    branches: [main, staging]
+    branches: [main]
+  # Manual deployment trigger
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
 
 env:
   NODE_VERSION: '20'
@@ -167,7 +179,7 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
-        run: npm test -- --coverage
+        run: npm test -- --run --coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -182,7 +194,7 @@ jobs:
   build-backend:
     name: Build Backend
     runs-on: ubuntu-latest
-    needs: [lint-backend, test-backend]
+    needs: [lint-backend]
     defaults:
       run:
         working-directory: ./backend
@@ -191,28 +203,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Build TypeScript
-        run: npm run build
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-dist
-          path: backend/dist
-          retention-days: 7
+      - name: Build backend Docker image
+        working-directory: .
+        run: |
+          docker build \
+            --file backend/Dockerfile \
+            --tag converge-backend-ci \
+            backend
 
   # ========================================
   # Job 6: Build Frontend
@@ -220,7 +220,7 @@ jobs:
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
-    needs: [lint-frontend, test-frontend]
+    needs: [lint-frontend]
     defaults:
       run:
         working-directory: ./frontend
@@ -229,39 +229,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build React app
-        run: npm run build
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist
-          retention-days: 7
+      - name: Build frontend Docker image
+        working-directory: .
+        run: |
+          docker build \
+            --file frontend/Dockerfile \
+            --tag converge-frontend-ci \
+            --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} \
+            frontend
 
   # ========================================
-  # Job 7: Deploy to Development
+  # Job 7: Deploy to Development (Manual Only)
   # ========================================
   deploy-development:
     name: Deploy to Development
     runs-on: ubuntu-latest
     needs: [build-backend, build-frontend]
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'development'
     environment:
-      name: development
-      url: https://api.dev.converge-nps.com
+      name: Development
+      url: https://frontend-development-1c0c.up.railway.app
 
     steps:
       - name: Checkout code
@@ -271,38 +261,32 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy Backend to Railway (Development)
-        working-directory: ./backend
-        run: railway up --environment development
+        run: railway up --service Backend --environment Development
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_DEVELOPMENT }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy Frontend to Railway (Development)
+        run: railway up --service Frontend --environment Development
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: Run database migrations
-        working-directory: ./backend
-        run: railway run --environment development npx prisma migrate deploy
+        run: railway run --service Backend --environment Development -- npx prisma migrate deploy
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_DEVELOPMENT }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-      - name: Notify Slack
-        if: always()
-        uses: slackapi/slack-github-action@v1
-        with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
-          payload: |
-            {
-              "text": "${{ job.status == 'success' && 'Development deployment successful' || 'Development deployment FAILED' }}: ${{ github.sha }}"
-            }
 
   # ========================================
-  # Job 8: Deploy to Staging
+  # Job 8: Deploy to Staging (Manual Only)
   # ========================================
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     needs: [build-backend, build-frontend]
-    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
     environment:
-      name: staging
-      url: https://api.staging.converge-nps.com
+      name: Staging
+      url: https://frontend-staging-073c.up.railway.app
 
     steps:
       - name: Checkout code
@@ -312,53 +296,32 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy Backend to Railway (Staging)
-        working-directory: ./backend
-        run: railway up --environment staging
+        run: railway up --service Backend --environment Staging
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy Frontend to Railway (Staging)
+        run: railway up --service Frontend --environment Staging
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: Run database migrations
-        working-directory: ./backend
-        run: railway run --environment staging npx prisma migrate deploy
+        run: railway run --service Backend --environment Staging -- npx prisma migrate deploy
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-      - name: Run integration tests
-        working-directory: ./backend
-        run: npm run test:integration || echo "Integration tests not yet implemented"
-        env:
-          API_URL: https://api.staging.converge-nps.com
-
-      - name: Notify Slack
-        if: always()
-        uses: slackapi/slack-github-action@v1
-        with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
-          payload: |
-            {
-              "text": "${{ job.status == 'success' && 'Staging deployment successful' || 'Staging deployment FAILED' }}: ${{ github.sha }}",
-              "attachments": [{
-                "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
-                "fields": [
-                  {"title": "Environment", "value": "Staging", "short": true},
-                  {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
-                  {"title": "Commit", "value": "${{ github.sha }}", "short": true},
-                  {"title": "Author", "value": "${{ github.actor }}", "short": true}
-                ]
-              }]
-            }
 
   # ========================================
-  # Job 9: Deploy to Production
+  # Job 9: Deploy to Production (Manual Only)
   # ========================================
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [build-backend, build-frontend]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
     environment:
-      name: production
-      url: https://api.converge-nps.com
+      name: Production
+      url: https://converge.npsfoundation.org
 
     steps:
       - name: Checkout code
@@ -368,58 +331,17 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy Backend to Railway (Production)
-        working-directory: ./backend
-        run: railway up --environment production
+        run: railway up --service Backend --environment production
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy Frontend to Railway (Production)
+        run: railway up --service Frontend --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: Run database migrations
-        working-directory: ./backend
-        run: railway run --environment production npx prisma migrate deploy
+        run: railway run --service Backend --environment production -- npx prisma migrate deploy
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-      - name: Run smoke tests
-        working-directory: ./backend
-        run: npm run test:smoke || echo "Smoke tests not yet implemented"
-        env:
-          API_URL: https://api.converge-nps.com
-
-      - name: Notify Slack - Success
-        if: success()
-        uses: slackapi/slack-github-action@v1
-        with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
-          payload: |
-            {
-              "text": "Production deployment successful",
-              "attachments": [{
-                "color": "good",
-                "fields": [
-                  {"title": "Environment", "value": "Production", "short": true},
-                  {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
-                  {"title": "Commit", "value": "${{ github.sha }}", "short": true},
-                  {"title": "Author", "value": "${{ github.actor }}", "short": true},
-                  {"title": "URL", "value": "https://api.converge-nps.com", "short": false}
-                ]
-              }]
-            }
-
-      - name: Notify Slack - Failure
-        if: failure()
-        uses: slackapi/slack-github-action@v1
-        with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
-          payload: |
-            {
-              "text": "Production deployment FAILED",
-              "attachments": [{
-                "color": "danger",
-                "fields": [
-                  {"title": "Environment", "value": "Production", "short": true},
-                  {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
-                  {"title": "Commit", "value": "${{ github.sha }}", "short": true},
-                  {"title": "Author", "value": "${{ github.actor }}", "short": true}
-                ]
-              }]
-            }

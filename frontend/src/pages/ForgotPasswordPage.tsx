@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
 import { Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
@@ -39,7 +38,7 @@ export default function ForgotPasswordPage() {
       await api.post('/auth/forgot-password', { email });
       // Always show success to prevent user enumeration
       setSubmitted(true);
-    } catch (err: any) {
+    } catch {
       // Still show success message to prevent user enumeration
       setSubmitted(true);
     } finally {

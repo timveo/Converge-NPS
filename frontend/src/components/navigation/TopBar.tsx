@@ -21,8 +21,8 @@ export function TopBar({ onMenuClick }: TopBarProps) {
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const { data } = await api.get('/messages/unread-count');
-        setUnreadCount(data.data.count);
+        const response = await api.get<{ count: number }>('/messages/unread-count');
+        setUnreadCount(response.count);
       } catch (error) {
         console.error('Failed to fetch unread count', error);
       }

@@ -26,8 +26,8 @@ describe('Admin Service', () => {
         updatedAt: new Date(),
       };
 
-      (prisma.sessions.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.sessions.create as jest.Mock).mockResolvedValue(mockSession);
+      (prisma.session.findMany as jest.Mock).mockResolvedValue([]);
+      (prisma.session.create as jest.Mock).mockResolvedValue(mockSession);
 
       const result = await adminService.createSession({
         title: 'AI/ML Workshop',
@@ -41,7 +41,7 @@ describe('Admin Service', () => {
       });
 
       expect(result).toEqual(mockSession);
-      expect(prisma.sessions.create).toHaveBeenCalled();
+      expect(prisma.session.create).toHaveBeenCalled();
     });
 
     it('should throw error if end time is before start time', async () => {
@@ -65,7 +65,7 @@ describe('Admin Service', () => {
         endTime: new Date('2026-01-28T10:30:00Z'),
       };
 
-      (prisma.sessions.findMany as jest.Mock).mockResolvedValue([conflictingSession]);
+      (prisma.session.findMany as jest.Mock).mockResolvedValue([conflictingSession]);
 
       await expect(
         adminService.createSession({
@@ -95,20 +95,20 @@ describe('Admin Service', () => {
         title: 'Updated Title',
       };
 
-      (prisma.sessions.findUnique as jest.Mock).mockResolvedValue(existingSession);
-      (prisma.sessions.findMany as jest.Mock).mockResolvedValue([]);
-      (prisma.sessions.update as jest.Mock).mockResolvedValue(updatedSession);
+      (prisma.session.findUnique as jest.Mock).mockResolvedValue(existingSession);
+      (prisma.session.findMany as jest.Mock).mockResolvedValue([]);
+      (prisma.session.update as jest.Mock).mockResolvedValue(updatedSession);
 
       const result = await adminService.updateSession('session-1', {
         title: 'Updated Title',
       });
 
       expect(result.title).toBe('Updated Title');
-      expect(prisma.sessions.update).toHaveBeenCalled();
+      expect(prisma.session.update).toHaveBeenCalled();
     });
 
     it('should throw error if session not found', async () => {
-      (prisma.sessions.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.session.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
         adminService.updateSession('non-existent', { title: 'Test' })
@@ -123,8 +123,8 @@ describe('Admin Service', () => {
         _count: { rsvps: 5 },
       };
 
-      (prisma.sessions.findUnique as jest.Mock).mockResolvedValue(sessionWithRsvps);
-      (prisma.sessions.update as jest.Mock).mockResolvedValue({
+      (prisma.session.findUnique as jest.Mock).mockResolvedValue(sessionWithRsvps);
+      (prisma.session.update as jest.Mock).mockResolvedValue({
         ...sessionWithRsvps,
         status: 'cancelled',
       });
@@ -132,7 +132,7 @@ describe('Admin Service', () => {
       const result = await adminService.deleteSession('session-1');
 
       expect(result.cancelled).toBe(true);
-      expect(prisma.sessions.update).toHaveBeenCalledWith({
+      expect(prisma.session.update).toHaveBeenCalledWith({
         where: { id: 'session-1' },
         data: { status: 'cancelled' },
       });
@@ -144,13 +144,13 @@ describe('Admin Service', () => {
         _count: { rsvps: 0 },
       };
 
-      (prisma.sessions.findUnique as jest.Mock).mockResolvedValue(sessionWithoutRsvps);
-      (prisma.sessions.delete as jest.Mock).mockResolvedValue(sessionWithoutRsvps);
+      (prisma.session.findUnique as jest.Mock).mockResolvedValue(sessionWithoutRsvps);
+      (prisma.session.delete as jest.Mock).mockResolvedValue(sessionWithoutRsvps);
 
       const result = await adminService.deleteSession('session-1');
 
       expect(result.deleted).toBe(true);
-      expect(prisma.sessions.delete).toHaveBeenCalled();
+      expect(prisma.session.delete).toHaveBeenCalled();
     });
   });
 
@@ -161,8 +161,8 @@ describe('Admin Service', () => {
         { id: 'user-2', fullName: 'Bob', email: 'bob@test.com', role: 'faculty' },
       ];
 
-      (prisma.profiles.findMany as jest.Mock).mockResolvedValue(mockUsers);
-      (prisma.profiles.count as jest.Mock).mockResolvedValue(2);
+      (prisma.profile.findMany as jest.Mock).mockResolvedValue(mockUsers);
+      (prisma.profile.count as jest.Mock).mockResolvedValue(2);
 
       const result = await adminService.listUsers({ limit: 10, offset: 0 });
 
@@ -175,13 +175,13 @@ describe('Admin Service', () => {
         { id: 'user-1', fullName: 'Alice', email: 'alice@test.com', role: 'student' },
       ];
 
-      (prisma.profiles.findMany as jest.Mock).mockResolvedValue(studentUsers);
-      (prisma.profiles.count as jest.Mock).mockResolvedValue(1);
+      (prisma.profile.findMany as jest.Mock).mockResolvedValue(studentUsers);
+      (prisma.profile.count as jest.Mock).mockResolvedValue(1);
 
       const result = await adminService.listUsers({ role: 'student' });
 
       expect(result.users).toEqual(studentUsers);
-      expect(prisma.profiles.findMany).toHaveBeenCalledWith(
+      expect(prisma.profile.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { role: 'student' },
         })
@@ -193,8 +193,8 @@ describe('Admin Service', () => {
         { id: 'user-1', fullName: 'Alice Johnson', email: 'alice@test.com' },
       ];
 
-      (prisma.profiles.findMany as jest.Mock).mockResolvedValue(searchResults);
-      (prisma.profiles.count as jest.Mock).mockResolvedValue(1);
+      (prisma.profile.findMany as jest.Mock).mockResolvedValue(searchResults);
+      (prisma.profile.count as jest.Mock).mockResolvedValue(1);
 
       const result = await adminService.listUsers({ search: 'Alice' });
 
@@ -211,8 +211,8 @@ describe('Admin Service', () => {
         role: 'student',
       };
 
-      (prisma.profiles.findUnique as jest.Mock).mockResolvedValue(user);
-      (prisma.profiles.update as jest.Mock).mockResolvedValue({
+      (prisma.profile.findUnique as jest.Mock).mockResolvedValue(user);
+      (prisma.profile.update as jest.Mock).mockResolvedValue({
         ...user,
         role: 'staff',
       });
@@ -220,11 +220,11 @@ describe('Admin Service', () => {
       const result = await adminService.updateUserRole('user-1', { role: 'staff' });
 
       expect(result.role).toBe('staff');
-      expect(prisma.profiles.update).toHaveBeenCalled();
+      expect(prisma.profile.update).toHaveBeenCalled();
     });
 
     it('should throw error if user not found', async () => {
-      (prisma.profiles.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.profile.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
         adminService.updateUserRole('non-existent', { role: 'staff' })
@@ -239,8 +239,8 @@ describe('Admin Service', () => {
         role: 'student',
       };
 
-      (prisma.profiles.findUnique as jest.Mock).mockResolvedValue(user);
-      (prisma.profiles.update as jest.Mock).mockResolvedValue({
+      (prisma.profile.findUnique as jest.Mock).mockResolvedValue(user);
+      (prisma.profile.update as jest.Mock).mockResolvedValue({
         ...user,
         profileVisibility: 'private',
         allowQrScanning: false,
@@ -250,7 +250,7 @@ describe('Admin Service', () => {
       const result = await adminService.suspendUser('user-1', 'Violating terms');
 
       expect(result.suspended).toBe(true);
-      expect(prisma.profiles.update).toHaveBeenCalled();
+      expect(prisma.profile.update).toHaveBeenCalled();
     });
 
     it('should not allow suspending admin users', async () => {
@@ -259,7 +259,7 @@ describe('Admin Service', () => {
         role: 'admin',
       };
 
-      (prisma.profiles.findUnique as jest.Mock).mockResolvedValue(adminUser);
+      (prisma.profile.findUnique as jest.Mock).mockResolvedValue(adminUser);
 
       await expect(
         adminService.suspendUser('admin-1', 'Test reason')
@@ -269,17 +269,17 @@ describe('Admin Service', () => {
 
   describe('getDashboardStats', () => {
     it('should return dashboard statistics', async () => {
-      (prisma.profiles.count as jest.Mock).mockResolvedValue(100);
-      (prisma.sessions.count as jest.Mock).mockResolvedValue(10);
-      (prisma.connections.count as jest.Mock).mockResolvedValue(50);
-      (prisma.messages.count as jest.Mock).mockResolvedValue(200);
-      (prisma.researchProjects.count as jest.Mock).mockResolvedValue(15);
-      (prisma.profiles.groupBy as jest.Mock).mockResolvedValue([
+      (prisma.profile.count as jest.Mock).mockResolvedValue(100);
+      (prisma.session.count as jest.Mock).mockResolvedValue(10);
+      (prisma.connection.count as jest.Mock).mockResolvedValue(50);
+      (prisma.message.count as jest.Mock).mockResolvedValue(200);
+      (prisma.project.count as jest.Mock).mockResolvedValue(15);
+      (prisma.profile.groupBy as jest.Mock).mockResolvedValue([
         { role: 'student', _count: 70 },
         { role: 'faculty', _count: 20 },
         { role: 'industry', _count: 10 },
       ]);
-      (prisma.sessions.groupBy as jest.Mock).mockResolvedValue([
+      (prisma.session.groupBy as jest.Mock).mockResolvedValue([
         { track: 'AI/ML', _count: 5 },
         { track: 'Cybersecurity', _count: 5 },
       ]);
@@ -315,8 +315,8 @@ describe('Admin Service', () => {
         { status: 'maybe', _count: 10 },
       ];
 
-      (prisma.sessions.findMany as jest.Mock).mockResolvedValue(mockSessions);
-      (prisma.rsvps.groupBy as jest.Mock).mockResolvedValue(mockRsvpsByStatus);
+      (prisma.session.findMany as jest.Mock).mockResolvedValue(mockSessions);
+      (prisma.rsvp.groupBy as jest.Mock).mockResolvedValue(mockRsvpsByStatus);
 
       const result = await adminService.getRsvpStats();
 
@@ -329,11 +329,11 @@ describe('Admin Service', () => {
 
   describe('getActivityReport', () => {
     it('should return activity report for specified days', async () => {
-      (prisma.profiles.count as jest.Mock).mockResolvedValue(10);
-      (prisma.connections.count as jest.Mock).mockResolvedValue(20);
-      (prisma.messages.count as jest.Mock).mockResolvedValue(50);
-      (prisma.rsvps.count as jest.Mock).mockResolvedValue(30);
-      (prisma.researchProjects.count as jest.Mock).mockResolvedValue(5);
+      (prisma.profile.count as jest.Mock).mockResolvedValue(10);
+      (prisma.connection.count as jest.Mock).mockResolvedValue(20);
+      (prisma.message.count as jest.Mock).mockResolvedValue(50);
+      (prisma.rsvp.count as jest.Mock).mockResolvedValue(30);
+      (prisma.project.count as jest.Mock).mockResolvedValue(5);
 
       const result = await adminService.getActivityReport(7);
 

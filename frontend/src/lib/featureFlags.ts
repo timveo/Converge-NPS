@@ -1,5 +1,5 @@
 import { featureFlags } from '@/config/features';
-import type { DeviceType, FeatureConfig, UserRole } from '@/types';
+import type { DeviceType, UserRole } from '@/types';
 
 export function isFeatureAvailable(
   featureName: keyof typeof featureFlags,

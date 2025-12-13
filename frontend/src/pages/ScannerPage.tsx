@@ -57,7 +57,7 @@ export default function ScannerPage() {
   const [reminderTime, setReminderTime] = useState<string>("");
   const [scannedData, setScannedData] = useState<any>(null);
   const [profileData, setProfileData] = useState<any>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isLoadingProfile, _setIsLoadingProfile] = useState(false);
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualCode, setManualCode] = useState("");
