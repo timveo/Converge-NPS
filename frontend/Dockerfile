@@ -7,12 +7,6 @@ RUN npm ci
 
 COPY . ./
 
-# Set build-time environment variables for Vite
-ARG VITE_API_BASE_URL=https://converge-nps-production.up.railway.app/api/v1
-ARG VITE_WS_URL=wss://converge-nps-production.up.railway.app
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_WS_URL=$VITE_WS_URL
-
 RUN npm run build
 
 # Stage 2: Nginx runtime

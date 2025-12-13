@@ -21,10 +21,6 @@ RUN npx prisma generate \
 FROM node:18-bullseye-slim AS runtime
 WORKDIR /app/backend
 
-# Set Railway environment variables (these can be overridden at runtime)
-ENV DATABASE_URL="postgresql://postgres:YvXquISeTIEjgmOawKnxyLuhocKIGbxI@postgres.railway.internal:5432/railway"
-ENV REDIS_URL="redis://default:RqVDfuTHujcABeVLktPqhoewtIQUpRIj@redis.railway.internal:6379"
-
 # ADD curl here so the healthcheck works
 RUN apt-get update && apt-get install -y \
     dumb-init bash postgresql-client curl \
