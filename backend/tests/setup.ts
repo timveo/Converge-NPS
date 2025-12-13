@@ -11,6 +11,9 @@ process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/converge_test'
 process.env.REDIS_URL = 'redis://localhost:6379';
 process.env.FRONTEND_URL = 'http://localhost:5173';
 process.env.API_URL = 'http://localhost:3000';
+process.env.JWT_EXPIRES_IN = '1h';
+process.env.JWT_REFRESH_EXPIRES_IN = '30d';
+process.env.BCRYPT_ROUNDS = '4'; // Use lower rounds for faster tests
 
 // Mock Prisma Client
 jest.mock('@prisma/client', () => {
@@ -53,9 +56,11 @@ jest.mock('@prisma/client', () => {
       count: jest.fn(),
     },
     message: {
+      findUnique: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       count: jest.fn(),
     },
     conversation: {
@@ -64,8 +69,33 @@ jest.mock('@prisma/client', () => {
       findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
+    },
+    conversationParticipant: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      createMany: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
     },
     project: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
+    opportunity: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
+    partner: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
@@ -83,17 +113,74 @@ jest.mock('@prisma/client', () => {
       deleteMany: jest.fn(),
       groupBy: jest.fn(),
     },
+    userPassword: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    userRole: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    userSession: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
+    emailVerification: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    qrCode: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      upsert: jest.fn(),
+    },
     $disconnect: jest.fn(),
+    $queryRaw: jest.fn(),
+    $executeRaw: jest.fn(),
   };
 
   return {
     PrismaClient: jest.fn(() => mockPrismaClient),
+    AppRole: {
+      student: 'student',
+      faculty: 'faculty',
+      staff: 'staff',
+      admin: 'admin',
+      industry_partner: 'industry_partner',
+    },
+    Prisma: {
+      PrismaClientKnownRequestError: class PrismaClientKnownRequestError extends Error {
+        code: string;
+        meta?: object;
+        constructor(message: string, { code, meta, clientVersion }: { code: string; meta?: object; clientVersion: string }) {
+          super(message);
+          this.code = code;
+          this.meta = meta;
+        }
+      },
+      PrismaClientValidationError: class PrismaClientValidationError extends Error {
+        constructor(message: string, { clientVersion }: { clientVersion: string }) {
+          super(message);
+        }
+      },
+    },
   };
 });
 
 // Global test utilities
 global.console = {
   ...console,
+  log: jest.fn(),   // Suppress logs in tests
   error: jest.fn(), // Suppress error logs in tests
   warn: jest.fn(),  // Suppress warning logs in tests
 };
