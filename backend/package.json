@@ -27,6 +27,7 @@
   "author": "Backend Developer Agent",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
     "@prisma/client": "^5.7.0",
     "axios": "^1.13.2",
     "bcrypt": "^5.1.1",

@@ -23,6 +23,7 @@ import smartsheetRoutes from './routes/smartsheet.routes';
 import partnerRoutes from './routes/partner.routes';
 import staffRoutes from './routes/staff.routes';
 import opportunityRoutes from './routes/opportunity.routes';
+import recommendationRoutes from './routes/recommendation.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -156,6 +157,7 @@ export function createApp(): Application {
   app.use(`${API_VERSION}/staff`, staffRoutes);
   // app.use(`${API_VERSION}/admin`, adminRoutes); // TEMPORARILY DISABLED - schema mismatch
   app.use(`${API_VERSION}/admin/smartsheet`, smartsheetRoutes);
+  app.use(`${API_VERSION}/recommendations`, recommendationRoutes);
 
   // ===========================
   // 404 Handler

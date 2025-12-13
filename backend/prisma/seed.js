@@ -54,6 +54,8 @@ async function main() {
     await prisma.session.deleteMany();
     await prisma.opportunity.deleteMany();
     await prisma.project.deleteMany();
+    await prisma.partnerFavorite.deleteMany();
+    await prisma.partner.deleteMany();
     await prisma.userRole.deleteMany();
     await prisma.userPassword.deleteMany();
     await prisma.emailVerification.deleteMany();
@@ -74,6 +76,7 @@ async function main() {
       role: 'admin',
       organization: 'Naval Postgraduate School',
       bio: 'System administrator and event organizer',
+      accelerationInterests: ['Event Management', 'Technology Integration'],
       profileVisibility: 'public',
       allowQrScanning: true,
       allowMessaging: true,
@@ -88,6 +91,7 @@ async function main() {
       role: 'student',
       organization: 'Naval Postgraduate School',
       bio: 'PhD candidate specializing in AI/ML',
+      accelerationInterests: ['Artificial Intelligence', 'Machine Learning', 'Autonomous Systems', 'Data Science'],
       profileVisibility: 'public',
       allowQrScanning: true,
       allowMessaging: true,
@@ -102,6 +106,7 @@ async function main() {
       role: 'student',
       organization: 'Naval Postgraduate School',
       bio: 'Graduate student in cybersecurity',
+      accelerationInterests: ['Cybersecurity', 'Network Security', 'Threat Detection', 'Cryptography'],
       profileVisibility: 'public',
       allowQrScanning: true,
       allowMessaging: true,
@@ -116,6 +121,7 @@ async function main() {
       role: 'faculty',
       organization: 'Naval Postgraduate School',
       bio: 'Professor specializing in autonomous systems',
+      accelerationInterests: ['Autonomous Systems', 'Robotics', 'AI/ML', 'Maritime Operations'],
       profileVisibility: 'public',
       allowQrScanning: true,
       allowMessaging: true,
@@ -130,6 +136,7 @@ async function main() {
       role: 'industry',
       organization: 'TechCorp Solutions',
       bio: 'Defense contractor specializing in AI/ML solutions',
+      accelerationInterests: ['Defense Technology', 'AI/ML', 'Government Contracts', 'Research Partnerships'],
       profileVisibility: 'public',
       allowQrScanning: true,
       allowMessaging: true,
@@ -374,6 +381,86 @@ async function main() {
   ]);
 
   console.log('✅ Created 2 industry opportunities');
+
+  // Create industry partners
+  console.log('Creating industry partners...');
+
+  await Promise.all([
+    prisma.partner.create({
+      data: {
+        name: 'Northrop Grumman',
+        description: 'A leading global aerospace and defense technology company providing innovative systems, products, and solutions.',
+        contactName: 'James Wilson',
+        contactEmail: 'jwilson@northropgrumman.com',
+        websiteUrl: 'https://www.northropgrumman.com',
+        partnershipType: 'Defense Contractor',
+        researchAreas: ['Autonomous Systems', 'Cybersecurity', 'AI/ML', 'Space Systems'],
+        isFeatured: true,
+      },
+    }),
+    prisma.partner.create({
+      data: {
+        name: 'Lockheed Martin',
+        description: 'Global security and aerospace company focused on research, design, development, and manufacturing of advanced technology systems.',
+        contactName: 'Sarah Thompson',
+        contactEmail: 'sthompson@lockheedmartin.com',
+        websiteUrl: 'https://www.lockheedmartin.com',
+        partnershipType: 'Defense Contractor',
+        researchAreas: ['Hypersonics', 'AI/ML', 'Autonomous Systems', 'Missile Defense'],
+        isFeatured: true,
+      },
+    }),
+    prisma.partner.create({
+      data: {
+        name: 'Raytheon Technologies',
+        description: 'An aerospace and defense company that provides advanced systems for commercial, military, and government customers worldwide.',
+        contactName: 'Michael Brown',
+        contactEmail: 'mbrown@raytheon.com',
+        websiteUrl: 'https://www.rtx.com',
+        partnershipType: 'Defense Contractor',
+        researchAreas: ['Cybersecurity', 'Radar Systems', 'Missile Systems', 'Electronic Warfare'],
+        isFeatured: false,
+      },
+    }),
+    prisma.partner.create({
+      data: {
+        name: 'DARPA',
+        description: 'The Defense Advanced Research Projects Agency develops breakthrough technologies and capabilities for national security.',
+        contactName: 'Dr. Emily Chen',
+        contactEmail: 'echen@darpa.mil',
+        websiteUrl: 'https://www.darpa.mil',
+        partnershipType: 'Government Agency',
+        researchAreas: ['AI/ML', 'Autonomous Systems', 'Biotechnology', 'Quantum Computing'],
+        isFeatured: true,
+      },
+    }),
+    prisma.partner.create({
+      data: {
+        name: 'Office of Naval Research',
+        description: 'Coordinates, executes, and promotes Navy and Marine Corps science and technology programs through universities, government labs, and industry.',
+        contactName: 'Captain Robert Lee',
+        contactEmail: 'rlee@onr.navy.mil',
+        websiteUrl: 'https://www.onr.navy.mil',
+        partnershipType: 'Government Agency',
+        researchAreas: ['Maritime Operations', 'Autonomous Systems', 'Data Science', 'Naval Engineering'],
+        isFeatured: true,
+      },
+    }),
+    prisma.partner.create({
+      data: {
+        name: 'AWS Public Sector',
+        description: 'Amazon Web Services provides cloud computing services for government, education, and nonprofit organizations.',
+        contactName: 'Lisa Garcia',
+        contactEmail: 'lgarcia@amazon.com',
+        websiteUrl: 'https://aws.amazon.com/government-education',
+        partnershipType: 'Technology Partner',
+        researchAreas: ['Cloud Computing', 'AI/ML', 'Data Science', 'Cybersecurity'],
+        isFeatured: false,
+      },
+    }),
+  ]);
+
+  console.log('✅ Created 6 industry partners');
 
   // Create connections
   console.log('Creating connections...');

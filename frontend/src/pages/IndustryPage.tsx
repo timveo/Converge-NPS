@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus } from "lucide-react";
+import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,18 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { RecommendationCard } from "@/components/RecommendationCard";
+import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
+
+interface Recommendation {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  reason: string;
+  relevanceScore: number;
+  tags: string[];
+}
 
 const TECHNOLOGY_AREAS = ["AI/ML", "Autonomy", "Cybersecurity", "Quantum", "Space", "Biotechnology", "Energy", "Materials Science", "Communications", "Electronic Warfare", "Robotics", "Data Analytics"];
 const SEEKING_OPTIONS = ["Research partnerships", "Student interns", "Pilot programs", "Data access", "Funding opportunities", "Technology licensing"];
@@ -47,6 +59,8 @@ export default function IndustryPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [expandedPartners, setExpandedPartners] = useState<Set<string>>(new Set());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const { dismiss, isDismissed } = useDismissedRecommendations('industry');
 
   const toggleExpanded = (partnerId: string) => {
     setExpandedPartners(prev => {
@@ -104,7 +118,36 @@ export default function IndustryPage() {
 
   useEffect(() => {
     fetchPartners();
+    fetchRecommendations();
   }, []);
+
+  const fetchRecommendations = async () => {
+    try {
+      const response = await api.post('/recommendations', { type: 'industry_partner' });
+      const data = (response as any)?.recommendations || [];
+      setRecommendations(data);
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+    }
+  };
+
+  const visibleRecommendations = recommendations
+    .filter(rec => !isDismissed(rec.id))
+    .slice(0, 3);
+
+  const handleRecommendationClick = (rec: Recommendation) => {
+    // Find the partner and scroll to it, or expand it
+    const partner = partners.find(p =>
+      p.company_name.toLowerCase() === rec.title.toLowerCase() ||
+      p.id === rec.id
+    );
+    if (partner) {
+      setExpandedPartners(prev => new Set([...prev, partner.id]));
+      // Scroll to the partner card
+      const element = document.getElementById(`partner-${partner.id}`);
+      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   const fetchPartners = async () => {
     try {
@@ -219,6 +262,31 @@ export default function IndustryPage() {
       </div>
 
       <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
+        {/* AI Recommendations */}
+        {visibleRecommendations.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Sparkles className="h-4 w-4 text-accent" />
+              <span>Recommended for you</span>
+            </div>
+            <div className="grid gap-2">
+              {visibleRecommendations.map((rec) => (
+                <RecommendationCard
+                  key={rec.id}
+                  title={rec.title}
+                  reason={rec.reason}
+                  matchScore={rec.relevanceScore / 10}
+                  tags={rec.tags}
+                  type="Partner"
+                  onClick={() => handleRecommendationClick(rec)}
+                  onDismiss={() => dismiss(rec.id)}
+                  compact
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 md:h-4 md:w-4 text-muted-foreground" />
@@ -428,7 +496,7 @@ export default function IndustryPage() {
             const isExpanded = expandedPartners.has(partner.id);
             return (
               <Collapsible key={partner.id} open={isExpanded} onOpenChange={() => toggleExpanded(partner.id)}>
-                <Card className="shadow-md border-border/50 hover:shadow-lg transition-all duration-300">
+                <Card id={`partner-${partner.id}`} className="shadow-md border-border/50 hover:shadow-lg transition-all duration-300">
                   <div className="p-4 md:p-6">
                     {/* Header row with logo, name, tags, and favorite */}
                     <div className="flex items-start gap-3 md:gap-4">

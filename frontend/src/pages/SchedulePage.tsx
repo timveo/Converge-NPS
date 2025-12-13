@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Calendar, ChevronLeft, Search, X, List, CalendarDays, AlertTriangle, Loader2 } from "lucide-react";
+import { Calendar, ChevronLeft, Search, X, List, CalendarDays, AlertTriangle, Loader2, Sparkles } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,18 @@ import { ConflictDialog } from "@/components/schedule/ConflictDialog";
 import { TimelineView } from "@/components/schedule/TimelineView";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
+import { RecommendationCard } from "@/components/RecommendationCard";
+import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
+
+interface Recommendation {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  reason: string;
+  relevanceScore: number;
+  tags: string[];
+}
 
 interface Session {
   id: string;
@@ -47,10 +59,40 @@ export default function SchedulePage() {
   const [activeTab, setActiveTab] = useState<'all' | 'my-schedule'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
   const [conflictDialog, setConflictDialog] = useState<{ show: boolean; newSession: Session | null; conflictingSession: Session | null }>({ show: false, newSession: null, conflictingSession: null });
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const { dismiss, isDismissed } = useDismissedRecommendations('schedule');
 
   useEffect(() => {
     fetchData();
+    fetchRecommendations();
   }, []);
+
+  const fetchRecommendations = async () => {
+    try {
+      const response = await api.post('/recommendations', { type: 'session' });
+      const data = (response as any)?.recommendations || [];
+      setRecommendations(data);
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+    }
+  };
+
+  const visibleRecommendations = recommendations
+    .filter(rec => !isDismissed(rec.id))
+    .slice(0, 3);
+
+  const handleRecommendationRSVP = async (rec: Recommendation) => {
+    // Find the session and RSVP to it
+    const session = sessions.find(s =>
+      s.title.toLowerCase() === rec.title.toLowerCase() ||
+      s.id === rec.id
+    );
+    if (session) {
+      await handleRSVP(session.id);
+      // Dismiss the recommendation after RSVP
+      dismiss(rec.id);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -378,6 +420,31 @@ END:VCALENDAR`;
           </TabsList>
 
           <TabsContent value="all" className="space-y-2 md:space-y-4 mt-2 md:mt-4">
+            {/* AI Recommendations */}
+            {visibleRecommendations.length > 0 && !loading && (
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Sparkles className="h-4 w-4 text-accent" />
+                  <span>Recommended for you</span>
+                </div>
+                <div className="grid gap-2">
+                  {visibleRecommendations.map((rec) => (
+                    <RecommendationCard
+                      key={rec.id}
+                      title={rec.title}
+                      reason={rec.reason}
+                      matchScore={rec.relevanceScore / 10}
+                      tags={rec.tags}
+                      type="Session"
+                      onClick={() => handleRecommendationRSVP(rec)}
+                      onDismiss={() => dismiss(rec.id)}
+                      compact
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />

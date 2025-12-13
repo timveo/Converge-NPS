@@ -23,6 +23,7 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { api } from "@/lib/api";
+import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 
 interface Connection {
   id: string;
@@ -89,7 +90,7 @@ export default function ConnectionsPage() {
   const [recommendations, setRecommendations] = useState<RecommendedConnection[]>([]);
   const [connectingUser, setConnectingUser] = useState<string | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  const [dismissedRecommendations, setDismissedRecommendations] = useState<Set<string>>(new Set());
+  const { dismiss: dismissRecommendation, isDismissed: isRecommendationDismissed } = useDismissedRecommendations('connections');
 
   const navigate = useNavigate();
 
@@ -323,10 +324,6 @@ export default function ConnectionsPage() {
   const clearFilters = () => {
     setFilters({ intents: [], userTypes: [], sortBy: 'recent' });
     setSearchQuery('');
-  };
-
-  const dismissRecommendation = (id: string) => {
-    setDismissedRecommendations(prev => new Set([...prev, id]));
   };
 
   const getTimeAgo = (dateString: string) => {
@@ -612,7 +609,7 @@ export default function ConnectionsPage() {
       </div>
 
       {/* Inline Recommendations */}
-      {recommendations.filter(r => !dismissedRecommendations.has(r.id)).length > 0 && (
+      {recommendations.filter(r => !isRecommendationDismissed(r.id)).length > 0 && (
         <div className="container mx-auto px-3 md:px-4 mb-2.5 md:mb-4">
           <Card className="p-3 md:p-4 bg-gradient-to-br from-accent/5 to-primary/5 border-accent/30">
             <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
@@ -620,7 +617,7 @@ export default function ConnectionsPage() {
               <h3 className="font-semibold text-xs md:text-sm">Suggested Connections</h3>
             </div>
             <div className="space-y-2 md:space-y-3">
-              {recommendations.filter(r => !dismissedRecommendations.has(r.id)).map((rec) => (
+              {recommendations.filter(r => !isRecommendationDismissed(r.id)).map((rec) => (
                 <div key={rec.id} className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-background/50 rounded-lg hover:shadow-sm transition-shadow relative">
                   <Avatar className="h-8 w-8 md:h-10 md:w-10 shrink-0">
                     <AvatarFallback className="bg-gradient-navy text-primary-foreground text-xs md:text-sm">
