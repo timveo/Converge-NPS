@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ChevronLeft, Loader2, ChevronDown, Phone, Shield, Mail, Smartphone, LogOut } from "lucide-react";
+import InstallAppDialog from "@/components/InstallAppDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -74,6 +75,7 @@ export default function SettingsPage() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [interestsOpen, setInterestsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
 
   // Store original values to detect changes
   const [originalFormData, setOriginalFormData] = useState(formData);
@@ -533,11 +535,17 @@ export default function SettingsPage() {
                 type="button"
                 variant="outline"
                 size="sm"
+                onClick={() => setShowInstallDialog(true)}
               >
                 Install
               </Button>
             </div>
           </Card>
+
+          <InstallAppDialog
+            open={showInstallDialog}
+            onClose={() => setShowInstallDialog(false)}
+          />
 
           {hasChanges() && (
             <div className="flex gap-3 md:gap-4">
