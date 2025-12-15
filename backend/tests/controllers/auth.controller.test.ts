@@ -5,9 +5,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthController } from '../../src/controllers/auth.controller';
 import { AuthService } from '../../src/services/auth.service';
+import { TwoFactorService } from '../../src/services/twoFactor.service';
 
 // Mock the AuthService
 jest.mock('../../src/services/auth.service');
+
+// Mock the TwoFactorService
+jest.mock('../../src/services/twoFactor.service');
 
 // Mock logger
 jest.mock('../../src/utils/logger', () => ({
@@ -111,16 +115,19 @@ describe('AuthController', () => {
   });
 
   describe('login', () => {
-    it('should login user successfully', async () => {
+    it('should validate credentials and send 2FA code', async () => {
       mockReq.body = {
         email: 'test@nps.edu',
         password: 'SecurePass123!',
       };
 
-      (AuthService.login as jest.Mock).mockResolvedValue({
-        user: { id: 'user-123', email: 'test@nps.edu' },
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
+      (AuthService.validateCredentials as jest.Mock).mockResolvedValue({
+        user: { id: 'user-123', email: 'test@nps.edu', fullName: 'Test User' },
+      });
+
+      (TwoFactorService.sendCode as jest.Mock).mockResolvedValue({
+        success: true,
+        message: 'Verification code sent to your email',
       });
 
       await AuthController.login(
@@ -129,6 +136,98 @@ describe('AuthController', () => {
         mockNext
       );
 
+      expect(AuthService.validateCredentials).toHaveBeenCalledWith('test@nps.edu', 'SecurePass123!');
+      expect(TwoFactorService.sendCode).toHaveBeenCalledWith('user-123', 'test@nps.edu', 'Test User');
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Verification code sent to your email',
+          requires2FA: true,
+          userId: 'user-123',
+          email: 'test@nps.edu',
+        })
+      );
+    });
+
+    it('should return rate limit error when 2FA code sending fails', async () => {
+      mockReq.body = {
+        email: 'test@nps.edu',
+        password: 'SecurePass123!',
+      };
+
+      (AuthService.validateCredentials as jest.Mock).mockResolvedValue({
+        user: { id: 'user-123', email: 'test@nps.edu', fullName: 'Test User' },
+      });
+
+      (TwoFactorService.sendCode as jest.Mock).mockResolvedValue({
+        success: false,
+        message: 'Please wait 30 seconds before requesting a new code',
+        cooldownRemaining: 30,
+      });
+
+      await AuthController.login(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext
+      );
+
+      expect(mockRes.status).toHaveBeenCalledWith(429);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            code: 'TWO_FACTOR_RATE_LIMIT',
+          }),
+        })
+      );
+    });
+
+    it('should pass login errors to next', async () => {
+      mockReq.body = {
+        email: 'test@nps.edu',
+        password: 'wrong-password',
+      };
+
+      const error = new Error('Invalid credentials');
+      (AuthService.validateCredentials as jest.Mock).mockRejectedValue(error);
+
+      await AuthController.login(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext
+      );
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe('verify2FA', () => {
+    const testUserId = '550e8400-e29b-41d4-a716-446655440000';
+
+    it('should verify 2FA code and complete login', async () => {
+      mockReq.body = {
+        userId: testUserId,
+        code: '123456',
+      };
+
+      (TwoFactorService.verifyCode as jest.Mock).mockResolvedValue({
+        success: true,
+        message: 'Code verified successfully',
+      });
+
+      (AuthService.completeLogin as jest.Mock).mockResolvedValue({
+        user: { id: testUserId, email: 'test@nps.edu' },
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      });
+
+      await AuthController.verify2FA(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext
+      );
+
+      expect(TwoFactorService.verifyCode).toHaveBeenCalledWith(testUserId, '123456');
+      expect(AuthService.completeLogin).toHaveBeenCalledWith(testUserId);
       expect(mockRes.cookie).toHaveBeenCalledWith(
         'refreshToken',
         'refresh-token',
@@ -146,22 +245,142 @@ describe('AuthController', () => {
       );
     });
 
-    it('should pass login errors to next', async () => {
+    it('should return error for invalid 2FA code', async () => {
       mockReq.body = {
-        email: 'test@nps.edu',
-        password: 'wrong-password',
+        userId: testUserId,
+        code: '000000',
       };
 
-      const error = new Error('Invalid credentials');
-      (AuthService.login as jest.Mock).mockRejectedValue(error);
+      (TwoFactorService.verifyCode as jest.Mock).mockResolvedValue({
+        success: false,
+        message: 'Invalid code. 4 attempts remaining.',
+        attemptsRemaining: 4,
+      });
 
-      await AuthController.login(
+      await AuthController.verify2FA(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext
+      );
+
+      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            code: 'INVALID_2FA_CODE',
+            attemptsRemaining: 4,
+          }),
+        })
+      );
+    });
+
+    it('should pass verify2FA errors to next', async () => {
+      mockReq.body = {
+        userId: testUserId,
+        code: '123456',
+      };
+
+      const error = new Error('Database error');
+      (TwoFactorService.verifyCode as jest.Mock).mockRejectedValue(error);
+
+      await AuthController.verify2FA(
         mockReq as Request,
         mockRes as Response,
         mockNext
       );
 
       expect(mockNext).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe('resend2FA', () => {
+    const testUserId = '550e8400-e29b-41d4-a716-446655440000';
+
+    it('should resend 2FA code successfully', async () => {
+      mockReq.body = {
+        userId: testUserId,
+      };
+
+      (AuthService.getUserById as jest.Mock).mockResolvedValue({
+        id: testUserId,
+        email: 'test@nps.edu',
+        fullName: 'Test User',
+      });
+
+      (TwoFactorService.sendCode as jest.Mock).mockResolvedValue({
+        success: true,
+        message: 'Verification code sent to your email',
+      });
+
+      await AuthController.resend2FA(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext
+      );
+
+      expect(AuthService.getUserById).toHaveBeenCalledWith(testUserId);
+      expect(TwoFactorService.sendCode).toHaveBeenCalledWith(testUserId, 'test@nps.edu', 'Test User');
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        message: 'Verification code sent to your email',
+      });
+    });
+
+    it('should return 404 if user not found', async () => {
+      const nonexistentUserId = '550e8400-e29b-41d4-a716-446655440001';
+      mockReq.body = {
+        userId: nonexistentUserId,
+      };
+
+      (AuthService.getUserById as jest.Mock).mockResolvedValue(null);
+
+      await AuthController.resend2FA(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext
+      );
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            code: 'USER_NOT_FOUND',
+          }),
+        })
+      );
+    });
+
+    it('should return rate limit error when resend is rate limited', async () => {
+      mockReq.body = {
+        userId: testUserId,
+      };
+
+      (AuthService.getUserById as jest.Mock).mockResolvedValue({
+        id: testUserId,
+        email: 'test@nps.edu',
+        fullName: 'Test User',
+      });
+
+      (TwoFactorService.sendCode as jest.Mock).mockResolvedValue({
+        success: false,
+        message: 'Please wait 15 seconds before requesting a new code',
+        cooldownRemaining: 15,
+      });
+
+      await AuthController.resend2FA(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext
+      );
+
+      expect(mockRes.status).toHaveBeenCalledWith(429);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            code: 'TWO_FACTOR_RATE_LIMIT',
+          }),
+        })
+      );
     });
   });
 
