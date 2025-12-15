@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -7,14 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { VerificationCodeInput } from '@/components/auth/VerificationCodeInput';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail } from 'lucide-react';
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const { login, register } = useAuth();
+  const { login, register, verify2FA, resend2FA, twoFactorPending, cancelTwoFactor } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [codeError, setCodeError] = useState(false);
 
   // Login state
   const [loginData, setLoginData] = useState({
@@ -34,7 +37,15 @@ export default function AuthPage() {
   });
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
 
-  // ===== LOGIN FLOW =====
+  // Cooldown timer for resend
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // ===== LOGIN FLOW - STEP 1 =====
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginErrors({});
@@ -51,19 +62,96 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
-      await login({ email: loginData.email, password: loginData.password });
+      const response = await login({ email: loginData.email, password: loginData.password });
+
+      if (response.requires2FA) {
+        toast.success('Verification code sent!', {
+          description: 'Please check your email for the 6-digit code.',
+        });
+        setResendCooldown(30); // Start cooldown
+      } else {
+        // Direct login (backwards compatibility)
+        toast.success('Welcome back!', {
+          description: "You're now logged in.",
+        });
+        navigate('/');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const errorMessage = error.response?.data?.error?.message || 'Invalid email or password';
+
+      // Handle rate limit for 2FA
+      if (error.response?.data?.error?.code === 'TWO_FACTOR_RATE_LIMIT') {
+        const cooldown = error.response?.data?.error?.cooldownRemaining || 30;
+        setResendCooldown(cooldown);
+        toast.error('Please wait', {
+          description: `You can request a new code in ${cooldown} seconds.`,
+        });
+      } else {
+        toast.error('Login failed', {
+          description: errorMessage,
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ===== LOGIN FLOW - STEP 2: VERIFY 2FA CODE =====
+  const handleVerifyCode = async (code: string) => {
+    if (!twoFactorPending) return;
+
+    setLoading(true);
+    setCodeError(false);
+    try {
+      await verify2FA(twoFactorPending.userId, code);
       toast.success('Welcome back!', {
         description: "You're now logged in.",
       });
       navigate('/');
     } catch (error: any) {
-      console.error('Login error:', error);
-      toast.error('Login failed', {
-        description: error.response?.data?.error?.message || 'Invalid email or password',
+      console.error('2FA verification error:', error);
+      setCodeError(true);
+      const errorMessage = error.response?.data?.error?.message || 'Invalid verification code';
+      const attemptsRemaining = error.response?.data?.error?.attemptsRemaining;
+
+      toast.error('Verification failed', {
+        description: attemptsRemaining !== undefined
+          ? `${errorMessage}`
+          : errorMessage,
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  // ===== RESEND 2FA CODE =====
+  const handleResendCode = async () => {
+    if (!twoFactorPending || resendCooldown > 0) return;
+
+    setLoading(true);
+    try {
+      await resend2FA(twoFactorPending.userId);
+      setResendCooldown(30);
+      toast.success('Code resent!', {
+        description: 'Please check your email for the new code.',
+      });
+    } catch (error: any) {
+      console.error('Resend error:', error);
+      const cooldown = error.response?.data?.error?.cooldownRemaining || 30;
+      setResendCooldown(cooldown);
+      toast.error('Failed to resend', {
+        description: error.response?.data?.error?.message || 'Please try again later.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ===== CANCEL 2FA AND GO BACK =====
+  const handleBack = () => {
+    cancelTwoFactor();
+    setCodeError(false);
   };
 
   // ===== SIGNUP FLOW =====
@@ -113,10 +201,20 @@ export default function AuthPage() {
       });
 
       toast.success('Account created!', {
-        description: 'Please log in with your credentials.',
+        description: 'Logging you in...',
       });
-      setActiveTab('login');
-      setLoginData({ email: signupData.email, password: '' });
+
+      // Automatically login after registration to trigger 2FA
+      const response = await login({ email: signupData.email, password: signupData.password });
+
+      if (response.requires2FA) {
+        toast.success('Verification code sent!', {
+          description: 'Please check your email for the 6-digit code.',
+        });
+        setResendCooldown(30);
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       console.error('Signup error:', error);
       toast.error('Signup failed', {
@@ -127,6 +225,71 @@ export default function AuthPage() {
     }
   };
 
+  // ===== RENDER 2FA VERIFICATION SCREEN =====
+  if (twoFactorPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-3 md:p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center px-4 md:px-6 py-4 md:py-6">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <Mail className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-xl md:text-2xl">Check your email</CardTitle>
+            <CardDescription className="text-sm md:text-base">
+              We sent a verification code to
+              <br />
+              <span className="font-medium text-foreground">{twoFactorPending.email}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 md:px-6 pb-4 md:pb-6 space-y-6">
+            <div className="space-y-4">
+              <Label className="text-center block text-sm text-muted-foreground">
+                Enter the 6-digit code
+              </Label>
+              <VerificationCodeInput
+                onComplete={handleVerifyCode}
+                disabled={loading}
+                error={codeError}
+              />
+              {codeError && (
+                <p className="text-center text-sm text-destructive">
+                  Invalid code. Please try again.
+                </p>
+              )}
+              <p className="text-center text-xs text-muted-foreground">
+                Code expires in 5 minutes
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Button
+                variant="ghost"
+                onClick={handleResendCode}
+                disabled={loading || resendCooldown > 0}
+                className="text-sm"
+              >
+                {resendCooldown > 0
+                  ? `Resend code in ${resendCooldown}s`
+                  : "Didn't receive the code? Resend"}
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={loading}
+                className="gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ===== RENDER LOGIN/SIGNUP SCREEN =====
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-3 md:p-4">
       <Card className="w-full max-w-md">
@@ -205,12 +368,15 @@ export default function AuthPage() {
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Logging in...
+                      Sending code...
                     </>
                   ) : (
-                    'Log In'
+                    'Continue'
                   )}
                 </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  We'll send a verification code to your email
+                </p>
               </form>
             </TabsContent>
 

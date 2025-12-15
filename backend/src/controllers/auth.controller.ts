@@ -6,12 +6,16 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
+import { TwoFactorService } from '../services/twoFactor.service';
+import { EmailService } from '../services/email.service';
 import {
   RegisterSchema,
   LoginSchema,
   ForgotPasswordSchema,
   ResetPasswordSchema,
   VerifyEmailSchema,
+  TwoFactorSendSchema,
+  TwoFactorVerifySchema,
 } from '../types/schemas';
 import logger from '../utils/logger';
 
@@ -48,15 +52,69 @@ export class AuthController {
 
   /**
    * POST /auth/login
-   * Login user
+   * Login user - Step 1: Validate credentials and send 2FA code
    */
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
       // Validate input
       const { email, password } = LoginSchema.parse(req.body) as any;
 
-      // Login user
-      const { user, accessToken, refreshToken } = await AuthService.login(email, password);
+      // Validate credentials (but don't issue tokens yet)
+      const { user } = await AuthService.validateCredentials(email, password);
+
+      // Send 2FA code
+      const result = await TwoFactorService.sendCode(user.id, user.email, user.fullName);
+
+      if (!result.success) {
+        logger.warn('Failed to send 2FA code', { userId: user.id, message: result.message });
+        res.status(429).json({
+          error: {
+            code: 'TWO_FACTOR_RATE_LIMIT',
+            message: result.message,
+            cooldownRemaining: result.cooldownRemaining,
+          },
+        });
+        return;
+      }
+
+      logger.info('2FA code sent', { userId: user.id, email: user.email });
+
+      res.status(200).json({
+        message: 'Verification code sent to your email',
+        requires2FA: true,
+        userId: user.id,
+        email: user.email,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /auth/verify-2fa
+   * Login user - Step 2: Verify 2FA code and issue tokens
+   */
+  static async verify2FA(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId, code } = TwoFactorVerifySchema.parse(req.body) as any;
+
+      // Verify the 2FA code
+      const verifyResult = await TwoFactorService.verifyCode(userId, code);
+
+      if (!verifyResult.success) {
+        logger.warn('2FA verification failed', { userId, message: verifyResult.message });
+        res.status(401).json({
+          error: {
+            code: 'INVALID_2FA_CODE',
+            message: verifyResult.message,
+            attemptsRemaining: verifyResult.attemptsRemaining,
+          },
+        });
+        return;
+      }
+
+      // 2FA verified - now issue tokens
+      const { user, accessToken, refreshToken } = await AuthService.completeLogin(userId);
 
       // Set refresh token in httpOnly cookie
       res.cookie('refreshToken', refreshToken, {
@@ -67,12 +125,57 @@ export class AuthController {
         path: '/auth/refresh',
       });
 
-      logger.info('User logged in', { userId: user.id, email: user.email });
+      logger.info('User logged in with 2FA', { userId: user.id, email: user.email });
 
       res.status(200).json({
         message: 'Login successful',
         user,
         accessToken,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /auth/resend-2fa
+   * Resend 2FA code during login
+   */
+  static async resend2FA(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = TwoFactorSendSchema.parse(req.body) as any;
+
+      // Get user info
+      const user = await AuthService.getUserById(userId);
+
+      if (!user) {
+        res.status(404).json({
+          error: {
+            code: 'USER_NOT_FOUND',
+            message: 'User not found',
+          },
+        });
+        return;
+      }
+
+      // Send new 2FA code
+      const result = await TwoFactorService.sendCode(user.id, user.email, user.fullName);
+
+      if (!result.success) {
+        res.status(429).json({
+          error: {
+            code: 'TWO_FACTOR_RATE_LIMIT',
+            message: result.message,
+            cooldownRemaining: result.cooldownRemaining,
+          },
+        });
+        return;
+      }
+
+      logger.info('2FA code resent', { userId: user.id });
+
+      res.status(200).json({
+        message: 'Verification code sent to your email',
       });
     } catch (error) {
       next(error);

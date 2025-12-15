@@ -33,6 +33,10 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
+export interface ValidateCredentialsResponse {
+  user: Profile & { userRoles: { role: string }[] };
+}
+
 export class AuthService {
   /**
    * Register a new user
@@ -107,9 +111,10 @@ export class AuthService {
   }
 
   /**
-   * Login user
+   * Validate user credentials (Step 1 of 2FA login)
+   * Returns user data without issuing tokens
    */
-  static async login(email: string, password: string): Promise<LoginResponse> {
+  static async validateCredentials(email: string, password: string): Promise<ValidateCredentialsResponse> {
     // Find user
     const user = await prisma.profile.findUnique({
       where: { email: email.toLowerCase() },
@@ -148,8 +153,70 @@ export class AuthService {
       throw new UnauthorizedError('Email not verified. Please check your email.');
     }
 
+    return { user };
+  }
+
+  /**
+   * Complete login after 2FA verification (Step 2 of 2FA login)
+   * Issues tokens after 2FA is verified
+   */
+  static async completeLogin(userId: string): Promise<LoginResponse> {
+    // Get user with roles
+    const user = await prisma.profile.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
     // Generate tokens
     const roles = user.userRoles.map(r => r.role);
+    const accessToken = generateAccessToken(user.id, user.email, roles);
+    const refreshToken = await generateRefreshToken(user.id);
+
+    // Store refresh token hash
+    const refreshTokenHash = hashToken(refreshToken);
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+    await prisma.userSession.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash,
+        expiresAt,
+      },
+    });
+
+    // Return user data (without sensitive fields)
+    const { ...safeUser } = user;
+
+    return {
+      user: safeUser,
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  /**
+   * Get user by ID
+   */
+  static async getUserById(userId: string): Promise<Profile | null> {
+    return prisma.profile.findUnique({
+      where: { id: userId },
+    });
+  }
+
+  /**
+   * Login user (legacy - kept for backwards compatibility)
+   */
+  static async login(email: string, password: string): Promise<LoginResponse> {
+    const { user } = await this.validateCredentials(email, password);
+
+    // Generate tokens
+    const roles = user.userRoles.map(r => r.role) as import('@prisma/client').AppRole[];
     const accessToken = generateAccessToken(user.id, user.email, roles);
     const refreshToken = await generateRefreshToken(user.id);
 
