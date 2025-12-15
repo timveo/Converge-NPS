@@ -1,7 +1,3 @@
-// Converge-NPS Database Schema
-// Version: 1.0
-// Based on: DATABASE_SCHEMA.md
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl"]
@@ -12,9 +8,501 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// =============================================================================
-// ENUMS
-// =============================================================================
+model UserPassword {
+  userId       String   @id @map("user_id") @db.Uuid
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("user_passwords")
+}
+
+model EmailVerification {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @map("token_hash")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("email_verifications")
+}
+
+model UserSession {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  refreshTokenHash String   @map("refresh_token_hash")
+  deviceInfo       String?  @map("device_info")
+  ipAddress        String?  @map("ip_address") @db.Inet
+  lastActivity     DateTime @default(now()) @map("last_activity") @db.Timestamptz(6)
+  expiresAt        DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([refreshTokenHash])
+  @@map("user_sessions")
+}
+
+model TwoFactorCode {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  codeHash  String   @map("code_hash")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([codeHash])
+  @@index([expiresAt])
+  @@map("two_factor_codes")
+}
+
+model Profile {
+  id                       String                    @id @db.Uuid
+  fullName                 String                    @map("full_name")
+  email                    String                    @unique
+  phone                    String?
+  rank                     String?
+  organization             String?
+  department               String?
+  role                     String?
+  bio                      String?
+  avatarUrl                String?                   @map("avatar_url")
+  accelerationInterests    String[]                  @map("acceleration_interests")
+  linkedinUrl              String?                   @map("linkedin_url")
+  websiteUrl               String?                   @map("website_url")
+  profileVisibility        ProfileVisibility         @default(public) @map("profile_visibility")
+  allowQrScanning          Boolean                   @default(true) @map("allow_qr_scanning")
+  allowMessaging           Boolean                   @default(true) @map("allow_messaging")
+  hideContactInfo          Boolean                   @default(false) @map("hide_contact_info")
+  onboardingCompleted      Boolean                   @default(false) @map("onboarding_completed")
+  onboardingStep           Int                       @default(0) @map("onboarding_step")
+  createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  auditLogsTarget          AuditLog[]                @relation("AuditLogTarget")
+  auditLogs                AuditLog[]                @relation("AuditLogUser")
+  checkedInBy              CheckIn[]                 @relation("CheckInStaff")
+  checkedIn                CheckIn?                  @relation("CheckedInUser")
+  connectionsAsTarget      Connection[]              @relation("TargetUserConnections")
+  connectionsAsUser        Connection[]              @relation("UserConnections")
+  conversationParticipants ConversationParticipant[]
+  messageReadReceipts      MessageReadReceipt[]
+  messagesSent             Message[]                 @relation("MessageSender")
+  offlineQueue             OfflineQueue[]
+  opportunities            Opportunity[]             @relation("OpportunityPoster")
+  opportunityInterests     OpportunityInterest[]
+  partnerFavorites         PartnerFavorite[]
+  projectBookmarks         ProjectBookmark[]
+  projectInterests         ProjectInterest[]
+  projectsAsPi             Project[]                 @relation("ProjectPI")
+  qrCode                   QrCode?
+  rsvps                    Rsvp[]
+  smartsheetSyncs          SmartsheetSync[]
+  userRoles                UserRole[]
+
+  @@map("profiles")
+}
+
+model UserRole {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      AppRole
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([userId])
+  @@index([role])
+  @@map("user_roles")
+}
+
+model UserRoleHistory {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      AppRole
+  action    String
+  changedBy String   @map("changed_by") @db.Uuid
+  changedAt DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+  notes     String?
+
+  @@index([userId])
+  @@index([changedAt])
+  @@map("user_role_history")
+}
+
+model QrCode {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String    @unique @map("user_id") @db.Uuid
+  qrCodeData    String    @map("qr_code_data")
+  isActive      Boolean   @default(true) @map("is_active")
+  generatedAt   DateTime  @default(now()) @map("generated_at") @db.Timestamptz(6)
+  lastScannedAt DateTime? @map("last_scanned_at") @db.Timestamptz(6)
+  scanCount     Int       @default(0) @map("scan_count")
+  user          Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([qrCodeData])
+  @@index([isActive])
+  @@map("qr_codes")
+}
+
+model Connection {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String           @map("user_id") @db.Uuid
+  connectedUserId      String           @map("connected_user_id") @db.Uuid
+  notes                String?
+  collaborativeIntents String[]         @map("collaborative_intents")
+  followUpReminder     DateTime?        @map("follow_up_reminder") @db.Timestamptz(6)
+  reminderSent         Boolean          @default(false) @map("reminder_sent")
+  connectionMethod     ConnectionMethod @default(qr_scan) @map("connection_method")
+  createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  connectedUser        Profile          @relation("TargetUserConnections", fields: [connectedUserId], references: [id], onDelete: Cascade)
+  user                 Profile          @relation("UserConnections", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, connectedUserId])
+  @@index([userId, createdAt])
+  @@index([connectedUserId])
+  @@index([collaborativeIntents], type: Gin)
+  @@index([followUpReminder])
+  @@map("connections")
+}
+
+model Session {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String
+  description     String?
+  speaker         String?
+  location        String?
+  sessionType     String?       @map("session_type")
+  startTime       DateTime      @map("start_time") @db.Timestamptz(6)
+  endTime         DateTime      @map("end_time") @db.Timestamptz(6)
+  capacity        Int           @default(50)
+  registeredCount Int           @default(0) @map("registered_count")
+  isFeatured      Boolean       @default(false) @map("is_featured")
+  requiresRsvp    Boolean       @default(true) @map("requires_rsvp")
+  status          SessionStatus @default(scheduled)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  rsvps           Rsvp[]
+
+  @@index([startTime])
+  @@index([endTime])
+  @@index([isFeatured])
+  @@index([sessionType])
+  @@index([status])
+  @@map("sessions")
+}
+
+model Rsvp {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String     @map("user_id") @db.Uuid
+  sessionId String     @map("session_id") @db.Uuid
+  status    RsvpStatus
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId])
+  @@index([userId, sessionId])
+  @@index([sessionId])
+  @@index([status])
+  @@map("rsvps")
+}
+
+model CheckIn {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String        @unique @map("user_id") @db.Uuid
+  checkedInBy   String        @map("checked_in_by") @db.Uuid
+  checkInMethod CheckInMethod @map("check_in_method")
+  isWalkIn      Boolean       @default(false) @map("is_walk_in")
+  checkedInAt   DateTime      @default(now()) @map("checked_in_at") @db.Timestamptz(6)
+  staff         Profile       @relation("CheckInStaff", fields: [checkedInBy], references: [id])
+  user          Profile       @relation("CheckedInUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([checkedInBy])
+  @@index([checkedInAt])
+  @@index([isWalkIn])
+  @@map("check_ins")
+}
+
+model Project {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String
+  description     String
+  piId            String            @map("pi_id") @db.Uuid
+  piRole          String?           @map("pi_role")
+  department      String?
+  stage           ProjectStage
+  classification  String            @default("Unclassified")
+  researchAreas   String[]          @map("research_areas")
+  keywords        String[]
+  students        String[]
+  seeking         String[]
+  demoSchedule    String?           @map("demo_schedule")
+  interestedCount Int               @default(0) @map("interested_count")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  bookmarks       ProjectBookmark[]
+  interests       ProjectInterest[]
+  pi              Profile           @relation("ProjectPI", fields: [piId], references: [id])
+
+  @@index([piId])
+  @@index([stage])
+  @@index([classification])
+  @@index([department])
+  @@index([researchAreas], type: Gin)
+  @@index([seeking], type: Gin)
+  @@index([keywords], type: Gin)
+  @@map("projects")
+}
+
+model ProjectBookmark {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+  @@map("project_bookmarks")
+}
+
+model ProjectInterest {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  message   String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+  @@map("project_interests")
+}
+
+model Opportunity {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                OpportunityType
+  title               String
+  description         String?
+  sponsorOrganization String?               @map("sponsor_organization")
+  sponsorContactId    String?               @map("sponsor_contact_id") @db.Uuid
+  postedBy            String                @map("posted_by") @db.Uuid
+  requirements        String?
+  benefits            String?
+  location            String?
+  duration            String?
+  deadline            DateTime?             @db.Timestamptz(6)
+  dodAlignment        String[]              @map("dod_alignment")
+  status              OpportunityStatus     @default(active)
+  featured            Boolean               @default(false)
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  poster              Profile               @relation("OpportunityPoster", fields: [postedBy], references: [id])
+  interests           OpportunityInterest[]
+
+  @@index([type])
+  @@index([status])
+  @@index([postedBy])
+  @@index([deadline])
+  @@index([featured])
+  @@index([dodAlignment], type: Gin)
+  @@map("opportunities")
+}
+
+model OpportunityInterest {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  opportunityId String      @map("opportunity_id") @db.Uuid
+  userId        String      @map("user_id") @db.Uuid
+  status        String      @default("interested")
+  message       String?
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  user          Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, opportunityId])
+  @@index([userId])
+  @@index([opportunityId])
+  @@map("opportunity_interests")
+}
+
+model Partner {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String            @unique
+  description     String?
+  contactName     String?           @map("contact_name")
+  contactEmail    String?           @map("contact_email")
+  websiteUrl      String?           @map("website_url")
+  logoUrl         String?           @map("logo_url")
+  partnershipType String?           @map("partnership_type")
+  researchAreas   String[]          @map("research_areas")
+  isFeatured      Boolean           @default(false) @map("is_featured")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  favorites       PartnerFavorite[]
+
+  @@index([isFeatured])
+  @@index([partnershipType])
+  @@index([researchAreas], type: Gin)
+  @@map("partners")
+}
+
+model PartnerFavorite {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  partnerId String   @map("partner_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  partner   Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, partnerId])
+  @@index([userId])
+  @@index([partnerId])
+  @@map("partner_favorites")
+}
+
+model Conversation {
+  id            String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subject       String?
+  isGroup       Boolean                   @default(false) @map("is_group")
+  lastMessageAt DateTime                  @default(now()) @map("last_message_at") @db.Timestamptz(6)
+  createdAt     DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  participants  ConversationParticipant[]
+  messages      Message[]
+
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String       @map("conversation_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  joinedAt       DateTime     @default(now()) @map("joined_at") @db.Timestamptz(6)
+  lastViewedAt   DateTime?    @map("last_viewed_at") @db.Timestamptz(6)
+  isAdmin        Boolean      @default(false) @map("is_admin")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId, lastViewedAt])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String               @map("conversation_id") @db.Uuid
+  senderId       String               @map("sender_id") @db.Uuid
+  content        String
+  isRead         Boolean              @default(false) @map("is_read")
+  sentAt         DateTime             @default(now()) @map("sent_at") @db.Timestamptz(6)
+  readReceipts   MessageReadReceipt[]
+  conversation   Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         Profile              @relation("MessageSender", fields: [senderId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([sentAt])
+  @@map("messages")
+}
+
+model MessageReadReceipt {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  readAt    DateTime @default(now()) @map("read_at") @db.Timestamptz(6)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, readAt])
+  @@map("message_read_receipts")
+}
+
+model Notification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String
+  content   String
+  isRead    Boolean  @default(false) @map("is_read")
+  targetId  String?  @map("target_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId, isRead])
+  @@index([targetId])
+  @@map("notifications")
+}
+
+model SmartsheetSync {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String        @map("user_id") @db.Uuid
+  syncType       SyncType      @map("sync_type")
+  direction      SyncDirection
+  entityType     String        @map("entity_type")
+  status         SyncStatus    @default(pending)
+  processedCount Int           @default(0) @map("processed_count")
+  totalCount     Int           @default(0) @map("total_count")
+  errorDetails   String?       @map("error_details")
+  startedAt      DateTime?     @map("started_at") @db.Timestamptz(6)
+  completedAt    DateTime?     @map("completed_at") @db.Timestamptz(6)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  user           Profile       @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([syncType, entityType])
+  @@map("smartsheet_syncs")
+}
+
+model OfflineQueue {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String               @map("user_id") @db.Uuid
+  operationType OfflineOperationType @map("operation_type")
+  payload       Json                 @db.Json
+  status        OfflineQueueStatus   @default(pending)
+  retryCount    Int                  @default(0) @map("retry_count")
+  lastAttemptAt DateTime?            @map("last_attempt_at") @db.Timestamptz(6)
+  errorDetails  String?              @map("error_details")
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  user          Profile              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([operationType])
+  @@map("offline_queue")
+}
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  targetId   String?  @map("target_id") @db.Uuid
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id") @db.Uuid
+  action     String
+  details    Json?    @db.Json
+  timestamp  DateTime @default(now()) @db.Timestamptz(6)
+  targetUser Profile? @relation("AuditLogTarget", fields: [targetId], references: [id])
+  user       Profile  @relation("AuditLogUser", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
 
 enum AppRole {
   student
@@ -40,7 +528,6 @@ enum RsvpStatus {
   cancelled
 }
 
-// Added to fix multiple TypeScript errors in admin.service.ts
 enum SessionStatus {
   scheduled
   in_progress
@@ -102,587 +589,4 @@ enum OfflineQueueStatus {
   processing
   completed
   failed
-}
-
-// =============================================================================
-// 1. AUTHENTICATION & USER MANAGEMENT
-// =============================================================================
-
-model UserPassword {
-  userId       String   @id @map("user_id") @db.Uuid
-  passwordHash String   @map("password_hash") @db.Text
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@map("user_passwords")
-}
-
-model EmailVerification {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId     String    @map("user_id") @db.Uuid
-  tokenHash  String    @map("token_hash") @db.Text
-  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
-  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(6)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  @@index([userId])
-  @@index([tokenHash])
-  @@map("email_verifications")
-}
-
-model UserSession {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId           String    @map("user_id") @db.Uuid
-  refreshTokenHash String    @map("refresh_token_hash") @db.Text
-  deviceInfo       String?   @map("device_info") @db.Text
-  ipAddress        String?   @map("ip_address") @db.Inet
-  lastActivity     DateTime  @default(now()) @map("last_activity") @db.Timestamptz(6)
-  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  @@index([userId])
-  @@index([refreshTokenHash])
-  @@map("user_sessions")
-}
-
-model TwoFactorCode {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  codeHash  String   @map("code_hash") @db.Text
-  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
-  attempts  Int      @default(0)
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  @@index([userId])
-  @@index([codeHash])
-  @@index([expiresAt])
-  @@map("two_factor_codes")
-}
-
-model Profile {
-  id                    String            @id @db.Uuid
-  fullName              String            @map("full_name") @db.Text
-  email                 String            @unique @db.Text
-  phone                 String?           @db.Text
-  rank                  String?           @db.Text
-  organization          String?           @db.Text
-  department            String?           @db.Text
-  role                  String?           @db.Text
-  bio                   String?           @db.Text
-  avatarUrl             String?           @map("avatar_url") @db.Text
-  accelerationInterests String[]          @map("acceleration_interests")
-  linkedinUrl           String?           @map("linkedin_url") @db.Text
-  websiteUrl            String?           @map("website_url") @db.Text
-
-  // Privacy Controls (4 toggles from PRD)
-  profileVisibility     ProfileVisibility @default(public) @map("profile_visibility")
-  allowQrScanning       Boolean           @default(true) @map("allow_qr_scanning")
-  allowMessaging        Boolean           @default(true) @map("allow_messaging")
-  hideContactInfo       Boolean           @default(false) @map("hide_contact_info")
-
-  // Onboarding
-  onboardingCompleted   Boolean           @default(false) @map("onboarding_completed")
-  onboardingStep        Int               @default(0) @map("onboarding_step")
-
-  // Timestamps
-  createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  userRoles             UserRole[]
-  qrCode                QrCode?
-  connectionsAsUser     Connection[]      @relation("UserConnections")
-  connectionsAsTarget   Connection[]      @relation("TargetUserConnections")
-  rsvps                 Rsvp[]
-  checkedIn             CheckIn?          @relation("CheckedInUser")
-  checkedInBy           CheckIn[]         @relation("CheckInStaff")
-  projectsAsPi          Project[]         @relation("ProjectPI")
-  projectBookmarks      ProjectBookmark[]
-  projectInterests      ProjectInterest[]
-  opportunities         Opportunity[]     @relation("OpportunityPoster")
-  opportunityInterests  OpportunityInterest[]
-  partnerFavorites      PartnerFavorite[]
-  conversationParticipants ConversationParticipant[]
-  messagesSent          Message[]         @relation("MessageSender")
-  messageReadReceipts   MessageReadReceipt[]
-  smartsheetSyncs       SmartsheetSync[]
-  auditLogs             AuditLog[]        @relation("AuditLogUser")
-  auditLogsTarget       AuditLog[]        @relation("AuditLogTarget")
-  offlineQueue          OfflineQueue[]
-
-  @@map("profiles")
-}
-
-model UserRole {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  role      AppRole
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, role])
-  @@index([userId])
-  @@index([role])
-  @@map("user_roles")
-}
-
-model UserRoleHistory {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  role      AppRole
-  action    String   @db.Text // 'added' or 'removed'
-  changedBy String   @map("changed_by") @db.Uuid
-  changedAt DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
-  notes     String?  @db.Text
-
-  @@index([userId])
-  @@index([changedAt])
-  @@map("user_role_history")
-}
-
-model QrCode {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String    @unique @map("user_id") @db.Uuid
-  qrCodeData     String    @map("qr_code_data") @db.Text
-  isActive       Boolean   @default(true) @map("is_active")
-  generatedAt    DateTime  @default(now()) @map("generated_at") @db.Timestamptz(6)
-  lastScannedAt  DateTime? @map("last_scanned_at") @db.Timestamptz(6)
-  scanCount      Int       @default(0) @map("scan_count")
-
-  // Relations
-  user           Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([qrCodeData])
-  @@index([isActive])
-  @@map("qr_codes")
-}
-
-// =============================================================================
-// 2. NETWORKING & CONNECTIONS
-// =============================================================================
-
-model Connection {
-  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId              String           @map("user_id") @db.Uuid
-  connectedUserId     String           @map("connected_user_id") @db.Uuid
-  notes               String?          @db.Text
-  collaborativeIntents String[]        @map("collaborative_intents")
-  followUpReminder    DateTime?        @map("follow_up_reminder") @db.Timestamptz(6)
-  reminderSent        Boolean          @default(false) @map("reminder_sent")
-  connectionMethod    ConnectionMethod @default(qr_scan) @map("connection_method")
-  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  user                Profile          @relation("UserConnections", fields: [userId], references: [id], onDelete: Cascade)
-  connectedUser       Profile          @relation("TargetUserConnections", fields: [connectedUserId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, connectedUserId])
-  @@index([userId, createdAt])
-  @@index([connectedUserId])
-  @@index([collaborativeIntents], type: Gin)
-  @@index([followUpReminder])
-  @@map("connections")
-}
-
-// =============================================================================
-// 3. EVENT SCHEDULE & RSVPs
-// =============================================================================
-
-model Session {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title           String   @db.Text
-  description     String?  @db.Text
-  speaker         String?  @db.Text
-  location        String?  @db.Text
-  sessionType     String?  @map("session_type") @db.Text
-  startTime       DateTime @map("start_time") @db.Timestamptz(6)
-  endTime         DateTime @map("end_time") @db.Timestamptz(6)
-  capacity        Int      @default(50)
-  registeredCount Int      @default(0) @map("registered_count")
-  isFeatured      Boolean  @default(false) @map("is_featured")
-  requiresRsvp    Boolean  @default(true) @map("requires_rsvp")
-  // ADDED: Status field to fix multiple TS2353 errors in admin.service.ts
-  status          SessionStatus @default(scheduled)
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  rsvps           Rsvp[]
-
-  @@index([startTime])
-  @@index([endTime])
-  @@index([isFeatured])
-  @@index([sessionType])
-  @@index([status]) // Added index for the new status field
-  @@map("sessions")
-}
-
-model Rsvp {
-  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String     @map("user_id") @db.Uuid
-  sessionId String     @map("session_id") @db.Uuid
-  status    RsvpStatus
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  user      Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, sessionId])
-  @@index([userId, sessionId])
-  @@index([sessionId])
-  @@index([status])
-  @@map("rsvps")
-}
-
-model CheckIn {
-  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String        @unique @map("user_id") @db.Uuid
-  checkedInBy    String        @map("checked_in_by") @db.Uuid
-  checkInMethod  CheckInMethod @map("check_in_method")
-  isWalkIn       Boolean       @default(false) @map("is_walk_in")
-  checkedInAt    DateTime      @default(now()) @map("checked_in_at") @db.Timestamptz(6)
-
-  // Relations
-  user           Profile       @relation("CheckedInUser", fields: [userId], references: [id], onDelete: Cascade)
-  staff          Profile       @relation("CheckInStaff", fields: [checkedInBy], references: [id])
-
-  @@index([userId])
-  @@index([checkedInBy])
-  @@index([checkedInAt])
-  @@index([isWalkIn])
-  @@map("check_ins")
-}
-
-// =============================================================================
-// 4. RESEARCH PROJECTS & OPPORTUNITIES
-// =============================================================================
-
-model Project {
-  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title          String            @db.Text
-  description    String            @db.Text
-  piId           String            @map("pi_id") @db.Uuid
-  piRole         String?           @map("pi_role") @db.Text
-  department     String?           @db.Text
-  stage          ProjectStage
-  classification String            @default("Unclassified") @db.Text
-  researchAreas  String[]          @map("research_areas")
-  keywords       String[]
-  students       String[]
-  seeking        String[]
-  demoSchedule   String?           @map("demo_schedule") @db.Text
-  interestedCount Int              @default(0) @map("interested_count")
-  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  pi             Profile           @relation("ProjectPI", fields: [piId], references: [id])
-  bookmarks      ProjectBookmark[]
-  interests      ProjectInterest[]
-
-  @@index([piId])
-  @@index([stage])
-  @@index([classification])
-  @@index([department])
-  @@index([researchAreas], type: Gin)
-  @@index([seeking], type: Gin)
-  @@index([keywords], type: Gin)
-  @@map("projects")
-}
-
-model ProjectBookmark {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  projectId String   @map("project_id") @db.Uuid
-  notes     String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, projectId])
-  @@index([userId])
-  @@index([projectId])
-  @@map("project_bookmarks")
-}
-
-model ProjectInterest {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  projectId String   @map("project_id") @db.Uuid
-  message   String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, projectId])
-  @@index([userId])
-  @@index([projectId])
-  @@map("project_interests")
-}
-
-model Opportunity {
-  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type                OpportunityType
-  title               String                @db.Text
-  description         String?               @db.Text
-  sponsorOrganization String?               @map("sponsor_organization") @db.Text
-  sponsorContactId    String?               @map("sponsor_contact_id") @db.Uuid
-  postedBy            String                @map("posted_by") @db.Uuid
-  requirements        String?               @db.Text
-  benefits            String?               @db.Text
-  location            String?               @db.Text
-  duration            String?               @db.Text
-  deadline            DateTime?             @db.Timestamptz(6)
-  dodAlignment        String[]              @map("dod_alignment")
-  status              OpportunityStatus     @default(active)
-  featured            Boolean               @default(false)
-  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  poster              Profile               @relation("OpportunityPoster", fields: [postedBy], references: [id])
-  interests           OpportunityInterest[]
-
-  @@index([type])
-  @@index([status])
-  @@index([postedBy])
-  @@index([deadline])
-  @@index([featured])
-  @@index([dodAlignment], type: Gin)
-  @@map("opportunities")
-}
-
-model OpportunityInterest {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  opportunityId String   @map("opportunity_id") @db.Uuid
-  userId        String   @map("user_id") @db.Uuid
-  status        String   @default("interested") @db.Text
-  message       String?  @db.Text
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  user          Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, opportunityId])
-  @@index([userId])
-  @@index([opportunityId])
-  @@map("opportunity_interests")
-}
-
-// =============================================================================
-// 5. PARTNER & INDUSTRY MANAGEMENT
-// =============================================================================
-
-model Partner {
-  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name           String            @unique @db.Text
-  description    String?           @db.Text
-  contactName    String?           @map("contact_name") @db.Text
-  contactEmail   String?           @map("contact_email") @db.Text
-  websiteUrl     String?           @map("website_url") @db.Text
-  logoUrl        String?           @map("logo_url") @db.Text
-  partnershipType String?           @map("partnership_type") @db.Text
-  researchAreas  String[]          @map("research_areas")
-  isFeatured     Boolean           @default(false) @map("is_featured")
-  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  favorites      PartnerFavorite[]
-
-  @@index([isFeatured])
-  @@index([partnershipType])
-  @@index([researchAreas], type: Gin)
-  @@map("partners")
-}
-
-model PartnerFavorite {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  partnerId String   @map("partner_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  partner   Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, partnerId])
-  @@index([userId])
-  @@index([partnerId])
-  @@map("partner_favorites")
-}
-
-// =============================================================================
-// 6. MESSAGING & NOTIFICATIONS
-// =============================================================================
-
-model Conversation {
-  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  subject       String?          @db.Text
-  isGroup       Boolean          @default(false) @map("is_group")
-  lastMessageAt DateTime         @default(now()) @map("last_message_at") @db.Timestamptz(6)
-  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  participants  ConversationParticipant[]
-  messages      Message[]
-
-  @@index([lastMessageAt])
-  @@map("conversations")
-}
-
-model ConversationParticipant {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  conversationId String    @map("conversation_id") @db.Uuid
-  userId         String    @map("user_id") @db.Uuid
-  joinedAt       DateTime  @default(now()) @map("joined_at") @db.Timestamptz(6)
-  lastViewedAt   DateTime? @map("last_viewed_at") @db.Timestamptz(6)
-  isAdmin        Boolean   @default(false) @map("is_admin")
-
-  // Relations
-  conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user         Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([conversationId, userId])
-  @@index([userId, lastViewedAt])
-  @@map("conversation_participants")
-}
-
-model Message {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  conversationId String    @map("conversation_id") @db.Uuid
-  senderId       String    @map("sender_id") @db.Uuid
-  content        String    @db.Text
-  isRead         Boolean   @default(false) @map("is_read")
-  sentAt         DateTime  @default(now()) @map("sent_at") @db.Timestamptz(6)
-
-  // Relations
-  conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       Profile          @relation("MessageSender", fields: [senderId], references: [id])
-  readReceipts MessageReadReceipt[]
-
-  @@index([conversationId])
-  @@index([senderId])
-  @@index([sentAt])
-  @@map("messages")
-}
-
-model MessageReadReceipt {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  messageId     String   @map("message_id") @db.Uuid
-  userId        String   @map("user_id") @db.Uuid
-  readAt        DateTime @default(now()) @map("read_at") @db.Timestamptz(6)
-
-  // Relations
-  message       Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user          Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([messageId, userId])
-  @@index([userId, readAt])
-  @@map("message_read_receipts")
-}
-
-model Notification {
-  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String      @map("user_id") @db.Uuid
-  type      String      @db.Text // e.g., 'new_message', 'connection_request', 'follow_up_reminder'
-  content   String      @db.Text
-  isRead    Boolean     @default(false) @map("is_read")
-  targetId  String?     @map("target_id") @db.Uuid // ID of the related entity (e.g., ConversationId, ConnectionId)
-  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  // user      Profile   @relation(fields: [userId], references: [id], onDelete: Cascade) // Assuming Notification entity is implicitly linked to the Profile. If needed, this relation should be added.
-
-  @@index([userId, isRead])
-  @@index([targetId])
-  @@map("notifications")
-}
-
-// =============================================================================
-// 7. DATA SYNC & OFFLINE QUEUE
-// =============================================================================
-
-model SmartsheetSync {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String          @map("user_id") @db.Uuid
-  syncType       SyncType        @map("sync_type")
-  direction      SyncDirection
-  entityType     String          @map("entity_type") @db.Text // e.g., 'users', 'projects', 'events'
-  status         SyncStatus      @default(pending)
-  processedCount Int             @default(0) @map("processed_count")
-  totalCount     Int             @default(0) @map("total_count")
-  errorDetails   String?         @map("error_details") @db.Text
-  startedAt      DateTime?       @map("started_at") @db.Timestamptz(6)
-  completedAt    DateTime?       @map("completed_at") @db.Timestamptz(6)
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  user           Profile         @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([status])
-  @@index([syncType, entityType])
-  @@map("smartsheet_syncs")
-}
-
-model OfflineQueue {
-  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId        String          @map("user_id") @db.Uuid
-  operationType OfflineOperationType @map("operation_type")
-  // FIX: Use Prisma 'Json' type for @db.Json native type
-  payload       Json            @db.Json // JSON object containing the data to be synced
-  status        OfflineQueueStatus @default(pending)
-  retryCount    Int             @default(0) @map("retry_count")
-  lastAttemptAt DateTime?       @map("last_attempt_at") @db.Timestamptz(6)
-  errorDetails  String?         @map("error_details") @db.Text
-  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  user          Profile         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
-  @@index([operationType])
-  @@map("offline_queue")
-}
-
-// =============================================================================
-// 8. AUDIT AND SYSTEM LOGGING
-// =============================================================================
-
-model AuditLog {
-  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId        String          @map("user_id") @db.Uuid
-  targetId      String?         @map("target_id") @db.Uuid
-  entityType    String          @map("entity_type") @db.Text // e.g., 'Profile', 'Project', 'Session'
-  entityId      String          @map("entity_id") @db.Uuid
-  // FIX: 'action' is a String (Text in DB)
-  action        String          @db.Text // e.g., 'CREATE', 'UPDATE', 'DELETE', 'LOGIN'
-  // FIX: 'details' is JSON (Json in DB)
-  details       Json?           @db.Json // JSON object containing before/after data for updates
-  timestamp     DateTime        @default(now()) @db.Timestamptz(6)
-
-  // Relations
-  user          Profile         @relation("AuditLogUser", fields: [userId], references: [id])
-  targetUser    Profile?        @relation("AuditLogTarget", fields: [targetId], references: [id])
-
-  @@index([userId])
-  @@index([entityType, entityId])
-  @@index([action])
-  @@index([timestamp])
-  @@map("audit_logs")
 }
