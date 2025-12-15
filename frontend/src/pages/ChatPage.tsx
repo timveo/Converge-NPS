@@ -79,6 +79,37 @@ export default function ChatPage() {
     fetchData();
   }, [conversationId]);
 
+  // Polling fallback when Socket.IO is not connected
+  useEffect(() => {
+    if (!conversationId || isConnected) return;
+
+    const pollMessages = async () => {
+      try {
+        const messagesRes = await api.get<{ success: boolean; data: Message[]; conversation: Conversation }>(`/messages/conversations/${conversationId}/messages`);
+        const newMessages = messagesRes.data;
+        if (newMessages) {
+          setMessages(prev => {
+            // Only update if there are new messages
+            const lastNew = newMessages[newMessages.length - 1];
+            const lastPrev = prev[prev.length - 1];
+            if (newMessages.length !== prev.length ||
+                (lastNew && lastPrev && lastNew.id !== lastPrev.id)) {
+              return newMessages;
+            }
+            return prev;
+          });
+        }
+      } catch (error) {
+        console.error('Failed to poll messages', error);
+      }
+    };
+
+    // Poll every 3 seconds when socket is disconnected
+    const pollInterval = setInterval(pollMessages, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [conversationId, isConnected]);
+
   // Socket.IO event listeners
   useEffect(() => {
     if (!socket || !conversationId) return;

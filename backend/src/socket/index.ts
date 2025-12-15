@@ -36,11 +36,14 @@ export function initializeSocketServer(httpServer: HTTPServer) {
         return next(new Error('Authentication token required'));
       }
 
-      // Verify JWT token
-      const decoded = verify(token, process.env.JWT_SECRET!) as { userId: string };
-      socket.userId = decoded.userId;
+      // Verify JWT token - payload uses 'sub' for user ID
+      const decoded = verify(token, process.env.JWT_SECRET!, {
+        issuer: 'converge-nps.com',
+        audience: 'converge-nps-api',
+      }) as { sub: string };
+      socket.userId = decoded.sub;
 
-      logger.info('Socket authenticated', { userId: decoded.userId, socketId: socket.id });
+      logger.info('Socket authenticated', { userId: decoded.sub, socketId: socket.id });
       next();
     } catch (error) {
       logger.error('Socket authentication failed', { error });

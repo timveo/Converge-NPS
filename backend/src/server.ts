@@ -9,6 +9,7 @@ import { createServer } from 'http';
 import { createApp } from './app';
 import logger from './utils/logger';
 import { PrismaClient } from '@prisma/client';
+import { initializeSocketServer } from './socket';
 
 // Load environment variables
 dotenv.config();
@@ -32,6 +33,9 @@ async function startServer() {
     // Create Express app and HTTP server
     const app = createApp();
     const httpServer = createServer(app);
+
+    // Initialize Socket.IO server for real-time messaging
+    initializeSocketServer(httpServer);
 
     // Start listening
     httpServer.listen(PORT, HOST, () => {
