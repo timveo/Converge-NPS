@@ -86,17 +86,28 @@ export default function ChatPage() {
     const pollMessages = async () => {
       try {
         const messagesRes = await api.get<{ success: boolean; data: Message[]; conversation: Conversation }>(`/messages/conversations/${conversationId}/messages`);
-        const newMessages = messagesRes.data;
-        if (newMessages) {
+        const serverMessages = messagesRes.data;
+        if (serverMessages) {
           setMessages(prev => {
-            // Only update if there are new messages
-            const lastNew = newMessages[newMessages.length - 1];
-            const lastPrev = prev[prev.length - 1];
-            if (newMessages.length !== prev.length ||
-                (lastNew && lastPrev && lastNew.id !== lastPrev.id)) {
-              return newMessages;
+            // Keep temp messages that haven't been confirmed by server yet
+            const tempMessages = prev.filter(m => m.id.startsWith('temp-'));
+            const confirmedTempIds = new Set<string>();
+
+            // Check which temp messages have been confirmed (same sender + content exists in server messages)
+            for (const temp of tempMessages) {
+              const confirmed = serverMessages.some(
+                sm => sm.senderId === temp.senderId && sm.content === temp.content
+              );
+              if (confirmed) {
+                confirmedTempIds.add(temp.id);
+              }
             }
-            return prev;
+
+            // Filter out confirmed temp messages, keep unconfirmed ones
+            const pendingTempMessages = tempMessages.filter(m => !confirmedTempIds.has(m.id));
+
+            // Merge server messages with pending temp messages
+            return [...serverMessages, ...pendingTempMessages];
           });
         }
       } catch (error) {
@@ -118,7 +129,17 @@ export default function ChatPage() {
 
     socket.on('new_message', (message: Message) => {
       if (message.conversationId === conversationId) {
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => {
+          // Remove any temp messages with matching content from sender, then add the real message
+          const filtered = prev.filter(m =>
+            !(m.id.startsWith('temp-') && m.senderId === message.senderId && m.content === message.content)
+          );
+          // Avoid duplicates if message already exists
+          if (filtered.some(m => m.id === message.id)) {
+            return filtered;
+          }
+          return [...filtered, message];
+        });
         if (message.senderId !== user?.id) {
           socket.emit('mark_as_read', { conversationId });
         }
