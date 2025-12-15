@@ -88,7 +88,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // If no 2FA (shouldn't happen with new flow, but keeping for backwards compatibility)
     if (response.accessToken && response.user) {
       localStorage.setItem('accessToken', response.accessToken);
-      localStorage.setItem('tokenExpiry', String(Date.now() + 3600 * 1000));
+      if ((response as any).refreshToken) {
+        localStorage.setItem('refreshToken', (response as any).refreshToken);
+      }
+      localStorage.setItem('tokenExpiry', String(Date.now() + 8 * 60 * 60 * 1000)); // 8 hours
 
       const user: User = {
         ...response.user,
@@ -108,14 +111,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const verify2FA = async (userId: string, code: string) => {
-    const response = await api.post<{ user: any; accessToken: string; message: string }>(
+    const response = await api.post<{ user: any; accessToken: string; refreshToken: string; message: string }>(
       '/auth/verify-2fa',
       { userId, code }
     );
 
-    // Store access token
+    // Store access token and refresh token
     localStorage.setItem('accessToken', response.accessToken);
-    localStorage.setItem('tokenExpiry', String(Date.now() + 3600 * 1000));
+    localStorage.setItem('refreshToken', response.refreshToken);
+    localStorage.setItem('tokenExpiry', String(Date.now() + 8 * 60 * 60 * 1000)); // 8 hours
 
     // Map backend user format to frontend User type
     const user: User = {
