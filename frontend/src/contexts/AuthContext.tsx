@@ -2,11 +2,29 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { api } from '@/lib/api';
 import type { User, LoginCredentials, RegisterData } from '@/types';
 
+interface TwoFactorPendingState {
+  userId: string;
+  email: string;
+}
+
+interface LoginResponse {
+  requires2FA?: boolean;
+  userId?: string;
+  email?: string;
+  user?: any;
+  accessToken?: string;
+  message: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  twoFactorPending: TwoFactorPendingState | null;
+  login: (credentials: LoginCredentials) => Promise<LoginResponse>;
+  verify2FA: (userId: string, code: string) => Promise<void>;
+  resend2FA: (userId: string) => Promise<void>;
+  cancelTwoFactor: () => void;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
@@ -21,6 +39,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [twoFactorPending, setTwoFactorPending] = useState<TwoFactorPendingState | null>(null);
 
   // Load user on mount
   useEffect(() => {
@@ -51,17 +70,52 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loadUser();
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
-    const response = await api.post<{ user: any; accessToken: string; message: string }>(
+  const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>(
       '/auth/login',
       credentials
     );
 
-    // Store access token in localStorage
+    // Check if 2FA is required
+    if (response.requires2FA && response.userId && response.email) {
+      setTwoFactorPending({
+        userId: response.userId,
+        email: response.email,
+      });
+      return response;
+    }
+
+    // If no 2FA (shouldn't happen with new flow, but keeping for backwards compatibility)
+    if (response.accessToken && response.user) {
+      localStorage.setItem('accessToken', response.accessToken);
+      localStorage.setItem('tokenExpiry', String(Date.now() + 3600 * 1000));
+
+      const user: User = {
+        ...response.user,
+        roles: response.user.userRoles?.map((r: any) => r.role) || [],
+        privacy: {
+          profileVisibility: response.user.profileVisibility,
+          allowQrScanning: response.user.allowQrScanning,
+          allowMessaging: response.user.allowMessaging,
+          hideContactInfo: response.user.hideContactInfo,
+        },
+      };
+
+      setUser(user);
+    }
+
+    return response;
+  };
+
+  const verify2FA = async (userId: string, code: string) => {
+    const response = await api.post<{ user: any; accessToken: string; message: string }>(
+      '/auth/verify-2fa',
+      { userId, code }
+    );
+
+    // Store access token
     localStorage.setItem('accessToken', response.accessToken);
-    // Set token expiry (1 hour from now, matching backend JWT expiration)
     localStorage.setItem('tokenExpiry', String(Date.now() + 3600 * 1000));
-    // Refresh token is stored in httpOnly cookie by backend
 
     // Map backend user format to frontend User type
     const user: User = {
@@ -76,6 +130,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     setUser(user);
+    setTwoFactorPending(null);
+  };
+
+  const resend2FA = async (userId: string) => {
+    await api.post('/auth/resend-2fa', { userId });
+  };
+
+  const cancelTwoFactor = () => {
+    setTwoFactorPending(null);
   };
 
   const register = async (data: RegisterData) => {
@@ -111,7 +174,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     isLoading,
     isAuthenticated: !!user,
+    twoFactorPending,
     login,
+    verify2FA,
+    resend2FA,
+    cancelTwoFactor,
     register,
     logout,
     updateUser,
