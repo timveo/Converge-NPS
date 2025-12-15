@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { VerificationCodeInput } from '@/components/auth/VerificationCodeInput';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, Mail } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, Eye, EyeOff } from 'lucide-react';
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -25,6 +25,7 @@ export default function AuthPage() {
     password: '',
   });
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   // Signup state
   const [signupData, setSignupData] = useState({
@@ -36,6 +37,7 @@ export default function AuthPage() {
     role: '',
   });
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
 
   // Cooldown timer for resend
   useEffect(() => {
@@ -339,15 +341,29 @@ export default function AuthPage() {
                   <Label htmlFor="login-password" className="text-sm md:text-base">
                     Password
                   </Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    disabled={loading}
-                    className={`h-11 md:h-10 text-sm md:text-base ${loginErrors.password ? 'border-destructive' : ''}`}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={showLoginPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={loginData.password}
+                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                      disabled={loading}
+                      className={`h-11 md:h-10 text-sm md:text-base pr-10 ${loginErrors.password ? 'border-destructive' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showLoginPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                   {loginErrors.password && (
                     <p className="text-xs md:text-sm text-destructive">{loginErrors.password}</p>
                   )}
@@ -499,19 +515,33 @@ export default function AuthPage() {
                   <Label htmlFor="signup-password" className="text-sm md:text-base">
                     Password *
                   </Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={signupData.password}
-                    onChange={(e) =>
-                      setSignupData({ ...signupData, password: e.target.value })
-                    }
-                    disabled={loading}
-                    minLength={8}
-                    maxLength={128}
-                    className={`h-11 md:h-10 text-sm md:text-base ${signupErrors.password ? 'border-destructive' : ''}`}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signup-password"
+                      type={showSignupPassword ? 'text' : 'password'}
+                      placeholder="Create a password"
+                      value={signupData.password}
+                      onChange={(e) =>
+                        setSignupData({ ...signupData, password: e.target.value })
+                      }
+                      disabled={loading}
+                      minLength={8}
+                      maxLength={128}
+                      className={`h-11 md:h-10 text-sm md:text-base pr-10 ${signupErrors.password ? 'border-destructive' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showSignupPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                   {signupErrors.password && (
                     <p className="text-xs md:text-sm text-destructive">
                       {signupErrors.password}
