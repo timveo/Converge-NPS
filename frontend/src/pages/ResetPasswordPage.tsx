@@ -261,6 +261,15 @@ export default function ResetPasswordPage() {
               )}
             </Button>
 
+            {/* Disabled button explanation */}
+            {password.length > 0 && (!allRequirementsMet || !passwordsMatch) && (
+              <p className="text-xs text-muted-foreground text-center">
+                {!allRequirementsMet
+                  ? 'Please meet all password requirements above'
+                  : 'Passwords must match'}
+              </p>
+            )}
+
             <Link to="/auth">
               <Button variant="ghost" className="w-full h-11 md:h-10 text-sm md:text-base">
                 <ArrowLeft className="mr-1.5 md:mr-2 h-4 w-4 md:h-5 md:w-5" />
