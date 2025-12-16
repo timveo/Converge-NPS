@@ -411,6 +411,7 @@ describe('ConnectionService', () => {
 
     it('should return null if QR code not found', async () => {
       (prisma.qrCode.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([]);
 
       const result = await ConnectionService.getConnectionByQRCode('invalid-qr');
 

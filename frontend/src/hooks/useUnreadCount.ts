@@ -3,7 +3,7 @@ import { api } from '@/lib/api';
 
 // Shared state across all hook instances to avoid duplicate polling
 let globalUnreadCount = 0;
-let listeners: Set<(count: number) => void> = new Set();
+const listeners: Set<(count: number) => void> = new Set();
 let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
 const fetchUnreadCount = async () => {
