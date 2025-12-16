@@ -1,11 +1,9 @@
 import { Server, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { verify } from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import * as messageService from '../services/message.service';
 import logger from '../utils/logger';
-
-const prisma = new PrismaClient();
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;

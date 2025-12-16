@@ -4,7 +4,8 @@
  * Database operations for authentication flow
  */
 
-import { PrismaClient, Profile } from '@prisma/client';
+import { Profile } from '@prisma/client';
+import prisma from '../config/database';
 import {
   hashPassword,
   verifyPassword,
@@ -15,8 +16,6 @@ import {
 } from '../utils/auth';
 import { UnauthorizedError, ConflictError, NotFoundError } from '../middleware/errorHandler';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 export interface RegisterData {
   fullName: string;
@@ -315,15 +314,15 @@ export class AuthService {
   /**
    * Request password reset
    */
-  static async requestPasswordReset(email: string): Promise<string> {
+  static async requestPasswordReset(email: string): Promise<{ token: string; userName?: string } | null> {
     // Find user (silently fail to prevent email enumeration)
     const user = await prisma.profile.findUnique({
       where: { email: email.toLowerCase() },
     });
 
     if (!user) {
-      // Return success even if user doesn't exist (prevent email enumeration)
-      return '';
+      // Return null if user doesn't exist (prevent email enumeration)
+      return null;
     }
 
     // Generate reset token
@@ -331,25 +330,22 @@ export class AuthService {
     const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Store reset token
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS password_resets (
-        user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-        token_hash TEXT NOT NULL,
-        expires_at TIMESTAMPTZ NOT NULL,
-        used BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `;
+    // Store reset token (upsert to handle existing tokens)
+    await prisma.passwordReset.upsert({
+      where: { userId: user.id },
+      update: {
+        tokenHash: resetTokenHash,
+        expiresAt,
+        used: false,
+      },
+      create: {
+        userId: user.id,
+        tokenHash: resetTokenHash,
+        expiresAt,
+      },
+    });
 
-    await prisma.$executeRaw`
-      INSERT INTO password_resets (user_id, token_hash, expires_at)
-      VALUES (${user.id}::uuid, ${resetTokenHash}, ${expiresAt})
-      ON CONFLICT (user_id) DO UPDATE
-      SET token_hash = ${resetTokenHash}, expires_at = ${expiresAt}, used = false;
-    `;
-
-    return resetToken;
+    return { token: resetToken, userName: user.fullName || undefined };
   }
 
   /**
@@ -359,35 +355,39 @@ export class AuthService {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     // Find reset token
-    const reset: any = await prisma.$queryRaw`
-      SELECT user_id FROM password_resets
-      WHERE token_hash = ${tokenHash} AND expires_at > NOW() AND used = false;
-    `;
+    const reset = await prisma.passwordReset.findFirst({
+      where: {
+        tokenHash,
+        expiresAt: { gt: new Date() },
+        used: false,
+      },
+    });
 
-    if (!reset || reset.length === 0) {
+    if (!reset) {
       throw new UnauthorizedError('Invalid or expired reset token');
     }
 
-    const userId = reset[0].user_id;
+    const userId = reset.userId;
 
     // Hash new password
     const passwordHash = await hashPassword(newPassword);
 
     // Update password
-    await prisma.$executeRaw`
-      UPDATE user_passwords SET password_hash = ${passwordHash}, updated_at = NOW()
-      WHERE user_id = ${userId}::uuid;
-    `;
+    await prisma.userPassword.update({
+      where: { userId },
+      data: { passwordHash },
+    });
 
     // Mark token as used
-    await prisma.$executeRaw`
-      UPDATE password_resets SET used = true WHERE token_hash = ${tokenHash};
-    `;
+    await prisma.passwordReset.update({
+      where: { userId },
+      data: { used: true },
+    });
 
     // Invalidate all sessions (force re-login)
-    await prisma.$executeRaw`
-      DELETE FROM user_sessions WHERE user_id = ${userId}::uuid;
-    `;
+    await prisma.userSession.deleteMany({
+      where: { userId },
+    });
   }
 
   /**

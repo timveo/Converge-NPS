@@ -18,7 +18,7 @@ import connectionRoutes from './routes/connection.routes';
 import sessionRoutes from './routes/session.routes';
 import projectRoutes from './routes/project.routes';
 import messageRoutes from './routes/message.routes';
-// import adminRoutes from './routes/admin.routes'; // TEMPORARILY DISABLED - schema mismatch
+import adminRoutes from './routes/admin.routes';
 import smartsheetRoutes from './routes/smartsheet.routes';
 import partnerRoutes from './routes/partner.routes';
 import staffRoutes from './routes/staff.routes';
@@ -27,6 +27,9 @@ import recommendationRoutes from './routes/recommendation.routes';
 
 export function createApp(): Application {
   const app = express();
+
+  // Sample health endpoint logs to reduce noise
+  let healthLogCounter = 0;
 
   // ===========================
   // Security Middleware
@@ -102,6 +105,13 @@ export function createApp(): Application {
     // Log when response finishes
     res.on('finish', () => {
       const duration = Date.now() - start;
+
+      if (req.path === '/health') {
+        healthLogCounter = (healthLogCounter + 1) % 20;
+        if (healthLogCounter !== 0) {
+          return;
+        }
+      }
       logger.info(`${req.method} ${req.path}`, {
         statusCode: res.statusCode,
         method: req.method,
@@ -163,7 +173,7 @@ export function createApp(): Application {
   app.use(`${API_VERSION}/messages`, messageRoutes);
   app.use(`${API_VERSION}/partners`, partnerRoutes);
   app.use(`${API_VERSION}/staff`, staffRoutes);
-  // app.use(`${API_VERSION}/admin`, adminRoutes); // TEMPORARILY DISABLED - schema mismatch
+  app.use(`${API_VERSION}/admin`, adminRoutes);
   app.use(`${API_VERSION}/admin/smartsheet`, smartsheetRoutes);
   app.use(`${API_VERSION}/recommendations`, recommendationRoutes);
 

@@ -5,19 +5,109 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import { ConnectionService } from '../services/connection.service';
 import {
   CreateConnectionSchema,
+  ManualCodeLookupSchema,
   UpdateConnectionSchema,
   QRScanSchema,
   ConnectionsQuerySchema,
 } from '../types/schemas';
 import logger from '../utils/logger';
 
-const prisma = new PrismaClient();
-
 export class ConnectionController {
+  /**
+   * POST /connections/manual/lookup
+   * Lookup a user profile by manual code (UUID prefix)
+   */
+  static async manualCodeLookup(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Not authenticated' },
+        });
+      }
+
+      const { code } = ManualCodeLookupSchema.parse(req.body) as any;
+      const normalized = String(code).trim().toLowerCase();
+
+      const matchedRows = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id
+        FROM profiles
+        WHERE lower(id::text) LIKE ${normalized + '%'}
+        LIMIT 1
+      `;
+
+      const matchedProfile = matchedRows[0];
+
+      if (!matchedProfile) {
+        return res.status(404).json({
+          error: { code: 'INVALID_MANUAL_CODE', message: 'No user found for that code' },
+        });
+      }
+
+      const profile = await prisma.profile.findUnique({
+        where: { id: matchedProfile.id },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          organization: true,
+          department: true,
+          role: true,
+          bio: true,
+          avatarUrl: true,
+          linkedinUrl: true,
+          websiteUrl: true,
+          hideContactInfo: true,
+          profileVisibility: true,
+        },
+      });
+
+      if (!profile) {
+        return res.status(404).json({
+          error: { code: 'INVALID_MANUAL_CODE', message: 'No user found for that code' },
+        });
+      }
+
+      // Respect privacy settings: if user hides contact info, hide those fields for non-self
+      const safeProfile: any = { ...profile };
+      if (profile.hideContactInfo && profile.id !== req.user.id) {
+        safeProfile.email = null;
+        safeProfile.phone = null;
+        safeProfile.linkedinUrl = null;
+        safeProfile.websiteUrl = null;
+      }
+
+      // If profile is private and requester is not the same user, return limited profile
+      if (profile.profileVisibility === 'private' && profile.id !== req.user.id) {
+        return res.status(200).json({
+          profile: {
+            id: profile.id,
+            fullName: null,
+            email: null,
+            phone: null,
+            organization: null,
+            department: null,
+            role: null,
+            bio: null,
+            avatarUrl: null,
+            linkedinUrl: null,
+            websiteUrl: null,
+            hideContactInfo: true,
+            profileVisibility: 'private',
+          },
+        });
+      }
+
+      res.status(200).json({ profile: safeProfile });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * POST /connections/qr-scan
    * Create connection via QR code scan
@@ -171,7 +261,7 @@ export class ConnectionController {
 
       logger.info('Connection created successfully', {
         action: 'Add Connection',
-        method: 'Code_Add',
+        method: 'Manual_Code',
         connectionId: connection.id,
         userId: req.user.id,
         timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),

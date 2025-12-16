@@ -99,6 +99,10 @@ export const CreateConnectionSchema = z.object({
   connectionMethod: z.enum(['qr_scan', 'manual_entry']),
 });
 
+ export const ManualCodeLookupSchema = z.object({
+   code: z.string().trim().min(4).max(36),
+ });
+
 export const UpdateConnectionSchema = z.object({
   collaborativeIntents: z.array(z.string()).max(10).optional(),
   notes: z.string().max(1000).optional().nullable(),

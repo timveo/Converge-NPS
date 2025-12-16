@@ -1,6 +1,7 @@
 // @ts-nocheck
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
+const { randomUUID } = require('crypto');
 
 const prisma = new PrismaClient();
 
@@ -70,7 +71,7 @@ async function main() {
 
   const staff = await prisma.profile.create({
     data: {
-      id: '550e8400-e29b-41d4-a716-446655440001',
+      id: randomUUID(),
       fullName: 'Admin User',
       email: 'admin@converge-nps.com',
       role: 'admin',
@@ -85,7 +86,7 @@ async function main() {
 
   const student1 = await prisma.profile.create({
     data: {
-      id: '550e8400-e29b-41d4-a716-446655440002',
+      id: randomUUID(),
       fullName: 'Alice Johnson',
       email: 'alice@nps.edu',
       role: 'student',
@@ -100,7 +101,7 @@ async function main() {
 
   const student2 = await prisma.profile.create({
     data: {
-      id: '550e8400-e29b-41d4-a716-446655440003',
+      id: randomUUID(),
       fullName: 'Bob Smith',
       email: 'bob@nps.edu',
       role: 'student',
@@ -115,7 +116,7 @@ async function main() {
 
   const faculty = await prisma.profile.create({
     data: {
-      id: '550e8400-e29b-41d4-a716-446655440004',
+      id: randomUUID(),
       fullName: 'Dr. Carol Williams',
       email: 'carol@nps.edu',
       role: 'faculty',
@@ -130,7 +131,7 @@ async function main() {
 
   const industry1 = await prisma.profile.create({
     data: {
-      id: '550e8400-e29b-41d4-a716-446655440005',
+      id: randomUUID(),
       fullName: 'David Chen',
       email: 'david@techcorp.com',
       role: 'industry',

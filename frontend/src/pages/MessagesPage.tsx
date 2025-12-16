@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { MessageCircle, Search, ChevronLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
@@ -32,10 +32,40 @@ interface Conversation {
 
 export default function MessagesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { socket, isConnected } = useSocket();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Fast path: if we navigated here with a target user id, start/open the conversation and redirect.
+  useEffect(() => {
+    const state = location.state as any;
+    const recipientId: string | undefined = state?.startConversationWithUserId;
+    if (!recipientId) return;
+
+    let isCanceled = false;
+
+    (async () => {
+      try {
+        const res = await api.post<{ success: boolean; data?: { id: string } }>(
+          '/messages/conversations',
+          { recipientId }
+        );
+
+        const conversationId = res?.data?.id;
+        if (!conversationId || isCanceled) return;
+
+        navigate(`/messages/${conversationId}`, { replace: true });
+      } catch (error) {
+        console.error('Failed to start conversation', error);
+      }
+    })();
+
+    return () => {
+      isCanceled = true;
+    };
+  }, [location.state, navigate]);
 
   const fetchConversations = useCallback(async () => {
     try {

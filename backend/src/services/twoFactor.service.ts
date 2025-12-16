@@ -4,11 +4,9 @@
  * Handles 2FA code generation, storage, and verification
  */
 
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import crypto from 'crypto';
 import { EmailService } from './email.service';
-
-const prisma = new PrismaClient();
 
 // Configuration
 const CODE_LENGTH = 6;

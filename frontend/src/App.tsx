@@ -6,6 +6,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 // User Pages
 import AuthPage from '@/pages/AuthPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import DashboardPage from '@/pages/DashboardPage';
 import ProfilePage from '@/pages/ProfilePage';
 import ProfileEditPage from '@/pages/ProfileEditPage';
@@ -29,6 +30,7 @@ import SessionManagement from '@/pages/admin/SessionManagement';
 import SessionForm from '@/pages/admin/SessionForm';
 import UserManagement from '@/pages/admin/UserManagement';
 import Analytics from '@/pages/admin/Analytics';
+import EventAnalytics from '@/pages/admin/EventAnalytics';
 import SmartsheetPage from '@/pages/admin/SmartsheetPage';
 import AuditLogsPage from '@/pages/admin/AuditLogsPage';
 
@@ -45,6 +47,7 @@ function App() {
         <Route path="/login" element={<AuthPage />} />
         <Route path="/register" element={<AuthPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Protected user routes */}
         <Route
@@ -222,6 +225,14 @@ function App() {
           element={
             <ProtectedRoute requireAdmin>
               <Analytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/event-analytics"
+          element={
+            <ProtectedRoute requireAdmin>
+              <EventAnalytics />
             </ProtectedRoute>
           }
         />
