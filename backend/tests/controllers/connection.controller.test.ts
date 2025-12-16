@@ -214,6 +214,108 @@ describe('ConnectionController', () => {
     });
   });
 
+  describe('manualCodeLookup', () => {
+    it('should return profile for a valid manual code (public profile)', async () => {
+      mockReq.user = { id: '11111111-1111-1111-1111-111111111111' } as any;
+      mockReq.body = { code: 'A7F3D9C2' };
+
+      prismaMock.$queryRaw.mockResolvedValue([{ id: '22222222-2222-2222-2222-222222222222' }]);
+      prismaMock.profile.findUnique.mockResolvedValue({
+        id: '22222222-2222-2222-2222-222222222222',
+        fullName: 'Jane Doe',
+        email: 'jane@example.com',
+        phone: null,
+        organization: 'Org',
+        department: null,
+        role: 'Attendee',
+        bio: null,
+        avatarUrl: null,
+        linkedinUrl: null,
+        websiteUrl: null,
+        hideContactInfo: false,
+        profileVisibility: 'public',
+      });
+
+      await ConnectionController.manualCodeLookup(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext
+      );
+
+      expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(prismaMock.profile.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: '22222222-2222-2222-2222-222222222222' },
+        })
+      );
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        profile: expect.objectContaining({
+          id: '22222222-2222-2222-2222-222222222222',
+          fullName: 'Jane Doe',
+        }),
+      });
+    });
+
+    it('should return 404 if no user found for manual code', async () => {
+      mockReq.user = { id: '11111111-1111-1111-1111-111111111111' } as any;
+      mockReq.body = { code: 'NOPE' };
+
+      prismaMock.$queryRaw.mockResolvedValue([]);
+
+      await ConnectionController.manualCodeLookup(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext
+      );
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({ code: 'INVALID_MANUAL_CODE' }),
+        })
+      );
+    });
+
+    it('should return limited profile for private profile (non-self requester)', async () => {
+      mockReq.user = { id: '11111111-1111-1111-1111-111111111111' } as any;
+      mockReq.body = { code: 'A7F3D9C2' };
+
+      prismaMock.$queryRaw.mockResolvedValue([{ id: '22222222-2222-2222-2222-222222222222' }]);
+      prismaMock.profile.findUnique.mockResolvedValue({
+        id: '22222222-2222-2222-2222-222222222222',
+        fullName: 'Jane Doe',
+        email: 'jane@example.com',
+        phone: null,
+        organization: 'Org',
+        department: null,
+        role: 'Attendee',
+        bio: null,
+        avatarUrl: null,
+        linkedinUrl: null,
+        websiteUrl: null,
+        hideContactInfo: false,
+        profileVisibility: 'private',
+      });
+
+      await ConnectionController.manualCodeLookup(
+        mockReq as Request,
+        mockRes as Response,
+        mockNext
+      );
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        profile: expect.objectContaining({
+          id: '22222222-2222-2222-2222-222222222222',
+          profileVisibility: 'private',
+          fullName: null,
+          email: null,
+        }),
+      });
+    });
+  });
+
   describe('createByUserId', () => {
     it('should create connection by user ID', async () => {
       mockReq.user = { id: 'user-123' } as any;

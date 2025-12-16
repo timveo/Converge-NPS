@@ -19,6 +19,7 @@ import { offlineQueue } from "@/lib/offlineQueue";
 import { triggerHapticFeedback } from "@/lib/mobileUtils";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
 import {
   Tooltip,
   TooltipContent,
@@ -252,17 +253,22 @@ export default function ScannerPage() {
     setIsProcessing(true);
 
     try {
-      // For now, create mock data based on the code
-      // In production, this would call an API to look up the profile
+      const response = await api.post<{ profile: any }>(
+        '/connections/manual/lookup',
+        { code: manualCode }
+      );
+
+      const profile = (response as any).profile;
+
       setScannedData({
-        uuid: manualCode,
-        name: 'Event Participant',
-        org: 'Naval Postgraduate School',
-        role: 'Attendee',
-        bio: '',
-        interests: [],
-        linkedin: '',
-        email: '',
+        uuid: profile?.id,
+        name: profile?.fullName || 'Event Participant',
+        org: profile?.organization || '',
+        role: profile?.role || '',
+        bio: profile?.bio || '',
+        interests: profile?.accelerationInterests || [],
+        linkedin: profile?.linkedinUrl || '',
+        email: profile?.email || '',
         currentSessions: []
       });
 
@@ -358,8 +364,13 @@ export default function ScannerPage() {
         return;
       }
 
-      // TODO: Save to backend API
-      // For now, just show success
+      await api.post('/connections/manual', {
+        connectedUserId: scannedData.uuid,
+        collaborativeIntents: selectedIntents,
+        notes: note || null,
+        connectionMethod: 'manual_entry',
+      });
+
       toast.success("Connection saved successfully!" + (reminderTimestamp ? " Reminder set." : ""));
 
       // Reset and close
@@ -376,12 +387,10 @@ export default function ScannerPage() {
     try {
       if (!user?.id || !scannedData?.uuid) return;
 
-      await offlineQueue.add(user.id, 'create_connection', {
-        scanner_uuid: user.id,
-        scanned_uuid: scannedData.uuid,
-        timestamp: new Date().toISOString(),
-        collaborative_intent: selectedIntents,
-        custom_note: note || '',
+      await offlineQueue.add(user.id, 'qr_scan', {
+        qrCodeData: scannedData.uuid,
+        collaborativeIntents: selectedIntents,
+        notes: note || '',
       });
 
       toast.success(
