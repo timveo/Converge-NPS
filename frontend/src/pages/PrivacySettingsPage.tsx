@@ -57,7 +57,7 @@ export default function PrivacySettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="profileVisibility">Public Profile</Label>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Allow others to discover your profile in search and directory
                 </p>
               </div>
@@ -71,7 +71,7 @@ export default function PrivacySettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="allowQrScanning">Allow QR Scanning</Label>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Let others scan your QR code to connect with you
                 </p>
               </div>
@@ -85,7 +85,7 @@ export default function PrivacySettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="allowMessaging">Allow Messaging</Label>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Let other attendees send you direct messages
                 </p>
               </div>
@@ -99,7 +99,7 @@ export default function PrivacySettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="hideContactInfo">Hide Contact Info</Label>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Keep your email and phone number private from other users
                 </p>
               </div>

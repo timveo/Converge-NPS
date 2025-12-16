@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, QrCode, Calendar, MessageCircle, User } from 'lucide-react';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { useFeature } from '@/hooks/useFeature';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -44,6 +45,7 @@ export function BottomNav() {
   const location = useLocation();
   const deviceType = useDeviceType();
   const isQRAvailable = useFeature('qrScanner');
+  const { unreadCount } = useUnreadCount();
 
   // Only show on mobile and tablet
   if (deviceType === 'desktop') {
@@ -63,6 +65,8 @@ export function BottomNav() {
         {filteredNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
+          const isMessages = item.path === '/messages';
+          const showUnreadDot = isMessages && unreadCount > 0;
 
           return (
             <Link
@@ -75,7 +79,12 @@ export function BottomNav() {
                   : 'text-muted-foreground hover:text-accent'
               )}
             >
-              <Icon className="w-6 h-6 mb-1" />
+              <div className="relative">
+                <Icon className="w-6 h-6 mb-1" />
+                {showUnreadDot && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full" />
+                )}
+              </div>
               <span className="text-xs font-medium">{item.label}</span>
             </Link>
           );

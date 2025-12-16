@@ -215,7 +215,7 @@ export default function UserManagement() {
 
   // Skeleton component for loading state
   const UserCardSkeleton = () => (
-    <Card className="p-3 md:p-6 shadow-md border-gray-200">
+    <Card className="p-3 md:p-6 shadow-md border-border">
       <div className="flex items-start gap-2.5 md:gap-4 mb-2.5 md:mb-4">
         <Skeleton className="w-9 h-9 md:w-12 md:h-12 rounded-full flex-shrink-0" />
         <div className="flex-1 min-w-0">
@@ -236,7 +236,7 @@ export default function UserManagement() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4">
         <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg sticky top-0 z-10 rounded-lg">
@@ -303,7 +303,7 @@ export default function UserManagement() {
           filteredUsers.map((u) => (
             <Card
               key={u.id}
-              className="p-3 md:p-6 shadow-md border-gray-200 hover:shadow-lg transition-all duration-300"
+              className="p-3 md:p-6 shadow-md border-border hover:shadow-lg transition-all duration-300"
             >
               <div className="flex items-start gap-2.5 md:gap-4 mb-2.5 md:mb-4">
                 {/* Avatar */}
@@ -316,12 +316,12 @@ export default function UserManagement() {
 
                 <div className="flex-1 min-w-0">
                   {/* Name & Email */}
-                  <h3 className="font-semibold text-gray-900 text-sm md:text-base truncate">
+                  <h3 className="font-semibold text-foreground text-sm md:text-base truncate">
                     {u.full_name}
                   </h3>
-                  <p className="text-xs md:text-sm text-gray-500 truncate">{u.email}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">{u.email}</p>
                   {u.organization && (
-                    <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 truncate">
+                    <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1 truncate">
                       {u.organization}
                     </p>
                   )}
@@ -340,7 +340,7 @@ export default function UserManagement() {
 
               {/* Roles */}
               <div className="mt-2.5 md:mt-4">
-                <p className="text-[10px] md:text-xs font-medium text-gray-500 mb-1.5 md:mb-2">
+                <p className="text-[10px] md:text-xs font-medium text-muted-foreground mb-1.5 md:mb-2">
                   Assigned Roles
                 </p>
                 {u.roles.length > 0 ? (
@@ -364,15 +364,15 @@ export default function UserManagement() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs md:text-sm text-gray-500 italic">No roles assigned</p>
+                  <p className="text-xs md:text-sm text-muted-foreground italic">No roles assigned</p>
                 )}
               </div>
 
               {/* User Info */}
               {u.role && (
-                <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-200">
-                  <p className="text-[10px] md:text-xs text-gray-500">
-                    Profile Role: <span className="text-gray-900">{u.role}</span>
+                <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-border">
+                  <p className="text-[10px] md:text-xs text-muted-foreground">
+                    Profile Role: <span className="text-foreground">{u.role}</span>
                   </p>
                 </div>
               )}
@@ -408,11 +408,11 @@ export default function UserManagement() {
               </SelectContent>
             </Select>
 
-            <div className="mt-3 md:mt-4 p-2.5 md:p-3 bg-gray-100 rounded-lg">
-              <p className="text-[10px] md:text-xs text-gray-500">
+            <div className="mt-3 md:mt-4 p-2.5 md:p-3 bg-muted rounded-lg">
+              <p className="text-[10px] md:text-xs text-muted-foreground">
                 <strong>Role Descriptions:</strong>
               </p>
-              <ul className="text-[10px] md:text-xs text-gray-500 mt-1.5 md:mt-2 space-y-0.5 md:space-y-1 list-disc list-inside">
+              <ul className="text-[10px] md:text-xs text-muted-foreground mt-1.5 md:mt-2 space-y-0.5 md:space-y-1 list-disc list-inside">
                 <li>
                   <strong>Admin:</strong> Full system access
                 </li>

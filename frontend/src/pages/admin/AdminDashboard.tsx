@@ -143,7 +143,7 @@ export default function AdminDashboard() {
   const RecentUsersSkeleton = () => (
     <div className="space-y-1.5 md:space-y-2">
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 bg-gray-50 rounded-lg">
+        <div key={i} className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 bg-muted rounded-lg">
           <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <Skeleton className="h-4 w-32 mb-1" />
@@ -156,7 +156,7 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4 max-w-6xl">
         <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg sticky top-0 z-10 rounded-lg">
@@ -182,14 +182,14 @@ export default function AdminDashboard() {
 
       <main className="container mx-auto px-3 md:px-4 py-3 md:py-8 max-w-6xl space-y-3 md:space-y-6">
         {/* Quick Actions */}
-        <Card className="p-3 md:p-6 shadow-md border-blue-100">
-          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4 flex items-center gap-2">
+        <Card className="p-3 md:p-6 shadow-md border-border">
+          <h2 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4 flex items-center gap-2">
             <Settings className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
             Quick Actions
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             <button
-              className="bg-white hover:shadow-lg active:shadow-md border border-gray-200 hover:border-blue-300 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
+              className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
               onClick={() => navigate('/admin/users', { state: { fromAdmin: true } })}
             >
               <div className="flex flex-col items-start gap-3">
@@ -197,10 +197,10 @@ export default function AdminDashboard() {
                   <UserCog className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-left w-full">
-                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 group-hover:text-blue-600 transition-colors duration-300">
+                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 text-foreground group-hover:text-primary transition-colors duration-300">
                     Manage Users
                   </div>
-                  <div className="text-xs md:text-sm text-gray-500 leading-snug line-clamp-2">
+                  <div className="text-xs md:text-sm text-muted-foreground leading-snug line-clamp-2">
                     Assign roles & permissions
                   </div>
                 </div>
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
             </button>
 
             <button
-              className="bg-white hover:shadow-lg active:shadow-md border border-gray-200 hover:border-blue-300 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
+              className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
               onClick={() => navigate('/opportunities', { state: { fromAdmin: true } })}
             >
               <div className="flex flex-col items-start gap-3">
@@ -216,10 +216,10 @@ export default function AdminDashboard() {
                   <Briefcase className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-left w-full">
-                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 group-hover:text-blue-600 transition-colors duration-300">
+                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 text-foreground group-hover:text-primary transition-colors duration-300">
                     View Projects
                   </div>
-                  <div className="text-xs md:text-sm text-gray-500 leading-snug line-clamp-2">
+                  <div className="text-xs md:text-sm text-muted-foreground leading-snug line-clamp-2">
                     Monitor research activity
                   </div>
                 </div>
@@ -227,7 +227,7 @@ export default function AdminDashboard() {
             </button>
 
             <button
-              className="bg-white hover:shadow-lg active:shadow-md border border-gray-200 hover:border-blue-300 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
+              className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
               onClick={() => navigate('/schedule', { state: { fromAdmin: true } })}
             >
               <div className="flex flex-col items-start gap-3">
@@ -235,10 +235,10 @@ export default function AdminDashboard() {
                   <Calendar className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-left w-full">
-                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 group-hover:text-blue-600 transition-colors duration-300">
+                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 text-foreground group-hover:text-primary transition-colors duration-300">
                     Event Schedule
                   </div>
-                  <div className="text-xs md:text-sm text-gray-500 leading-snug line-clamp-2">
+                  <div className="text-xs md:text-sm text-muted-foreground leading-snug line-clamp-2">
                     Manage sessions
                   </div>
                 </div>
@@ -246,7 +246,7 @@ export default function AdminDashboard() {
             </button>
 
             <button
-              className="bg-white hover:shadow-lg active:shadow-md border border-gray-200 hover:border-blue-300 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
+              className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
               onClick={() => navigate('/admin/smartsheet')}
             >
               <div className="flex flex-col items-start gap-3">
@@ -254,10 +254,10 @@ export default function AdminDashboard() {
                   <Database className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-left w-full">
-                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 group-hover:text-blue-600 transition-colors duration-300">
+                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 text-foreground group-hover:text-primary transition-colors duration-300">
                     Data Sync
                   </div>
-                  <div className="text-xs md:text-sm text-gray-500 leading-snug line-clamp-2">
+                  <div className="text-xs md:text-sm text-muted-foreground leading-snug line-clamp-2">
                     Import from Smartsheet
                   </div>
                 </div>
@@ -265,7 +265,7 @@ export default function AdminDashboard() {
             </button>
 
             <button
-              className="bg-white hover:shadow-lg active:shadow-md border border-gray-200 hover:border-blue-300 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
+              className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
               onClick={() => navigate('/admin/sessions')}
             >
               <div className="flex flex-col items-start gap-3">
@@ -273,10 +273,10 @@ export default function AdminDashboard() {
                   <TrendingUp className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-left w-full">
-                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 group-hover:text-blue-600 transition-colors duration-300">
+                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 text-foreground group-hover:text-primary transition-colors duration-300">
                     Session Stats
                   </div>
-                  <div className="text-xs md:text-sm text-gray-500 leading-snug line-clamp-2">
+                  <div className="text-xs md:text-sm text-muted-foreground leading-snug line-clamp-2">
                     Monitor attendance
                   </div>
                 </div>
@@ -284,7 +284,7 @@ export default function AdminDashboard() {
             </button>
 
             <button
-              className="bg-white hover:shadow-lg active:shadow-md border border-gray-200 hover:border-blue-300 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
+              className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
               onClick={() => navigate('/admin/event-analytics')}
             >
               <div className="flex flex-col items-start gap-3">
@@ -292,10 +292,10 @@ export default function AdminDashboard() {
                   <BarChart3 className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-left w-full">
-                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 group-hover:text-blue-600 transition-colors duration-300">
+                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 text-foreground group-hover:text-primary transition-colors duration-300">
                     Event Analytics
                   </div>
-                  <div className="text-xs md:text-sm text-gray-500 leading-snug line-clamp-2">
+                  <div className="text-xs md:text-sm text-muted-foreground leading-snug line-clamp-2">
                     Real-time insights
                   </div>
                 </div>
@@ -303,7 +303,7 @@ export default function AdminDashboard() {
             </button>
 
             <button
-              className="bg-white hover:shadow-lg active:shadow-md border border-gray-200 hover:border-blue-300 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
+              className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
               onClick={() => toast.info('RE Export', { description: 'Export for Raiser\'s Edge coming soon' })}
             >
               <div className="flex flex-col items-start gap-3">
@@ -311,10 +311,10 @@ export default function AdminDashboard() {
                   <Download className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-left w-full">
-                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 group-hover:text-blue-600 transition-colors duration-300">
+                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 text-foreground group-hover:text-primary transition-colors duration-300">
                     RE Export
                   </div>
-                  <div className="text-xs md:text-sm text-gray-500 leading-snug line-clamp-2">
+                  <div className="text-xs md:text-sm text-muted-foreground leading-snug line-clamp-2">
                     Export for Raiser's Edge
                   </div>
                 </div>
@@ -324,9 +324,9 @@ export default function AdminDashboard() {
         </Card>
 
         {/* Recent Registrations */}
-        <Card className="p-3 md:p-6 shadow-md border-gray-200">
+        <Card className="p-3 md:p-6 shadow-md border-border">
           <div className="mb-2 md:mb-4">
-            <h2 className="text-sm md:text-lg font-semibold text-gray-900">
+            <h2 className="text-sm md:text-lg font-semibold text-foreground">
               Recent Registrations
             </h2>
           </div>
@@ -337,7 +337,7 @@ export default function AdminDashboard() {
               recentUsers.map((recentUser) => (
                 <div
                   key={recentUser.id}
-                  className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 bg-gray-50 rounded-lg"
+                  className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 bg-muted rounded-lg"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-900 to-blue-800 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
                     {recentUser.full_name
@@ -346,7 +346,7 @@ export default function AdminDashboard() {
                       .join('')}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-gray-900 truncate">
+                    <div className="font-medium text-sm text-foreground truncate">
                       {recentUser.full_name}
                     </div>
                     <div className="flex items-center gap-1 mt-0.5">
@@ -367,20 +367,20 @@ export default function AdminDashboard() {
                       ) : (
                         <Badge
                           variant="outline"
-                          className="text-xs px-1.5 py-0 text-gray-500"
+                          className="text-xs px-1.5 py-0 text-muted-foreground"
                         >
                           No role
                         </Badge>
                       )}
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500 whitespace-nowrap">
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">
                     {getTimeAgo(recentUser.created_at)}
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center text-gray-500 py-8">
+              <div className="text-center text-muted-foreground py-8">
                 <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No registrations yet</p>
               </div>

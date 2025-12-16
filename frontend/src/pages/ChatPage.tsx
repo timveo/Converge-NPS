@@ -255,7 +255,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-gray-100">
+    <div className="flex flex-col h-[100dvh] bg-muted">
       {/* Header - Navy gradient matching the design */}
       <header className="bg-gradient-navy text-primary-foreground px-4 py-3 shrink-0">
         <div className="flex items-center gap-3">
@@ -316,7 +316,7 @@ export default function ChatPage() {
                     'max-w-[80%] rounded-2xl px-4 py-3 shadow-sm',
                     isOwn
                       ? 'bg-primary text-primary-foreground rounded-br-md'
-                      : 'bg-white text-foreground rounded-bl-md border border-border'
+                      : 'bg-card text-foreground rounded-bl-md border border-border'
                   )}
                 >
                   <p className="text-sm leading-relaxed">{message.content}</p>
@@ -340,7 +340,7 @@ export default function ChatPage() {
         {/* Typing Indicator */}
         {isTyping && (
           <div className="flex items-start">
-            <div className="bg-white rounded-2xl rounded-bl-md px-4 py-3 shadow-sm border border-border">
+            <div className="bg-card rounded-2xl rounded-bl-md px-4 py-3 shadow-sm border border-border">
               <div className="flex space-x-1">
                 <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                 <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -354,7 +354,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input Area */}
-      <div className="bg-white border-t border-border p-4 shrink-0 safe-bottom">
+      <div className="bg-card border-t border-border p-4 shrink-0 safe-bottom">
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">
           <input
             type="text"

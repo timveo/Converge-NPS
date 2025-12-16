@@ -130,7 +130,7 @@ export default function SessionManagement() {
 
   // Skeleton components for loading state
   const SessionCardSkeleton = () => (
-    <Card className="p-3 shadow-md border-gray-200">
+    <Card className="p-3 shadow-md border-border">
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-2">
@@ -171,7 +171,7 @@ export default function SessionManagement() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4 max-w-7xl">
         <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg sticky top-0 z-10 rounded-lg">
@@ -223,22 +223,22 @@ export default function SessionManagement() {
             </div>
             {/* Desktop Skeleton */}
             <div className="hidden md:block">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-muted border-b border-border">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Speaker</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Track</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSVPs</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Session</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Speaker</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date & Time</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Track</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">RSVPs</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-border">
                       <SessionTableRowSkeleton />
                       <SessionTableRowSkeleton />
                       <SessionTableRowSkeleton />
@@ -251,10 +251,10 @@ export default function SessionManagement() {
             </div>
           </>
         ) : sessions.length === 0 ? (
-          <Card className="p-8 md:p-12 text-center shadow-md border-gray-200">
-            <Calendar className="h-12 w-12 md:h-16 md:w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-sm md:text-lg font-semibold text-gray-900 mb-2">No sessions yet</h3>
-            <p className="text-xs md:text-sm text-gray-600 mb-4">
+          <Card className="p-8 md:p-12 text-center shadow-md border-border">
+            <Calendar className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-sm md:text-lg font-semibold text-foreground mb-2">No sessions yet</h3>
+            <p className="text-xs md:text-sm text-muted-foreground mb-4">
               Create your first event session to get started
             </p>
             <Link to="/admin/sessions/new">
@@ -271,13 +271,13 @@ export default function SessionManagement() {
               {sessions.map((session) => (
                 <Card
                   key={session.id}
-                  className="p-3 shadow-md border-gray-200 hover:shadow-lg transition-all duration-300"
+                  className="p-3 shadow-md border-border hover:shadow-lg transition-all duration-300"
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       {/* Title and Status */}
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="font-semibold text-gray-900 text-sm truncate">
+                        <h3 className="font-semibold text-foreground text-sm truncate">
                           {session.title}
                         </h3>
                         <Badge
@@ -289,10 +289,10 @@ export default function SessionManagement() {
                       </div>
 
                       {/* Speaker */}
-                      <p className="text-xs text-gray-600 mb-2">{session.speaker || 'TBD'}</p>
+                      <p className="text-xs text-muted-foreground mb-2">{session.speaker || 'TBD'}</p>
 
                       {/* Details */}
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-500">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           <span>{formatDateTime(session.startTime)}</span>
@@ -352,59 +352,59 @@ export default function SessionManagement() {
 
             {/* Desktop Table View - Original Lovable Design */}
             <div className="hidden md:block">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-muted border-b border-border">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Session
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Speaker
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Date & Time
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Location
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Track
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           RSVPs
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Status
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-border">
                       {sessions.map((session) => (
-                        <tr key={session.id} className="hover:bg-gray-50">
+                        <tr key={session.id} className="hover:bg-muted/50">
                           <td className="px-6 py-4">
-                            <div className="text-sm font-medium text-gray-900">{session.title}</div>
+                            <div className="text-sm font-medium text-foreground">{session.title}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900">{session.speaker || 'TBD'}</div>
+                            <div className="text-sm text-foreground">{session.speaker || 'TBD'}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900">
+                            <div className="text-sm text-foreground">
                               {formatDateTime(session.startTime)}
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900">{session.location || 'TBD'}</div>
+                            <div className="text-sm text-foreground">{session.location || 'TBD'}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900">{session.track || '-'}</div>
+                            <div className="text-sm text-foreground">{session.track || '-'}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="flex items-center space-x-1 text-sm text-gray-900">
+                            <div className="flex items-center space-x-1 text-sm text-foreground">
                               <Users className="w-4 h-4" />
                               <span>
                                 {session._count?.rsvps || 0}

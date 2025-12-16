@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Bell, Menu, X } from 'lucide-react';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { useAuth } from '@/hooks/useAuth';
-import { api } from '@/lib/api';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { cn } from '@/lib/utils';
 
 interface TopBarProps {
@@ -13,27 +13,9 @@ interface TopBarProps {
 export function TopBar({ onMenuClick }: TopBarProps) {
   const deviceType = useDeviceType();
   const { user } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadCount } = useUnreadCount();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-
-  // Fetch unread message count
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const response = await api.get<{ count: number }>('/messages/unread-count');
-        setUnreadCount(response.count);
-      } catch (error) {
-        console.error('Failed to fetch unread count', error);
-      }
-    };
-
-    fetchUnreadCount();
-
-    // Poll every 30 seconds
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

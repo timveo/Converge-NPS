@@ -35,7 +35,7 @@ export default function ProjectsPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Research Projects</h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-muted-foreground mt-1">
             Discover NPS research and collaboration opportunities
           </p>
         </div>
@@ -44,7 +44,7 @@ export default function ProjectsPage() {
           <CardContent className="p-4">
             <div className="flex gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search projects..."
                   value={searchTerm}
@@ -81,7 +81,7 @@ export default function ProjectsPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">Research Areas:</p>
+                  <p className="text-sm text-muted-foreground mb-2">Research Areas:</p>
                   <div className="flex flex-wrap gap-1">
                     {project.researchAreas.map((area) => (
                       <Badge key={area} variant="secondary">
@@ -91,7 +91,7 @@ export default function ProjectsPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">Seeking:</p>
+                  <p className="text-sm text-muted-foreground mb-2">Seeking:</p>
                   <div className="flex flex-wrap gap-1">
                     {project.seeking.map((item) => (
                       <Badge key={item} variant="outline">

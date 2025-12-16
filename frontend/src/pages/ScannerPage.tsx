@@ -93,7 +93,7 @@ export default function ScannerPage() {
     loadPendingCount();
   }, []);
 
-  // Check camera permission on mount
+  // Check camera permission on mount and auto-start scanning if granted
   useEffect(() => {
     const checkCameraPermission = async () => {
       try {
@@ -103,12 +103,21 @@ export default function ScannerPage() {
         result.addEventListener('change', () => {
           setCameraPermission(result.state as CameraPermission);
         });
+
+        // Auto-start scanning if camera permission is already granted
+        if (result.state === 'granted') {
+          // Small delay to ensure component is fully mounted
+          setTimeout(() => {
+            handleStartScan();
+          }, 100);
+        }
       } catch {
         // Fallback for browsers that don't support permissions API
         setCameraPermission('prompt');
       }
     };
     checkCameraPermission();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Cleanup scanner on unmount
@@ -148,31 +157,44 @@ export default function ScannerPage() {
     setScanState('idle');
     setScanError(null);
     triggerHapticFeedback('light');
-
-    try {
-      // Initialize scanner
-      const html5QrCode = new Html5Qrcode("qr-scanner-container");
-      html5QrCodeRef.current = html5QrCode;
-
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-        },
-        async (decodedText) => {
-          await handleScanSuccess(decodedText);
-        },
-        () => {
-          // Ignore errors during scanning (expected when no QR code in frame)
-        }
-      );
-    } catch (err) {
-      console.error('Camera error:', err);
-      toast.error("Failed to access camera. Please allow camera permissions.");
-      setScanStage('idle');
-    }
+    // Scanner initialization moved to useEffect to wait for DOM
   };
+
+  // Initialize scanner when scanStage changes to 'scanning'
+  useEffect(() => {
+    if (scanStage !== 'scanning') return;
+
+    const initScanner = async () => {
+      try {
+        // Small delay to ensure DOM is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const html5QrCode = new Html5Qrcode("qr-scanner-container");
+        html5QrCodeRef.current = html5QrCode;
+
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          async (decodedText) => {
+            await handleScanSuccess(decodedText);
+          },
+          () => {
+            // Ignore errors during scanning (expected when no QR code in frame)
+          }
+        );
+      } catch (err) {
+        console.error('Camera error:', err);
+        toast.error("Failed to access camera. Please allow camera permissions.");
+        setScanStage('idle');
+      }
+    };
+
+    initScanner();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanStage]);
 
   const handleScanSuccess = async (decodedText: string) => {
     // Stop the scanner
@@ -183,8 +205,12 @@ export default function ScannerPage() {
     try {
       const qrData = JSON.parse(decodedText);
 
-      // Basic validation - expect uuid field
-      if (!qrData.uuid) {
+      // Handle the simplified QR format from QRCodeBadge: {type, id, v}
+      // Also support legacy format with uuid field
+      const userId = qrData.id || qrData.uuid;
+
+      // Basic validation - expect id or uuid field
+      if (!userId) {
         setScanState('error');
         triggerHapticFeedback('heavy');
         setScanError({
@@ -192,6 +218,22 @@ export default function ScannerPage() {
           message: 'This QR code is not from the event app'
         });
         toast.error('Invalid QR code format');
+        setTimeout(() => {
+          setScanState('idle');
+          setScanError(null);
+        }, 2000);
+        return;
+      }
+
+      // Validate type if present (for new format)
+      if (qrData.type && qrData.type !== 'converge-nps-profile') {
+        setScanState('error');
+        triggerHapticFeedback('heavy');
+        setScanError({
+          title: 'Invalid QR Code',
+          message: 'This QR code is not from the Converge app'
+        });
+        toast.error('Invalid QR code type');
         setTimeout(() => {
           setScanState('idle');
           setScanError(null);
@@ -208,9 +250,11 @@ export default function ScannerPage() {
         navigator.vibrate(200);
       }
 
+      // Store the QR code data (user ID) - profile will be fetched from backend
       setScannedData({
-        uuid: qrData.uuid,
-        name: qrData.name || 'Unknown Participant',
+        uuid: userId,
+        qrCodeData: decodedText, // Store raw QR data for backend
+        name: qrData.name || 'Loading...',
         org: qrData.org || qrData.organization || '',
         role: qrData.role || '',
         bio: qrData.bio || '',
@@ -273,7 +317,7 @@ export default function ScannerPage() {
       });
 
       triggerHapticFeedback('medium');
-      toast.success('Code verified successfully!');
+      toast.success('Code accepted!');
       setShowManualEntry(false);
       setScanStage('intent');
 
@@ -327,15 +371,18 @@ export default function ScannerPage() {
     }
 
     triggerHapticFeedback('medium');
+    setIsProcessing(true);
 
     try {
       if (!user?.id) {
         toast.error("You must be logged in to save connections");
+        setIsProcessing(false);
         return;
       }
 
       if (!scannedData?.uuid) {
         toast.error("Invalid QR code data");
+        setIsProcessing(false);
         return;
       }
 
@@ -361,6 +408,7 @@ export default function ScannerPage() {
 
       if (isOffline) {
         await addToOfflineQueue();
+        setIsProcessing(false);
         return;
       }
 
@@ -371,15 +419,26 @@ export default function ScannerPage() {
         connectionMethod: 'manual_entry',
       });
 
+
       toast.success("Connection saved successfully!" + (reminderTimestamp ? " Reminder set." : ""));
 
-      // Reset and close
+      // Navigate to connections page to see the new connection
       setTimeout(() => {
         handleClose();
+        navigate('/connections');
       }, 1000);
     } catch (error: any) {
       console.error('Save connection error:', error);
-      await addToOfflineQueue();
+      const errorMessage = error.response?.data?.error?.message || 'Failed to save connection';
+
+      // If it's a network error or server error, try offline queue
+      if (!error.response || error.response.status >= 500) {
+        await addToOfflineQueue();
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -791,9 +850,19 @@ export default function ScannerPage() {
             onClick={handleSaveConnection}
             className="w-full mb-2 md:mb-3 gap-2 h-11 md:h-12"
             size="lg"
+            disabled={isProcessing}
           >
-            <UserPlus className="h-5 w-5" />
-            Save Connection
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <UserPlus className="h-5 w-5" />
+                Save Connection
+              </>
+            )}
           </Button>
 
           {/* Secondary Actions */}

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
+import { AppLayout } from '@/components/layout/AppLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 // User Pages
@@ -49,135 +50,25 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Protected user routes */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile/edit"
-          element={
-            <ProtectedRoute>
-              <ProfileEditPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/privacy-settings"
-          element={
-            <ProtectedRoute>
-              <PrivacySettingsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/scanner"
-          element={
-            <ProtectedRoute>
-              <ScannerPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/connections"
-          element={
-            <ProtectedRoute>
-              <ConnectionsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/schedule"
-          element={
-            <ProtectedRoute>
-              <SchedulePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/my-schedule"
-          element={
-            <ProtectedRoute>
-              <MySchedulePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/messages"
-          element={
-            <ProtectedRoute>
-              <MessagesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/messages/:conversationId"
-          element={
-            <ProtectedRoute>
-              <ChatPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/opportunities"
-          element={
-            <ProtectedRoute>
-              <OpportunitiesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/opportunities/submit"
-          element={
-            <ProtectedRoute>
-              <SubmitOpportunityPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/industry"
-          element={
-            <ProtectedRoute>
-              <IndustryPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/projects"
-          element={
-            <ProtectedRoute>
-              <ProjectsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/partners"
-          element={
-            <ProtectedRoute>
-              <PartnersPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Protected user routes with bottom nav */}
+        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/edit" element={<ProfileEditPage />} />
+          <Route path="/privacy-settings" element={<PrivacySettingsPage />} />
+          <Route path="/scanner" element={<ScannerPage />} />
+          <Route path="/connections" element={<ConnectionsPage />} />
+          <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/my-schedule" element={<MySchedulePage />} />
+          <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/messages/:conversationId" element={<ChatPage />} />
+          <Route path="/opportunities" element={<OpportunitiesPage />} />
+          <Route path="/opportunities/submit" element={<SubmitOpportunityPage />} />
+          <Route path="/industry" element={<IndustryPage />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/partners" element={<PartnersPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
 
         {/* Admin routes (require admin/staff role) */}
         <Route
