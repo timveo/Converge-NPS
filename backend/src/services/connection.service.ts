@@ -30,17 +30,27 @@ export class ConnectionService {
   static async createConnection(data: CreateConnectionData): Promise<Connection> {
     const { userId, connectedUserId, collaborativeIntents, notes, connectionMethod } = data;
 
-    // Check if connection already exists
-    const existing = await prisma.connection.findUnique({
-      where: {
-        userId_connectedUserId: {
-          userId,
-          connectedUserId,
+    // Check if connection already exists (either direction)
+    const [existingForward, existingReverse] = await Promise.all([
+      prisma.connection.findUnique({
+        where: {
+          userId_connectedUserId: {
+            userId,
+            connectedUserId,
+          },
         },
-      },
-    });
+      }),
+      prisma.connection.findUnique({
+        where: {
+          userId_connectedUserId: {
+            userId: connectedUserId,
+            connectedUserId: userId,
+          },
+        },
+      }),
+    ]);
 
-    if (existing) {
+    if (existingForward || existingReverse) {
       throw new ConflictError('Connection already exists');
     }
 
@@ -63,34 +73,47 @@ export class ConnectionService {
       throw new ForbiddenError('User has disabled QR code scanning');
     }
 
-    // Create connection
-    const connection = await prisma.connection.create({
-      data: {
-        userId,
-        connectedUserId,
-        collaborativeIntents,
-        notes,
-        connectionMethod,
-      },
-      include: {
-        connectedUser: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            phone: true,
-            organization: true,
-            department: true,
-            role: true,
-            bio: true,
-            avatarUrl: true,
-            linkedinUrl: true,
-            websiteUrl: true,
-            hideContactInfo: true,
+    // Create bidirectional connections
+    const [connection] = await Promise.all([
+      // Connection from user to connected user
+      prisma.connection.create({
+        data: {
+          userId,
+          connectedUserId,
+          collaborativeIntents,
+          notes,
+          connectionMethod,
+        },
+        include: {
+          connectedUser: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              phone: true,
+              organization: true,
+              department: true,
+              role: true,
+              bio: true,
+              avatarUrl: true,
+              linkedinUrl: true,
+              websiteUrl: true,
+              hideContactInfo: true,
+            },
           },
         },
-      },
-    });
+      }),
+      // Reciprocal connection from connected user to user
+      prisma.connection.create({
+        data: {
+          userId: connectedUserId,
+          connectedUserId: userId,
+          collaborativeIntents: [], // Empty for reciprocal connections
+          notes: null,
+          connectionMethod: connectionMethod,
+        },
+      }),
+    ]);
 
     // Increment QR code scan count if QR scan
     if (connectionMethod === 'qr_scan') {
@@ -286,7 +309,7 @@ export class ConnectionService {
   }
 
   /**
-   * Delete connection
+   * Delete connection (bidirectional)
    */
   static async deleteConnection(connectionId: string, userId: string): Promise<void> {
     // Verify ownership
@@ -302,10 +325,20 @@ export class ConnectionService {
       throw new ForbiddenError('Not authorized to delete this connection');
     }
 
-    // Delete connection
-    await prisma.connection.delete({
-      where: { id: connectionId },
-    });
+    // Delete both directions of the connection
+    await Promise.all([
+      // Delete the user's connection record
+      prisma.connection.delete({
+        where: { id: connectionId },
+      }),
+      // Delete the reciprocal connection record
+      prisma.connection.deleteMany({
+        where: {
+          userId: connection.connectedUserId,
+          connectedUserId: connection.userId,
+        },
+      }),
+    ]);
   }
 
   /**
