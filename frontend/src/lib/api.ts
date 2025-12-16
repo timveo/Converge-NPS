@@ -38,8 +38,14 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config;
 
+        const requestUrl: string = originalRequest?.url || '';
+        const isAuthEndpoint =
+          requestUrl.includes('/auth/login') ||
+          requestUrl.includes('/auth/verify-2fa') ||
+          requestUrl.includes('/auth/register');
+
         // Handle 401 errors (token expired)
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
           originalRequest._retry = true;
 
           try {
