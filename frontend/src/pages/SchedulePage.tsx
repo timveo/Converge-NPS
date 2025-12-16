@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Calendar, ChevronLeft, Search, X, List, CalendarDays, AlertTriangle, Loader2, Sparkles } from "lucide-react";
+import { Calendar, ChevronLeft, Search, X, List, CalendarDays, AlertTriangle, Sparkles, Clock } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,8 +14,9 @@ import { ConflictDialog } from "@/components/schedule/ConflictDialog";
 import { TimelineView } from "@/components/schedule/TimelineView";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
-import { RecommendationCard } from "@/components/RecommendationCard";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
+import { OfflineDataBanner } from "@/components/OfflineDataBanner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Recommendation {
   id: string;
@@ -100,10 +101,10 @@ export default function SchedulePage() {
     try {
       const [sessionsRes, rsvpsRes] = await Promise.all([
         api.get('/sessions'),
-        api.get('/rsvps/me').catch(() => ({ data: { data: [] } }))
+        api.get('/sessions/rsvps/me').catch(() => ({ data: [] }))
       ]);
 
-      const sessionsData = (sessionsRes as any).data.data || (sessionsRes as any).data || [];
+      const sessionsData = (sessionsRes as any).data || [];
       const mappedSessions: Session[] = sessionsData.map((s: any) => ({
         id: s.id,
         title: s.title,
@@ -114,14 +115,14 @@ export default function SchedulePage() {
         speaker: s.speaker,
         capacity: s.capacity || 100,
         registered_count: s._count?.rsvps || s.registeredCount || s.registered_count || 0,
-        session_type: s.sessionType || s.session_type || s.track
+        session_type: s.track || s.sessionType || s.session_type
       }));
 
-      const rsvpsData = (rsvpsRes as any).data.data || (rsvpsRes as any).data || [];
+      const rsvpsData = (rsvpsRes as any).data || [];
       const mappedRsvps: RSVP[] = rsvpsData.map((r: any) => ({
         id: r.id,
         sessionId: r.sessionId || r.session?.id,
-        status: r.status
+        status: r.status === 'confirmed' ? 'attending' : r.status
       }));
 
       setSessions(mappedSessions);
@@ -203,7 +204,10 @@ export default function SchedulePage() {
     }
 
     if (filters.types.length) {
-      result = result.filter(s => filters.types.includes(s.session_type?.toLowerCase() || ''));
+      result = result.filter(s => {
+        const sessionType = s.session_type?.toLowerCase() || '';
+        return filters.types.some(t => t.toLowerCase() === sessionType);
+      });
     }
 
     if (filters.timeSlots.length) {
@@ -240,16 +244,23 @@ export default function SchedulePage() {
     const existingRsvp = getRSVPForSession(sessionId);
 
     if (existingRsvp) {
+      // Optimistic update - remove RSVP immediately
+      const previousRsvps = rsvps;
+      const previousSessions = sessions;
+      setRsvps(prev => prev.filter(r => r.id !== existingRsvp.id));
+      setSessions(prev => prev.map(s =>
+        s.id === sessionId
+          ? { ...s, registered_count: Math.max(0, s.registered_count - 1) }
+          : s
+      ));
+
       try {
-        await api.delete(`/rsvps/${existingRsvp.id}`);
-        setRsvps(prev => prev.filter(r => r.id !== existingRsvp.id));
-        setSessions(prev => prev.map(s =>
-          s.id === sessionId
-            ? { ...s, registered_count: Math.max(0, s.registered_count - 1) }
-            : s
-        ));
+        await api.delete(`/sessions/rsvps/${existingRsvp.id}`);
       } catch (err) {
+        // Rollback on error
         console.error('Failed to cancel RSVP', err);
+        setRsvps(previousRsvps);
+        setSessions(previousSessions);
       }
       return;
     }
@@ -263,17 +274,27 @@ export default function SchedulePage() {
       return;
     }
 
+    // Optimistic update - add temporary RSVP immediately
+    const tempId = `temp-${Date.now()}`;
+    const previousRsvps = rsvps;
+    const previousSessions = sessions;
+    setRsvps(prev => [...prev, { id: tempId, sessionId, status: 'attending' }]);
+    setSessions(prev => prev.map(s =>
+      s.id === sessionId
+        ? { ...s, registered_count: s.registered_count + 1 }
+        : s
+    ));
+
     try {
-      const response = await api.post('/rsvps', { sessionId, status: 'attending' });
-      const newRsvp = (response as any).data.data || (response as any).data;
-      setRsvps(prev => [...prev, { id: newRsvp.id, sessionId, status: 'attending' }]);
-      setSessions(prev => prev.map(s =>
-        s.id === sessionId
-          ? { ...s, registered_count: s.registered_count + 1 }
-          : s
-      ));
+      const response = await api.post(`/sessions/${sessionId}/rsvp`, { sessionId, status: 'confirmed' });
+      const newRsvp = (response as any).data || response;
+      // Replace temp RSVP with real one
+      setRsvps(prev => prev.map(r => r.id === tempId ? { id: newRsvp.id, sessionId, status: 'attending' } : r));
     } catch (err) {
+      // Rollback on error
       console.error('Failed to create RSVP', err);
+      setRsvps(previousRsvps);
+      setSessions(previousSessions);
     }
   };
 
@@ -323,7 +344,7 @@ END:VCALENDAR`;
               </Button>
               <div>
                 <h1 className="text-lg md:text-xl font-bold">Event Schedule</h1>
-                <p className="text-sm md:text-sm text-tech-cyan-light">Browse sessions and RSVP</p>
+                <p className="text-sm md:text-sm text-tech-cyan-light">Browse Sessions</p>
               </div>
             </div>
           </div>
@@ -331,6 +352,8 @@ END:VCALENDAR`;
       </div>
 
       <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
+        <OfflineDataBanner />
+
         {/* Error Banner */}
         {error && (
           <Alert variant="destructive" className="rounded-lg">
@@ -422,33 +445,80 @@ END:VCALENDAR`;
           <TabsContent value="all" className="space-y-2 md:space-y-4 mt-2 md:mt-4">
             {/* AI Recommendations */}
             {visibleRecommendations.length > 0 && !loading && (
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Sparkles className="h-4 w-4 text-accent" />
-                  <span>Recommended for you</span>
+              <Card className="w-full p-4 md:p-4 bg-gradient-to-br from-primary/5 via-accent/5 to-tech-cyan/5 border-accent/20 mb-4">
+                <div className="flex items-center gap-2 md:gap-2 mb-3 md:mb-3">
+                  <div className="p-1.5 md:p-1.5 rounded-md bg-accent/10">
+                    <Sparkles className="h-4 w-4 md:h-4 md:w-4 text-accent" />
+                  </div>
+                  <span className="font-semibold text-sm md:text-sm">Recommended for You</span>
                 </div>
-                <div className="grid gap-2">
-                  {visibleRecommendations.map((rec) => (
-                    <RecommendationCard
-                      key={rec.id}
-                      title={rec.title}
-                      reason={rec.reason}
-                      matchScore={rec.relevanceScore / 10}
-                      tags={rec.tags}
-                      type="Session"
-                      onClick={() => handleRecommendationRSVP(rec)}
-                      onDismiss={() => dismiss(rec.id)}
-                      compact
-                    />
-                  ))}
+                <div className="grid gap-2 md:gap-2.5">
+                  {visibleRecommendations.map((rec, index) => {
+                    const session = sessions.find(s =>
+                      s.title.toLowerCase() === rec.title.toLowerCase() || s.id === rec.id
+                    );
+                    const isRsvpd = session ? !!getRSVPForSession(session.id) : false;
+                    return (
+                      <div
+                        key={rec.id}
+                        className="group flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-background/80 backdrop-blur-sm rounded-lg border border-border/50 hover:border-accent/30 hover:shadow-md transition-all duration-200"
+                      >
+                        <div className="flex-shrink-0 w-5 h-5 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center text-[9px] md:text-xs font-bold text-accent">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] md:text-sm font-medium text-foreground line-clamp-1 group-hover:text-accent transition-colors" title={rec.title}>
+                            {rec.title}
+                          </p>
+                          <div className="flex items-center gap-1.5 md:gap-2 mt-0.5 flex-wrap">
+                            {session && (
+                              <span className="text-[9px] md:text-xs text-muted-foreground flex items-center gap-0.5">
+                                <Clock className="h-2 w-2 md:h-3 md:w-3" />
+                                {format(new Date(session.start_time), "h:mm a")}
+                              </span>
+                            )}
+                            {session?.location && (
+                              <span className="text-[9px] md:text-xs text-muted-foreground truncate max-w-[60px] md:max-w-[100px]">
+                                • {session.location}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            size="sm"
+                            variant={isRsvpd ? "secondary" : "default"}
+                            className={`h-8 md:h-8 text-xs md:text-sm px-2 md:px-3 ${!isRsvpd ? 'bg-accent hover:bg-accent/90' : ''}`}
+                            onClick={() => handleRecommendationRSVP(rec)}
+                          >
+                            {isRsvpd ? "Added" : "Add"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 md:h-8 md:w-8 text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-full"
+                            onClick={(e) => { e.stopPropagation(); dismiss(rec.id); }}
+                            aria-label="Dismiss"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+              </Card>
             )}
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Loading sessions...</p>
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i} className="p-3 md:p-6">
+                    <Skeleton className="h-6 md:h-8 w-3/4 mb-2 md:mb-4" />
+                    <Skeleton className="h-3 md:h-4 w-full mb-2" />
+                    <Skeleton className="h-3 md:h-4 w-2/3" />
+                  </Card>
+                ))}
               </div>
             ) : !displayed.length ? (
               <Card className="p-8 md:p-12 text-center">
