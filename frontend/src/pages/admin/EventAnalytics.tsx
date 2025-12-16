@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
-  Loader2,
   Users,
   UserCheck,
   UserX,
@@ -27,8 +26,6 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
-  PieChart,
-  Pie,
   Cell,
   ResponsiveContainer,
   Tooltip,
@@ -37,7 +34,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Legend,
 } from 'recharts';
 
 // Color palette
