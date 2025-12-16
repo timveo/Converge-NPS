@@ -255,22 +255,24 @@ export class AuthController {
     try {
       const { email } = ForgotPasswordSchema.parse(req.body) as any;
 
-      const resetToken = await AuthService.requestPasswordReset(email);
+      const result = await AuthService.requestPasswordReset(email);
 
-      if (resetToken) {
-        // TODO: Send password reset email
-        // await sendEmail(email, 'Reset your password', {
-        //   resetUrl: `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`,
-        // });
+      if (result) {
+        // Send password reset email
+        const emailSent = await EmailService.sendPasswordReset(email, result.token, result.userName);
 
-        logger.info('Password reset requested', { email });
+        if (emailSent) {
+          logger.info('Password reset email sent', { email });
+        } else {
+          logger.warn('Failed to send password reset email', { email });
+        }
       }
 
       // Always return success (prevent email enumeration)
       res.status(200).json({
         message: 'If the email exists, a password reset link has been sent.',
         // For development only (remove in production)
-        resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined,
+        resetToken: process.env.NODE_ENV === 'development' ? result?.token : undefined,
       });
     } catch (error) {
       next(error);
