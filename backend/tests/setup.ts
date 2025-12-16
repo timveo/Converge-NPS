@@ -142,12 +142,20 @@ jest.mock('../src/config/database', () => {
       findMany: jest.fn(),
       create: jest.fn(),
       delete: jest.fn(),
+      deleteMany: jest.fn(),
     },
     emailVerification: {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+    },
+    passwordReset: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      upsert: jest.fn(),
     },
     checkIn: {
       findUnique: jest.fn(),
@@ -294,12 +302,20 @@ jest.mock('@prisma/client', () => {
       findMany: jest.fn(),
       create: jest.fn(),
       delete: jest.fn(),
+      deleteMany: jest.fn(),
     },
     emailVerification: {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+    },
+    passwordReset: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      upsert: jest.fn(),
     },
     qrCode: {
       findUnique: jest.fn(),
