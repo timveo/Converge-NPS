@@ -60,6 +60,17 @@ model TwoFactorCode {
   @@map("two_factor_codes")
 }
 
+model PasswordReset {
+  userId    String   @id @map("user_id") @db.Uuid
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tokenHash])
+  @@map("password_resets")
+}
+
 model Profile {
   id                       String                    @id @db.Uuid
   fullName                 String                    @map("full_name")
