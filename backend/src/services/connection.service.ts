@@ -4,10 +4,9 @@
  * Database operations for user connections (QR scan, manual entry, notes)
  */
 
-import { PrismaClient, Connection } from '@prisma/client';
+import { Connection } from '@prisma/client';
+import prisma from '../config/database';
 import { NotFoundError, ConflictError, ForbiddenError } from '../middleware/errorHandler';
-
-const prisma = new PrismaClient();
 
 export interface CreateConnectionData {
   userId: string;

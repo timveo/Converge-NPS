@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -98,7 +99,7 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get<UsersResponse>('/admin/users?limit=1000');
+      const response = await api.get<UsersResponse>('/admin/users?limit=100');
       if (response.success) {
         const usersWithRoles: UserWithRoles[] = response.data.map((profile) => {
           // Handle different response formats
@@ -212,13 +213,27 @@ export default function UserManagement() {
     return null;
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 md:h-8 md:w-8 animate-spin text-primary" />
+  // Skeleton component for loading state
+  const UserCardSkeleton = () => (
+    <Card className="p-3 md:p-6 shadow-md border-gray-200">
+      <div className="flex items-start gap-2.5 md:gap-4 mb-2.5 md:mb-4">
+        <Skeleton className="w-9 h-9 md:w-12 md:h-12 rounded-full flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <Skeleton className="h-4 w-32 mb-1" />
+          <Skeleton className="h-3 w-48 mb-1" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+        <Skeleton className="h-7 md:h-9 w-20" />
       </div>
-    );
-  }
+      <div className="mt-2.5 md:mt-4">
+        <Skeleton className="h-3 w-20 mb-1.5 md:mb-2" />
+        <div className="flex flex-wrap gap-1.5 md:gap-2">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-5 w-14" />
+        </div>
+      </div>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
@@ -266,7 +281,15 @@ export default function UserManagement() {
 
       {/* Users List */}
       <main className="container mx-auto px-3 md:px-4 space-y-2 md:space-y-4">
-        {filteredUsers.length === 0 ? (
+        {loading ? (
+          <>
+            <UserCardSkeleton />
+            <UserCardSkeleton />
+            <UserCardSkeleton />
+            <UserCardSkeleton />
+            <UserCardSkeleton />
+          </>
+        ) : filteredUsers.length === 0 ? (
           <Card className="p-8 md:p-12 text-center">
             <UserCog className="h-8 w-8 md:h-12 md:w-12 mx-auto mb-2 md:mb-4 text-muted-foreground" />
             <h3 className="text-sm md:text-lg font-semibold text-foreground mb-1 md:mb-2">

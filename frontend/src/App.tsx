@@ -30,6 +30,7 @@ import SessionManagement from '@/pages/admin/SessionManagement';
 import SessionForm from '@/pages/admin/SessionForm';
 import UserManagement from '@/pages/admin/UserManagement';
 import Analytics from '@/pages/admin/Analytics';
+import EventAnalytics from '@/pages/admin/EventAnalytics';
 import SmartsheetPage from '@/pages/admin/SmartsheetPage';
 import AuditLogsPage from '@/pages/admin/AuditLogsPage';
 
@@ -224,6 +225,14 @@ function App() {
           element={
             <ProtectedRoute requireAdmin>
               <Analytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/event-analytics"
+          element={
+            <ProtectedRoute requireAdmin>
+              <EventAnalytics />
             </ProtectedRoute>
           }
         />

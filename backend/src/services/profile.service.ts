@@ -4,11 +4,10 @@
  * Database operations for user profiles
  */
 
-import { PrismaClient, Profile } from '@prisma/client';
+import { Profile } from '@prisma/client';
+import prisma from '../config/database';
 import { NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 export interface UpdateProfileData {
   fullName?: string;

@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 // Validation schemas
 export const sendMessageSchema = z.object({

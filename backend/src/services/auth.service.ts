@@ -4,7 +4,8 @@
  * Database operations for authentication flow
  */
 
-import { PrismaClient, Profile } from '@prisma/client';
+import { Profile } from '@prisma/client';
+import prisma from '../config/database';
 import {
   hashPassword,
   verifyPassword,
@@ -15,8 +16,6 @@ import {
 } from '../utils/auth';
 import { UnauthorizedError, ConflictError, NotFoundError } from '../middleware/errorHandler';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 export interface RegisterData {
   fullName: string;
