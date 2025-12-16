@@ -28,6 +28,9 @@ import recommendationRoutes from './routes/recommendation.routes';
 export function createApp(): Application {
   const app = express();
 
+  // Sample health endpoint logs to reduce noise
+  let healthLogCounter = 0;
+
   // ===========================
   // Security Middleware
   // ===========================
@@ -102,6 +105,13 @@ export function createApp(): Application {
     // Log when response finishes
     res.on('finish', () => {
       const duration = Date.now() - start;
+
+      if (req.path === '/health') {
+        healthLogCounter = (healthLogCounter + 1) % 20;
+        if (healthLogCounter !== 0) {
+          return;
+        }
+      }
       logger.info(`${req.method} ${req.path}`, {
         statusCode: res.statusCode,
         method: req.method,
