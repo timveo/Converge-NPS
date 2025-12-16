@@ -6,6 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ConnectionController } from '../../src/controllers/connection.controller';
 import { ConnectionService } from '../../src/services/connection.service';
 import prisma from '../../src/config/database';
+import logger from '../../src/utils/logger';
 
 // Cast prisma to any for mock methods
 const prismaMock = prisma as any;
@@ -194,6 +195,15 @@ describe('ConnectionController', () => {
       );
 
       expect(prismaMock.connection.create).toHaveBeenCalledTimes(2);
+      expect((logger as any).info).toHaveBeenCalledWith(
+        'Connection created successfully',
+        expect.objectContaining({
+          action: 'Add Connection',
+          method: 'Manual_Code',
+          userId: '11111111-1111-1111-1111-111111111111',
+          connectionId: mockConnection.id,
+        })
+      );
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith({
         message: 'Connection created successfully',
