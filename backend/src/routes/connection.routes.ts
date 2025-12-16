@@ -20,6 +20,12 @@ router.use(authenticateToken);
 router.post('/qr-scan', ConnectionController.qrScan);
 
 /**
+ * POST /connections/manual/lookup
+ * Lookup a user profile by manual code (UUID prefix)
+ */
+router.post('/manual/lookup', ConnectionController.manualCodeLookup);
+
+/**
  * POST /connections/manual
  * Create connection via manual entry
  */
