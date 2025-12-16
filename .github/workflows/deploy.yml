@@ -331,12 +331,12 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy Backend to Railway (Production)
-        run: railway up --service Backend --environment production
+        run: railway up --service Backend --environment Production
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
 
       - name: Deploy Frontend to Railway (Production)
-        run: railway up --service Frontend --environment production
+        run: railway up --service Frontend --environment Production
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
 
