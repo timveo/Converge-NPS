@@ -32,7 +32,7 @@ export default function MySchedulePage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">My Schedule</h1>
-            <p className="text-gray-600 mt-1">{mockSchedule.length} sessions</p>
+            <p className="text-muted-foreground mt-1">{mockSchedule.length} sessions</p>
           </div>
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" />
@@ -49,7 +49,7 @@ export default function MySchedulePage() {
                 <h2 className="text-xl font-bold mb-4">{day}</h2>
                 {daySessions.length === 0 ? (
                   <Card>
-                    <CardContent className="p-8 text-center text-gray-500">
+                    <CardContent className="p-8 text-center text-muted-foreground">
                       No sessions scheduled for this day
                     </CardContent>
                   </Card>
@@ -64,7 +64,7 @@ export default function MySchedulePage() {
                               <span className="text-sm font-semibold text-blue-600">
                                 {session.startTime}
                               </span>
-                              <span className="text-xs text-gray-600">
+                              <span className="text-xs text-muted-foreground">
                                 {session.endTime}
                               </span>
                             </div>
@@ -73,7 +73,7 @@ export default function MySchedulePage() {
                                 <h3 className="text-lg font-semibold">{session.title}</h3>
                                 <Badge>{session.type}</Badge>
                               </div>
-                              <div className="flex items-center gap-2 mt-2 text-gray-600">
+                              <div className="flex items-center gap-2 mt-2 text-muted-foreground">
                                 <MapPin className="w-4 h-4" />
                                 <span className="text-sm">{session.location}</span>
                               </div>

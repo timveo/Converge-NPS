@@ -87,7 +87,7 @@ export default function SmartsheetPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4 max-w-6xl">
         <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg sticky top-0 z-10 rounded-lg">
@@ -118,10 +118,10 @@ export default function SmartsheetPage() {
 
       <main className="container mx-auto px-3 md:px-4 py-3 md:py-6 max-w-6xl space-y-3 md:space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
-          <Card className="shadow-md border-gray-200">
+          <Card className="shadow-md border-border">
             <CardHeader className="p-3 md:p-6">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                   <Upload className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
                 </div>
                 <div>
@@ -156,10 +156,10 @@ export default function SmartsheetPage() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-md border-gray-200">
+          <Card className="shadow-md border-border">
             <CardHeader className="p-3 md:p-6">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                   <Download className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
                 </div>
                 <div>
@@ -179,20 +179,20 @@ export default function SmartsheetPage() {
           </Card>
         </div>
 
-        <Card className="shadow-md border-gray-200">
+        <Card className="shadow-md border-border">
           <CardHeader className="p-3 md:p-6">
             <CardTitle className="text-sm md:text-lg">Import History</CardTitle>
             <CardDescription className="text-xs md:text-sm">Recent import operations</CardDescription>
           </CardHeader>
           <CardContent className="p-3 md:p-6 pt-0">
             {importJobs.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-6">No imports have been run yet.</p>
+              <p className="text-sm text-muted-foreground text-center py-6">No imports have been run yet.</p>
             ) : (
               <div className="space-y-2 md:space-y-3">
                 {importJobs.map((job) => (
                   <div
                     key={job.id}
-                    className="flex items-center justify-between p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between p-3 md:p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
                   >
                     <div className="flex items-center gap-2 md:gap-3">
                       {job.status === 'completed' ? (
@@ -201,8 +201,8 @@ export default function SmartsheetPage() {
                         <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-red-600 flex-shrink-0" />
                       )}
                       <div>
-                        <p className="font-medium text-sm md:text-base">{job.type}</p>
-                        <p className="text-xs md:text-sm text-gray-600">
+                        <p className="font-medium text-sm md:text-base text-foreground">{job.type}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           {job.records} records • {job.lastRun}
                         </p>
                       </div>

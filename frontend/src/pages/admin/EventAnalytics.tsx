@@ -178,7 +178,7 @@ export default function EventAnalytics() {
   );
 
   const ListItemSkeleton = () => (
-    <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
+    <div className="flex items-center gap-2 p-2 rounded-lg bg-muted">
       <Skeleton className="w-6 h-6 md:w-7 md:h-7 rounded-lg flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <Skeleton className="h-3 w-24 mb-1" />
@@ -218,7 +218,7 @@ export default function EventAnalytics() {
   }));
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4">
         <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg sticky top-0 z-10 rounded-lg">
@@ -262,7 +262,7 @@ export default function EventAnalytics() {
         <section>
           <div className="flex items-center gap-2 mb-3 md:mb-4">
             <Zap className="h-4 w-4 md:h-5 md:w-5 text-amber-500" />
-            <h2 className="text-sm md:text-lg font-semibold text-gray-900">Real-Time Check-In</h2>
+            <h2 className="text-sm md:text-lg font-semibold text-foreground">Real-Time Check-In</h2>
             <Badge variant="outline" className="text-[10px] md:text-xs bg-green-50 text-green-700 border-green-200">
               LIVE
             </Badge>
@@ -279,27 +279,27 @@ export default function EventAnalytics() {
             ) : (
               <>
                 {/* Total Registered */}
-                <Card className="p-3 md:p-4 bg-gradient-to-br from-blue-50 to-white border-blue-100">
+                <Card className="p-3 md:p-4 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/30 dark:to-card border-blue-100 dark:border-blue-900/50">
                   <div className="flex items-center gap-2 mb-1 md:mb-2">
                     <div className="p-1.5 md:p-2 rounded-lg bg-blue-100">
                       <Users className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
                     </div>
-                    <span className="text-[10px] md:text-xs text-gray-500 font-medium">Registered</span>
+                    <span className="text-[10px] md:text-xs text-muted-foreground font-medium">Registered</span>
                   </div>
-                  <p className="text-xl md:text-3xl font-bold text-gray-900">
+                  <p className="text-xl md:text-3xl font-bold text-foreground">
                     {realTimeMetrics.totalRegistered}
                   </p>
                 </Card>
 
                 {/* Checked In */}
-                <Card className="p-3 md:p-4 bg-gradient-to-br from-green-50 to-white border-green-100">
+                <Card className="p-3 md:p-4 bg-gradient-to-br from-green-50 to-white dark:from-green-950/30 dark:to-card border-green-100 dark:border-green-900/50">
                   <div className="flex items-center gap-2 mb-1 md:mb-2">
                     <div className="p-1.5 md:p-2 rounded-lg bg-green-100">
                       <UserCheck className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-600" />
                     </div>
-                    <span className="text-[10px] md:text-xs text-gray-500 font-medium">Checked In</span>
+                    <span className="text-[10px] md:text-xs text-muted-foreground font-medium">Checked In</span>
                   </div>
-                  <p className="text-xl md:text-3xl font-bold text-gray-900">
+                  <p className="text-xl md:text-3xl font-bold text-foreground">
                     {realTimeMetrics.checkedIn}
                   </p>
                   <p className="text-[10px] md:text-xs text-green-600 font-medium">
@@ -308,27 +308,27 @@ export default function EventAnalytics() {
                 </Card>
 
                 {/* No Shows */}
-                <Card className="p-3 md:p-4 bg-gradient-to-br from-red-50 to-white border-red-100">
+                <Card className="p-3 md:p-4 bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-card border-red-100 dark:border-red-900/50">
                   <div className="flex items-center gap-2 mb-1 md:mb-2">
                     <div className="p-1.5 md:p-2 rounded-lg bg-red-100">
                       <UserX className="h-3.5 w-3.5 md:h-4 md:w-4 text-red-600" />
                     </div>
-                    <span className="text-[10px] md:text-xs text-gray-500 font-medium">No Shows</span>
+                    <span className="text-[10px] md:text-xs text-muted-foreground font-medium">No Shows</span>
                   </div>
-                  <p className="text-xl md:text-3xl font-bold text-gray-900">
+                  <p className="text-xl md:text-3xl font-bold text-foreground">
                     {realTimeMetrics.noShows}
                   </p>
                 </Card>
 
                 {/* Walk-ins */}
-                <Card className="p-3 md:p-4 bg-gradient-to-br from-purple-50 to-white border-purple-100">
+                <Card className="p-3 md:p-4 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/30 dark:to-card border-purple-100 dark:border-purple-900/50">
                   <div className="flex items-center gap-2 mb-1 md:mb-2">
                     <div className="p-1.5 md:p-2 rounded-lg bg-purple-100">
                       <UserPlus className="h-3.5 w-3.5 md:h-4 md:w-4 text-purple-600" />
                     </div>
-                    <span className="text-[10px] md:text-xs text-gray-500 font-medium">Walk-ins</span>
+                    <span className="text-[10px] md:text-xs text-muted-foreground font-medium">Walk-ins</span>
                   </div>
-                  <p className="text-xl md:text-3xl font-bold text-gray-900">
+                  <p className="text-xl md:text-3xl font-bold text-foreground">
                     {realTimeMetrics.walkIns}
                   </p>
                 </Card>
@@ -341,7 +341,7 @@ export default function EventAnalytics() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-green-500" />
-                <span className="text-xs md:text-sm font-medium text-gray-700">
+                <span className="text-xs md:text-sm font-medium text-foreground">
                   Check-ins in last hour
                 </span>
               </div>
@@ -360,7 +360,7 @@ export default function EventAnalytics() {
         <section>
           <div className="flex items-center gap-2 mb-3 md:mb-4">
             <PieChartIcon className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
-            <h2 className="text-sm md:text-lg font-semibold text-gray-900">Demographics</h2>
+            <h2 className="text-sm md:text-lg font-semibold text-foreground">Demographics</h2>
           </div>
 
           {/* Role Distribution - Visual Cards */}
@@ -398,10 +398,10 @@ export default function EventAnalytics() {
                       >
                         {role}
                       </span>
-                      <span className="text-[10px] md:text-xs text-gray-400">{percentage}%</span>
+                      <span className="text-[10px] md:text-xs text-muted-foreground">{percentage}%</span>
                     </div>
-                    <p className="text-lg md:text-2xl font-bold text-gray-900">{count}</p>
-                    <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
+                    <p className="text-lg md:text-2xl font-bold text-foreground">{count}</p>
+                    <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${percentage}%`, backgroundColor: color }}
@@ -430,7 +430,7 @@ export default function EventAnalytics() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
             {/* Role Distribution Bar Chart */}
             <Card className="p-3 md:p-4">
-              <h3 className="text-xs md:text-sm font-semibold text-gray-700 mb-3">
+              <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Role Distribution
               </h3>
               <div className="h-48 md:h-56">
@@ -468,7 +468,7 @@ export default function EventAnalytics() {
 
             {/* By Organization */}
             <Card className="p-3 md:p-4">
-              <h3 className="text-xs md:text-sm font-semibold text-gray-700 mb-3">
+              <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 <Building2 className="inline h-3.5 w-3.5 mr-1" />
                 Top Organizations
               </h3>
@@ -491,7 +491,7 @@ export default function EventAnalytics() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-xs md:text-sm font-medium text-gray-800 truncate pr-2">
+                              <span className="text-xs md:text-sm font-medium text-foreground truncate pr-2">
                                 {org.organization}
                               </span>
                               <Badge
@@ -502,7 +502,7 @@ export default function EventAnalytics() {
                                 {org.count}
                               </Badge>
                             </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                            <div className="w-full bg-muted/50 rounded-full h-2 overflow-hidden">
                               <div
                                 className="h-full rounded-full transition-all duration-500 group-hover:opacity-80"
                                 style={{ width: `${percentage}%`, backgroundColor: barColor }}
@@ -514,7 +514,7 @@ export default function EventAnalytics() {
                     );
                   })
                 ) : (
-                  <div className="text-center py-8 text-gray-400">
+                  <div className="text-center py-8 text-muted-foreground">
                     <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p className="text-xs">No organization data</p>
                   </div>
@@ -529,7 +529,7 @@ export default function EventAnalytics() {
         <section>
           <div className="flex items-center gap-2 mb-3 md:mb-4">
             <Calendar className="h-4 w-4 md:h-5 md:w-5 text-green-500" />
-            <h2 className="text-sm md:text-lg font-semibold text-gray-900">Session Analytics</h2>
+            <h2 className="text-sm md:text-lg font-semibold text-foreground">Session Analytics</h2>
           </div>
 
           {loading ? (
@@ -551,7 +551,7 @@ export default function EventAnalytics() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
             {/* Track Popularity */}
             <Card className="p-3 md:p-4">
-              <h3 className="text-xs md:text-sm font-semibold text-gray-700 mb-3">
+              <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Track Popularity
               </h3>
               <div className="h-48 md:h-56">
@@ -573,17 +573,17 @@ export default function EventAnalytics() {
 
             {/* Session Fill Rates */}
             <Card className="p-3 md:p-4">
-              <h3 className="text-xs md:text-sm font-semibold text-gray-700 mb-3">
+              <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Session Fill Rates
               </h3>
               <div className="space-y-2 max-h-56 overflow-y-auto">
                 {sessionAnalytics.sessions.slice(0, 8).map((session) => (
                   <div key={session.id}>
                     <div className="flex justify-between items-center mb-0.5">
-                      <span className="text-xs md:text-sm font-medium text-gray-800 truncate max-w-[200px]">
+                      <span className="text-xs md:text-sm font-medium text-foreground truncate max-w-[200px]">
                         {session.title}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {session.confirmed}/{session.capacity || '?'}
                       </span>
                     </div>
@@ -600,13 +600,13 @@ export default function EventAnalytics() {
                   </div>
                 ))}
               </div>
-              <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="mt-3 pt-3 border-t border-border">
                 <div className="flex justify-between text-xs md:text-sm">
-                  <span className="text-gray-600">Total Capacity</span>
+                  <span className="text-muted-foreground">Total Capacity</span>
                   <span className="font-medium">{sessionAnalytics.totalCapacity}</span>
                 </div>
                 <div className="flex justify-between text-xs md:text-sm">
-                  <span className="text-gray-600">Total Confirmed</span>
+                  <span className="text-muted-foreground">Total Confirmed</span>
                   <span className="font-medium text-green-600">
                     {sessionAnalytics.totalConfirmed}
                   </span>
@@ -621,7 +621,7 @@ export default function EventAnalytics() {
         <section>
           <div className="flex items-center gap-2 mb-3 md:mb-4">
             <Network className="h-4 w-4 md:h-5 md:w-5 text-purple-500" />
-            <h2 className="text-sm md:text-lg font-semibold text-gray-900">
+            <h2 className="text-sm md:text-lg font-semibold text-foreground">
               Networking Engagement
             </h2>
           </div>
@@ -655,45 +655,45 @@ export default function EventAnalytics() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-3 md:mb-4">
             <Card className="p-3 md:p-4 text-center">
               <Link2 className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1 text-blue-500" />
-              <p className="text-lg md:text-2xl font-bold text-gray-900">
+              <p className="text-lg md:text-2xl font-bold text-foreground">
                 {networkingEngagement.totalConnections}
               </p>
-              <p className="text-[10px] md:text-xs text-gray-500">Total Connections</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground">Total Connections</p>
             </Card>
             <Card className="p-3 md:p-4 text-center">
               <TrendingUp className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1 text-green-500" />
-              <p className="text-lg md:text-2xl font-bold text-gray-900">
+              <p className="text-lg md:text-2xl font-bold text-foreground">
                 {networkingEngagement.connectionsLast24h}
               </p>
-              <p className="text-[10px] md:text-xs text-gray-500">Last 24h</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground">Last 24h</p>
             </Card>
             <Card className="p-3 md:p-4 text-center">
               <MessageSquare className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1 text-purple-500" />
-              <p className="text-lg md:text-2xl font-bold text-gray-900">
+              <p className="text-lg md:text-2xl font-bold text-foreground">
                 {networkingEngagement.totalMessages}
               </p>
-              <p className="text-[10px] md:text-xs text-gray-500">Messages</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground">Messages</p>
             </Card>
             <Card className="p-3 md:p-4 text-center">
               <Users className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1 text-amber-500" />
-              <p className="text-lg md:text-2xl font-bold text-gray-900">
+              <p className="text-lg md:text-2xl font-bold text-foreground">
                 {networkingEngagement.totalConversations}
               </p>
-              <p className="text-[10px] md:text-xs text-gray-500">Conversations</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground">Conversations</p>
             </Card>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
             {/* Connection Graph (Heatmap Style) */}
             <Card className="p-3 md:p-4">
-              <h3 className="text-xs md:text-sm font-semibold text-gray-700 mb-3">
+              <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Connection Patterns
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-[10px] md:text-xs">
                   <thead>
                     <tr>
-                      <th className="p-1 text-left text-gray-500">From / To</th>
+                      <th className="p-1 text-left text-muted-foreground">From / To</th>
                       {Object.keys(networkingEngagement.connectionGraph).map((role) => (
                         <th
                           key={role}
@@ -739,14 +739,14 @@ export default function EventAnalytics() {
                   </tbody>
                 </table>
               </div>
-              <p className="text-[10px] text-gray-400 mt-2">
+              <p className="text-[10px] text-muted-foreground mt-2">
                 S=Student, F=Faculty, I=Industry, St=Staff, A=Admin
               </p>
             </Card>
 
             {/* Project Interest */}
             <Card className="p-3 md:p-4">
-              <h3 className="text-xs md:text-sm font-semibold text-gray-700 mb-3">
+              <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Top Research Projects
               </h3>
               <div className="space-y-2 max-h-56 overflow-y-auto">
@@ -754,12 +754,12 @@ export default function EventAnalytics() {
                   networkingEngagement.projectInterest.map((project, i) => (
                     <div
                       key={project.id}
-                      className="flex items-center justify-between p-2 rounded-lg bg-gray-50"
+                      className="flex items-center justify-between p-2 rounded-lg bg-muted"
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-xs font-bold text-gray-400 w-4">{i + 1}</span>
+                        <span className="text-xs font-bold text-muted-foreground w-4">{i + 1}</span>
                         <div className="min-w-0">
-                          <p className="text-xs md:text-sm font-medium text-gray-800 truncate">
+                          <p className="text-xs md:text-sm font-medium text-foreground truncate">
                             {project.title}
                           </p>
                           <Badge variant="outline" className="text-[10px] mt-0.5">
@@ -773,7 +773,7 @@ export default function EventAnalytics() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-gray-500 text-center py-4">No project data yet</p>
+                  <p className="text-xs text-muted-foreground text-center py-4">No project data yet</p>
                 )}
               </div>
             </Card>

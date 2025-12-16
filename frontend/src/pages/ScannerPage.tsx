@@ -157,31 +157,44 @@ export default function ScannerPage() {
     setScanState('idle');
     setScanError(null);
     triggerHapticFeedback('light');
-
-    try {
-      // Initialize scanner
-      const html5QrCode = new Html5Qrcode("qr-scanner-container");
-      html5QrCodeRef.current = html5QrCode;
-
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-        },
-        async (decodedText) => {
-          await handleScanSuccess(decodedText);
-        },
-        () => {
-          // Ignore errors during scanning (expected when no QR code in frame)
-        }
-      );
-    } catch (err) {
-      console.error('Camera error:', err);
-      toast.error("Failed to access camera. Please allow camera permissions.");
-      setScanStage('idle');
-    }
+    // Scanner initialization moved to useEffect to wait for DOM
   };
+
+  // Initialize scanner when scanStage changes to 'scanning'
+  useEffect(() => {
+    if (scanStage !== 'scanning') return;
+
+    const initScanner = async () => {
+      try {
+        // Small delay to ensure DOM is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const html5QrCode = new Html5Qrcode("qr-scanner-container");
+        html5QrCodeRef.current = html5QrCode;
+
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          async (decodedText) => {
+            await handleScanSuccess(decodedText);
+          },
+          () => {
+            // Ignore errors during scanning (expected when no QR code in frame)
+          }
+        );
+      } catch (err) {
+        console.error('Camera error:', err);
+        toast.error("Failed to access camera. Please allow camera permissions.");
+        setScanStage('idle');
+      }
+    };
+
+    initScanner();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanStage]);
 
   const handleScanSuccess = async (decodedText: string) => {
     // Stop the scanner

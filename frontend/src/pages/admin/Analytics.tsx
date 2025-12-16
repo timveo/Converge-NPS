@@ -89,7 +89,7 @@ export default function Analytics() {
   };
 
   const getFillRateColor = (fillRate: number | null) => {
-    if (!fillRate) return 'bg-gray-200';
+    if (!fillRate) return 'bg-muted';
     if (fillRate >= 90) return 'bg-red-500';
     if (fillRate >= 70) return 'bg-yellow-500';
     if (fillRate >= 50) return 'bg-blue-500';
@@ -105,7 +105,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4 max-w-6xl">
         <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg sticky top-0 z-10 rounded-lg">
@@ -136,9 +136,9 @@ export default function Analytics() {
 
       <main className="container mx-auto px-3 md:px-4 py-3 md:py-6 max-w-6xl space-y-3 md:space-y-6">
         {/* Time Period Selector */}
-        <Card className="p-3 md:p-4 shadow-md border-gray-200">
+        <Card className="p-3 md:p-4 shadow-md border-border">
           <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-gray-700">Activity Period:</label>
+            <label className="text-sm font-medium text-foreground">Activity Period:</label>
             <Select value={days} onValueChange={setDays}>
               <SelectTrigger className="w-[150px] h-9 text-sm">
                 <SelectValue />
@@ -157,73 +157,73 @@ export default function Analytics() {
         {/* Activity Report */}
         {activityReport && (
           <div>
-            <h2 className="text-sm md:text-lg font-semibold text-gray-900 mb-2 md:mb-4">
+            <h2 className="text-sm md:text-lg font-semibold text-foreground mb-2 md:mb-4">
               Activity Report ({activityReport.period})
             </h2>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 md:gap-4">
               {/* New Users */}
-              <Card className="p-3 md:p-6 shadow-md border-gray-200">
+              <Card className="p-3 md:p-6 shadow-md border-border">
                 <div className="flex items-center gap-2 md:gap-3 mb-2">
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                     <Users className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
                   </div>
                 </div>
-                <div className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                <div className="text-xl md:text-2xl font-bold text-foreground mb-1">
                   {activityReport.activity.newUsers}
                 </div>
-                <div className="text-xs md:text-sm text-gray-600">New Users</div>
+                <div className="text-xs md:text-sm text-muted-foreground">New Users</div>
               </Card>
 
               {/* New Connections */}
-              <Card className="p-3 md:p-6 shadow-md border-gray-200">
+              <Card className="p-3 md:p-6 shadow-md border-border">
                 <div className="flex items-center gap-2 md:gap-3 mb-2">
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                     <Activity className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
                   </div>
                 </div>
-                <div className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                <div className="text-xl md:text-2xl font-bold text-foreground mb-1">
                   {activityReport.activity.newConnections}
                 </div>
-                <div className="text-xs md:text-sm text-gray-600">Connections</div>
+                <div className="text-xs md:text-sm text-muted-foreground">Connections</div>
               </Card>
 
               {/* New RSVPs */}
-              <Card className="p-3 md:p-6 shadow-md border-gray-200">
+              <Card className="p-3 md:p-6 shadow-md border-border">
                 <div className="flex items-center gap-2 md:gap-3 mb-2">
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
                     <Calendar className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
                   </div>
                 </div>
-                <div className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                <div className="text-xl md:text-2xl font-bold text-foreground mb-1">
                   {activityReport.activity.newRsvps}
                 </div>
-                <div className="text-xs md:text-sm text-gray-600">RSVPs</div>
+                <div className="text-xs md:text-sm text-muted-foreground">RSVPs</div>
               </Card>
 
               {/* New Messages */}
-              <Card className="p-3 md:p-6 shadow-md border-gray-200">
+              <Card className="p-3 md:p-6 shadow-md border-border">
                 <div className="flex items-center gap-2 md:gap-3 mb-2">
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
                     <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-yellow-600" />
                   </div>
                 </div>
-                <div className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                <div className="text-xl md:text-2xl font-bold text-foreground mb-1">
                   {activityReport.activity.newMessages}
                 </div>
-                <div className="text-xs md:text-sm text-gray-600">Messages</div>
+                <div className="text-xs md:text-sm text-muted-foreground">Messages</div>
               </Card>
 
               {/* New Projects */}
-              <Card className="p-3 md:p-6 shadow-md border-gray-200">
+              <Card className="p-3 md:p-6 shadow-md border-border">
                 <div className="flex items-center gap-2 md:gap-3 mb-2">
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
                     <Briefcase className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
                   </div>
                 </div>
-                <div className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                <div className="text-xl md:text-2xl font-bold text-foreground mb-1">
                   {activityReport.activity.newProjects}
                 </div>
-                <div className="text-xs md:text-sm text-gray-600">Projects</div>
+                <div className="text-xs md:text-sm text-muted-foreground">Projects</div>
               </Card>
             </div>
           </div>
@@ -233,8 +233,8 @@ export default function Analytics() {
         {rsvpStats && (
           <>
             {/* RSVP Status Breakdown */}
-            <Card className="p-3 md:p-6 shadow-md border-gray-200">
-              <h2 className="text-sm md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">
+            <Card className="p-3 md:p-6 shadow-md border-border">
+              <h2 className="text-sm md:text-lg font-semibold text-foreground mb-3 md:mb-4">
                 RSVPs by Status
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
@@ -245,14 +245,14 @@ export default function Analytics() {
                   return (
                     <div key={item.status}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs md:text-sm font-medium text-gray-700 capitalize">
+                        <span className="text-xs md:text-sm font-medium text-foreground capitalize">
                           {item.status}
                         </span>
-                        <span className="text-xs md:text-sm font-bold text-gray-900">
+                        <span className="text-xs md:text-sm font-bold text-foreground">
                           {item.count}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-muted rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all ${
                             item.status === 'attending'
@@ -264,7 +264,7 @@ export default function Analytics() {
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
-                      <div className="text-[10px] md:text-xs text-gray-500 mt-1">
+                      <div className="text-[10px] md:text-xs text-muted-foreground mt-1">
                         {percentage.toFixed(1)}%
                       </div>
                     </div>
@@ -274,13 +274,13 @@ export default function Analytics() {
             </Card>
 
             {/* Session Fill Rates */}
-            <Card className="p-3 md:p-6 shadow-md border-gray-200">
-              <h2 className="text-sm md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">
+            <Card className="p-3 md:p-6 shadow-md border-border">
+              <h2 className="text-sm md:text-lg font-semibold text-foreground mb-3 md:mb-4">
                 Session Capacity & Fill Rates
               </h2>
               <div className="space-y-3">
                 {rsvpStats.bySession.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-muted-foreground">
                     <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No upcoming sessions with RSVPs</p>
                   </div>
@@ -288,14 +288,14 @@ export default function Analytics() {
                   rsvpStats.bySession.map((session) => (
                     <div
                       key={session.sessionId}
-                      className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-medium text-gray-900 truncate">
+                          <h3 className="text-sm font-medium text-foreground truncate">
                             {session.sessionTitle}
                           </h3>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {session.attending} attending
                             {session.capacity && ` / ${session.capacity} capacity`}
                           </p>
@@ -315,7 +315,7 @@ export default function Analytics() {
                         )}
                       </div>
                       {session.fillRate !== null && (
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div className="w-full bg-muted rounded-full h-1.5">
                           <div
                             className={`h-1.5 rounded-full transition-all ${getFillRateColor(
                               session.fillRate
@@ -331,12 +331,12 @@ export default function Analytics() {
             </Card>
 
             {/* Insights */}
-            <Card className="p-3 md:p-6 shadow-md border-blue-200 bg-blue-50">
+            <Card className="p-3 md:p-6 shadow-md border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30">
               <div className="flex items-start gap-3">
                 <TrendingUp className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-sm font-semibold text-blue-900 mb-2">Analytics Insights</h3>
-                  <ul className="text-xs md:text-sm text-blue-800 space-y-1">
+                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">Analytics Insights</h3>
+                  <ul className="text-xs md:text-sm text-blue-800 dark:text-blue-200 space-y-1">
                     {activityReport && activityReport.activity.newUsers > 0 && (
                       <li>
                         {activityReport.activity.newUsers} new users joined in the last {days} days
