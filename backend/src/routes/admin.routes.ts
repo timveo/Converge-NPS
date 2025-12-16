@@ -60,6 +60,13 @@ router.get('/stats/activity', adminController.getActivityReport);
 router.get('/event-analytics', adminController.getEventAnalytics);
 
 /**
+ * Data Export
+ */
+
+// GET /v1/admin/export/raisers-edge - Export data for Raiser's Edge import
+router.get('/export/raisers-edge', adminController.exportRaisersEdge);
+
+/**
  * Audit Logs
  */
 

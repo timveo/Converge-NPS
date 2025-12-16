@@ -304,7 +304,7 @@ export default function AdminDashboard() {
 
             <button
               className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
-              onClick={() => toast.info('RE Export', { description: 'Export for Raiser\'s Edge coming soon' })}
+              onClick={() => navigate('/admin/raisers-edge-export')}
             >
               <div className="flex flex-col items-start gap-3">
                 <div className="w-11 h-11 rounded-xl bg-red-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">

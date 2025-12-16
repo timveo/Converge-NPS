@@ -712,6 +712,112 @@ export async function getEventAnalytics() {
 }
 
 /**
+ * Export data for Raiser's Edge import (admin only)
+ * Returns CSV data with user profiles and roles
+ */
+export async function exportRaisersEdge() {
+  // Fetch all profiles with required fields
+  const profiles = await prisma.profile.findMany({
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      rank: true,
+      department: true,
+      organization: true,
+      role: true,
+      linkedinUrl: true,
+      websiteUrl: true,
+      createdAt: true,
+      userRoles: {
+        select: {
+          role: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Helper to split fullName into first/last
+  const splitName = (fullName: string | null): { firstName: string; lastName: string } => {
+    if (!fullName) return { firstName: '', lastName: '' };
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+    const lastName = parts.pop() || '';
+    const firstName = parts.join(' ');
+    return { firstName, lastName };
+  };
+
+  // Build export data with RE-compatible fields
+  const exportData = profiles.map(profile => {
+    const { firstName, lastName } = splitName(profile.fullName);
+    const roles = profile.userRoles.map(r => r.role);
+    const participantType = roles.length > 0 ? roles.join('; ') : 'Attendee';
+
+    return {
+      UUID: profile.id,
+      ParticipantType: participantType,
+      FirstName: firstName,
+      LastName: lastName,
+      Email: profile.email || '',
+      RankTitle: profile.rank || '',
+      BranchOfService: profile.department || '',
+      Organization: profile.organization || '',
+      Role: profile.role || '',
+      LinkedinURL: profile.linkedinUrl || '',
+      WebsiteURL: profile.websiteUrl || '',
+      RSVPDate: profile.createdAt ? profile.createdAt.toISOString().split('T')[0] : '',
+    };
+  });
+
+  // CSV headers matching Raiser's Edge import format
+  const headers = [
+    'UUID',
+    'ParticipantType',
+    'FirstName',
+    'LastName',
+    'Email',
+    'RankTitle',
+    'BranchOfService',
+    'Organization',
+    'Role',
+    'LinkedinURL',
+    'WebsiteURL',
+    'RSVPDate',
+  ];
+
+  // Escape CSV values properly (RFC 4180)
+  const escapeCSV = (value: string): string => {
+    const str = String(value ?? '');
+    const escaped = str.replace(/"/g, '""');
+    if (escaped.includes(',') || escaped.includes('\n') || escaped.includes('"')) {
+      return `"${escaped}"`;
+    }
+    return escaped;
+  };
+
+  // Generate CSV rows
+  const csvRows = [
+    headers.join(','),
+    ...exportData.map(row =>
+      headers.map(header => escapeCSV(row[header as keyof typeof row])).join(',')
+    ),
+  ];
+
+  // Add BOM for Excel UTF-8 compatibility
+  const BOM = '\uFEFF';
+  const csv = BOM + csvRows.join('\n');
+
+  const filename = `raisers-edge-export-${new Date().toISOString().split('T')[0]}.csv`;
+
+  return {
+    csv,
+    filename,
+    recordCount: exportData.length,
+  };
+}
+
+/**
  * Get audit logs (admin only)
  */
 export async function getAuditLogs(filters?: {
