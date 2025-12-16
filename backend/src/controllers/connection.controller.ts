@@ -5,6 +5,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { PrismaClient } from '@prisma/client';
 import { ConnectionService } from '../services/connection.service';
 import {
   CreateConnectionSchema,
@@ -13,6 +14,8 @@ import {
   ConnectionsQuerySchema,
 } from '../types/schemas';
 import logger from '../utils/logger';
+
+const prisma = new PrismaClient();
 
 export class ConnectionController {
   /**
@@ -38,18 +41,67 @@ export class ConnectionController {
         });
       }
 
-      // Create connection
-      const connection = await ConnectionService.createConnection({
-        userId: req.user.id,
-        connectedUserId: qrResult.userId,
-        collaborativeIntents,
-        notes: notes || null,
-        connectionMethod: 'qr_scan',
+      const userId = req.user.id;
+      const connectedUserId = qrResult.userId;
+      const connectionMethod = 'qr_scan';
+
+      // Create bidirectional connections
+      const [connection] = await Promise.all([
+        // Connection from user to connected user
+        prisma.connection.create({
+          data: {
+            userId,
+            connectedUserId,
+            collaborativeIntents,
+            notes,
+            connectionMethod,
+          },
+          include: {
+            connectedUser: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                organization: true,
+                department: true,
+                role: true,
+                bio: true,
+                avatarUrl: true,
+                linkedinUrl: true,
+                websiteUrl: true,
+                hideContactInfo: true,
+              },
+            },
+          },
+        }),
+        // Reciprocal connection from connected user to user
+        prisma.connection.create({
+          data: {
+            userId: connectedUserId,
+            connectedUserId: userId,
+            collaborativeIntents: [], // Empty for reciprocal connections
+            notes: null,
+            connectionMethod,
+          },
+        }),
+      ]);
+
+      // Increment QR code scan count
+      await prisma.qrCode.update({
+        where: { userId: connectedUserId },
+        data: {
+          scanCount: { increment: 1 },
+          lastScannedAt: new Date(),
+        },
       });
 
-      logger.info('Connection created via QR scan', {
-        userId: req.user.id,
-        connectedUserId: qrResult.userId,
+      logger.info('Connection created successfully', {
+        action: 'Add Connection',
+        method: 'qr_code',
+        connectionId: connection.id,
+        userId,
+        timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
       });
 
       res.status(201).json({
@@ -75,14 +127,54 @@ export class ConnectionController {
 
       const data = CreateConnectionSchema.parse(req.body) as any;
 
-      const connection = await ConnectionService.createConnection({
-        userId: req.user.id,
-        ...data,
-      });
+      // Create bidirectional connections
+      const [connection] = await Promise.all([
+        // Connection from user to connected user
+        prisma.connection.create({
+          data: {
+            userId: req.user.id,
+            connectedUserId: data.connectedUserId,
+            collaborativeIntents: data.collaborativeIntents,
+            notes: data.notes || null,
+            connectionMethod: 'manual_entry',
+          },
+          include: {
+            connectedUser: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                organization: true,
+                department: true,
+                role: true,
+                bio: true,
+                avatarUrl: true,
+                linkedinUrl: true,
+                websiteUrl: true,
+                hideContactInfo: true,
+              },
+            },
+          },
+        }),
+        // Reciprocal connection from connected user to user
+        prisma.connection.create({
+          data: {
+            userId: data.connectedUserId,
+            connectedUserId: req.user.id,
+            collaborativeIntents: [], // Empty for reciprocal connections
+            notes: null,
+            connectionMethod: 'manual_entry',
+          },
+        }),
+      ]);
 
-      logger.info('Connection created via manual entry', {
+      logger.info('Connection created successfully', {
+        action: 'Add Connection',
+        method: 'Code_Add',
+        connectionId: connection.id,
         userId: req.user.id,
-        connectedUserId: data.connectedUserId,
+        timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
       });
 
       res.status(201).json({
@@ -114,16 +206,53 @@ export class ConnectionController {
         });
       }
 
-      const connection = await ConnectionService.createConnection({
-        userId: req.user.id,
-        connectedUserId,
-        collaborativeIntents: [],
-        connectionMethod: 'manual_entry',
-      });
+      // Create bidirectional connections
+      const [connection] = await Promise.all([
+        // Connection from user to connected user
+        prisma.connection.create({
+          data: {
+            userId: req.user.id,
+            connectedUserId,
+            collaborativeIntents: [],
+            connectionMethod: 'manual_entry',
+          },
+          include: {
+            connectedUser: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                organization: true,
+                department: true,
+                role: true,
+                bio: true,
+                avatarUrl: true,
+                linkedinUrl: true,
+                websiteUrl: true,
+                hideContactInfo: true,
+              },
+            },
+          },
+        }),
+        // Reciprocal connection from connected user to user
+        prisma.connection.create({
+          data: {
+            userId: connectedUserId,
+            connectedUserId: req.user.id,
+            collaborativeIntents: [], // Empty for reciprocal connections
+            notes: null,
+            connectionMethod: 'manual_entry',
+          },
+        }),
+      ]);
 
-      logger.info('Connection created via recommendation', {
+      logger.info('Connection created successfully', {
+        action: 'Add Connection',
+        method: 'UI_Add',
+        connectionId: connection.id,
         userId: req.user.id,
-        connectedUserId,
+        timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
       });
 
       res.status(201).json({
@@ -212,7 +341,7 @@ export class ConnectionController {
 
   /**
    * DELETE /connections/:id
-   * Delete connection
+   * Delete connection (bidirectional)
    */
   static async deleteConnection(req: Request, res: Response, next: NextFunction) {
     try {
@@ -224,9 +353,44 @@ export class ConnectionController {
 
       const { id } = req.params;
 
-      await ConnectionService.deleteConnection(id, req.user.id);
+      // Verify ownership and get connection details
+      const connection = await prisma.connection.findUnique({
+        where: { id },
+      });
 
-      logger.info('Connection deleted', { connectionId: id, userId: req.user.id });
+      if (!connection) {
+        return res.status(404).json({
+          error: { code: 'NOT_FOUND', message: 'Connection not found' },
+        });
+      }
+
+      if (connection.userId !== req.user.id) {
+        return res.status(403).json({
+          error: { code: 'FORBIDDEN', message: 'Not authorized to delete this connection' },
+        });
+      }
+
+      // Delete both directions of the connection
+      await Promise.all([
+        // Delete the user's connection record
+        prisma.connection.delete({
+          where: { id },
+        }),
+        // Delete the reciprocal connection record
+        prisma.connection.deleteMany({
+          where: {
+            userId: connection.connectedUserId,
+            connectedUserId: connection.userId,
+          },
+        }),
+      ]);
+
+      logger.info('Connection deleted successfully', {
+        action: 'Remove Connection',
+        connectionId: id,
+        userId: req.user.id,
+        timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      });
 
       res.status(200).json({
         message: 'Connection deleted successfully',
