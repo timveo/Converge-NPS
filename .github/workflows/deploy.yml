@@ -298,12 +298,12 @@ jobs:
       - name: Deploy Backend to Railway (Staging)
         run: railway up --service Backend --environment Staging
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
       - name: Deploy Frontend to Railway (Staging)
         run: railway up --service Frontend --environment Staging
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
       # - name: Run database migrations
       #   run: railway run --service Backend --environment Staging -- npx prisma migrate deploy --schema=./prisma/schema.prisma
@@ -333,12 +333,12 @@ jobs:
       - name: Deploy Backend to Railway (Production)
         run: railway up --service Backend --environment production
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
 
       - name: Deploy Frontend to Railway (Production)
         run: railway up --service Frontend --environment production
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
 
       # - name: Run database migrations
       #   run: railway run --service Backend --environment production -- npx prisma migrate deploy --schema=./prisma/schema.prisma
