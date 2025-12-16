@@ -12,21 +12,27 @@ const logger = winston.createLogger({
     winston.format.printf(({ timestamp, level, message, statusCode, method, path, duration, ...meta }) => {
       const logObject: any = {};
       
-      // Add fields in specific order: statusCode, method, path, duration, timestamp
-      if (statusCode !== undefined) logObject.statusCode = statusCode;
-      if (method !== undefined) logObject.method = method;
-      if (path !== undefined) logObject.path = path;
-      if (duration !== undefined) logObject.duration = duration;
-      if (timestamp !== undefined) logObject.timestamp = timestamp;
-      
-      // Add any additional metadata
+      // Add any additional metadata first to preserve order
       Object.keys(meta).forEach(key => {
         if (meta[key] !== undefined) {
           logObject[key] = meta[key];
         }
       });
       
-      return JSON.stringify(logObject);
+      // Add HTTP fields in specific order
+      if (statusCode !== undefined) logObject.statusCode = statusCode;
+      if (method !== undefined) logObject.method = method;
+      if (path !== undefined) logObject.path = path;
+      if (duration !== undefined) logObject.duration = duration;
+      
+      // Only add timestamp if there are other fields OR it's a message log
+      if (Object.keys(logObject).length > 0 || message) {
+        logObject.timestamp = timestamp;
+        return JSON.stringify(logObject);
+      }
+      
+      // Suppress logs that only contain timestamps
+      return null;
     })
   ),
   transports: [
