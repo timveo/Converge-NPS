@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { api } from '@/lib/api';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,8 +26,31 @@ import ThemeToggle from '@/components/ThemeToggle';
 import OnboardingFlow from '@/components/OnboardingFlow';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Auto-show onboarding for users who haven't completed it
+  useEffect(() => {
+    if (user && user.onboardingCompleted === false) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
+
+  const handleOnboardingComplete = useCallback(async () => {
+    setShowOnboarding(false);
+
+    // Mark onboarding as completed in the backend
+    try {
+      await api.patch('/users/me/onboarding', {
+        onboardingStep: 3,
+        onboardingCompleted: true,
+      });
+      // Update local user state
+      updateUser({ onboardingCompleted: true });
+    } catch (error) {
+      console.error('Failed to update onboarding status:', error);
+    }
+  }, [updateUser]);
 
   const isAdmin = user?.roles?.includes('admin') || false;
   const isStaffOrAdmin = user?.roles?.includes('staff') || user?.roles?.includes('admin') || false;
@@ -369,17 +393,7 @@ export default function DashboardPage() {
       {/* Onboarding Flow Modal */}
       <OnboardingFlow
         open={showOnboarding}
-        onComplete={() => setShowOnboarding(false)}
-        userProfile={user ? {
-          id: user.id,
-          full_name: user.fullName || '',
-          first_name: user.fullName?.split(' ')[0] || null,
-          last_name: user.fullName?.split(' ').slice(1).join(' ') || null,
-          role: user.role || null,
-          organization: user.organization || null,
-          bio: user.bio || null,
-        } : null}
-        testMode={true}
+        onComplete={handleOnboardingComplete}
       />
     </div>
   );
