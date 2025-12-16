@@ -13,42 +13,7 @@ import {
   deleteConversation,
   getUnreadCount,
 } from '../../src/services/message.service';
-
-// Mock database
-jest.mock('@prisma/client', () => {
-  const mockPrisma = {
-    conversation: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-    conversationParticipant: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      createMany: jest.fn(),
-      delete: jest.fn(),
-      count: jest.fn(),
-    },
-    message: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      count: jest.fn(),
-    },
-    profile: {
-      findUnique: jest.fn(),
-    },
-  };
-  return { PrismaClient: jest.fn(() => mockPrisma) };
-});
-
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient() as jest.Mocked<PrismaClient>;
+import prisma from '../../src/config/database';
 
 describe('Message Service', () => {
   beforeEach(() => {

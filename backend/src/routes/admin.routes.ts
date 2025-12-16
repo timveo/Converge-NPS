@@ -31,8 +31,14 @@ router.get('/users', adminController.listUsers);
 // GET /v1/admin/users/:id - Get user details
 router.get('/users/:id', adminController.getUserDetails);
 
-// PATCH /v1/admin/users/:id/role - Update user role
+// PATCH /v1/admin/users/:id/role - Update user role (legacy - updates profile.role field)
 router.patch('/users/:id/role', adminController.updateUserRole);
+
+// POST /v1/admin/users/:id/roles - Add role to user
+router.post('/users/:id/roles', adminController.addUserRole);
+
+// DELETE /v1/admin/users/:id/roles/:role - Remove role from user
+router.delete('/users/:id/roles/:role', adminController.removeUserRole);
 
 // POST /v1/admin/users/:id/suspend - Suspend user
 router.post('/users/:id/suspend', adminController.suspendUser);
@@ -49,6 +55,9 @@ router.get('/stats/rsvps', adminController.getRsvpStats);
 
 // GET /v1/admin/stats/activity - Activity report
 router.get('/stats/activity', adminController.getActivityReport);
+
+// GET /v1/admin/event-analytics - Comprehensive event analytics
+router.get('/event-analytics', adminController.getEventAnalytics);
 
 /**
  * Audit Logs

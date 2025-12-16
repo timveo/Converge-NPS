@@ -4,30 +4,7 @@
  */
 
 import { ProfileService } from '../../src/services/profile.service';
-
-// Mock PrismaClient
-jest.mock('@prisma/client', () => {
-  const mockPrisma = {
-    profile: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-      count: jest.fn(),
-    },
-    userRole: {
-      findMany: jest.fn(),
-    },
-    qrCode: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-    },
-  };
-  return { PrismaClient: jest.fn(() => mockPrisma) };
-});
-
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient() as jest.Mocked<PrismaClient>;
+import prisma from '../../src/config/database';
 
 describe('ProfileService', () => {
   beforeEach(() => {
