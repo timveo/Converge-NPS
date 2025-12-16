@@ -2,6 +2,9 @@
 
 This directory contains load testing scripts to simulate 250 concurrent conference attendees.
 
+> **IMPORTANT: Load tests must ONLY run against local Docker databases.**
+> The scripts have built-in safety checks that block execution against non-localhost databases.
+
 ## Prerequisites
 
 ### 1. Install k6
@@ -39,15 +42,18 @@ docker-compose up -d
 
 ### 3. Seed Load Test Users
 
-Create 250 test users in the database:
+Create 250 test users in the Docker database:
 
 ```bash
-node backend/load-tests/seed-load-test-users.js
+# You MUST specify the Docker database URL explicitly
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/converge_nps" node backend/load-tests/seed-load-test-users.js
 ```
 
 This creates users with:
-- Emails: `loadtest1@nps.edu` through `loadtest250@nps.edu`
+- Emails: `loadtest1@nps.edu` through `loadtest250@nps.edu` (strict pattern)
 - Password: `LoadTest123!`
+
+> **Safety Note:** The script will refuse to run if DATABASE_URL doesn't contain `localhost` or `127.0.0.1`.
 
 ## Running Load Tests
 
@@ -65,16 +71,6 @@ Run the complete simulation with all scenarios:
 
 ```bash
 k6 run backend/load-tests/conference-simulation.js
-```
-
-### Against a Different Environment
-
-```bash
-# Staging
-k6 run -e BASE_URL=https://staging-api.converge-nps.com/api/v1 backend/load-tests/conference-simulation.js
-
-# Production (be careful!)
-k6 run -e BASE_URL=https://api.converge-nps.com/api/v1 backend/load-tests/conference-simulation.js
 ```
 
 ### With Docker
@@ -138,8 +134,14 @@ The load test simulates three realistic conference scenarios:
 Remove load test users when done:
 
 ```bash
-node backend/load-tests/cleanup-load-test-users.js
+# You MUST specify the Docker database URL explicitly
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/converge_nps" node backend/load-tests/cleanup-load-test-users.js
 ```
+
+> **Safety Note:** The cleanup script:
+> - Only runs against localhost databases (blocks non-local DATABASE_URLs)
+> - Uses strict pattern matching (`loadtest{number}@nps.edu`) to avoid deleting real users
+> - Shows which database it's connected to before making changes
 
 ## Troubleshooting
 

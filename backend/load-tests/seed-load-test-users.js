@@ -3,13 +3,31 @@
  * Seed script for load test users
  * Creates 250 test users for load testing the conference simulation
  *
- * Usage: node backend/load-tests/seed-load-test-users.js
+ * IMPORTANT: This script should ONLY be run against local Docker database.
+ *
+ * Usage:
+ *   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/converge_nps" node backend/load-tests/seed-load-test-users.js
  */
 
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
+const { randomUUID } = require('crypto');
+
+// Safety check: Only allow running against localhost databases
+const DATABASE_URL = process.env.DATABASE_URL || '';
+if (!DATABASE_URL.includes('localhost') && !DATABASE_URL.includes('127.0.0.1')) {
+  console.error('❌ SAFETY ERROR: This script can only run against localhost databases.');
+  console.error('   Current DATABASE_URL does not contain "localhost" or "127.0.0.1".');
+  console.error('   Load testing should NEVER run against development, staging, or production.');
+  console.error('\n   To run against Docker:');
+  console.error('   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/converge_nps" node backend/load-tests/seed-load-test-users.js');
+  process.exit(1);
+}
 
 const prisma = new PrismaClient();
+
+// Load test user email pattern: loadtest{1-250}@nps.edu
+const LOAD_TEST_EMAIL_REGEX = /^loadtest\d+@nps\.edu$/;
 
 const LOAD_TEST_USER_COUNT = 250;
 const LOAD_TEST_PASSWORD = 'LoadTest123!';
@@ -104,6 +122,7 @@ async function seedLoadTestUsers() {
       const interests = getRandomItems(INTERESTS, 3 + (i % 3));
 
       usersToCreate.push({
+        id: randomUUID(),
         email,
         fullName: `Load Test User ${i}`,
         role,
