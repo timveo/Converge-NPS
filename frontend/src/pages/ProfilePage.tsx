@@ -92,7 +92,7 @@ export default function ProfilePage() {
                   Complete your profile to make better connections
                 </p>
               </div>
-              <Button size="sm" variant="outline" className="text-sm md:text-sm px-3 md:px-3" onClick={() => navigate("/settings")}>
+              <Button size="sm" variant="outline" className="text-sm md:text-sm px-3 md:px-3" onClick={() => navigate("/settings", { state: { openProfile: true } })}>
                 Complete
               </Button>
             </div>
