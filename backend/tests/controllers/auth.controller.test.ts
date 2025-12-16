@@ -7,17 +7,6 @@ import { AuthController } from '../../src/controllers/auth.controller';
 import { AuthService } from '../../src/services/auth.service';
 import { TwoFactorService } from '../../src/services/twoFactor.service';
 
-// Mock the database module before any imports that use it
-jest.mock('../../src/config/database', () => ({
-  __esModule: true,
-  default: {
-    profile: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
-    userRole: { findMany: jest.fn(), create: jest.fn() },
-    $connect: jest.fn(),
-    $disconnect: jest.fn(),
-  },
-}));
-
 // Mock the AuthService
 jest.mock('../../src/services/auth.service');
 
