@@ -11,9 +11,11 @@ jest.mock('@prisma/client', () => {
     connection: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      deleteMany: jest.fn(),
       count: jest.fn(),
     },
     profile: {
