@@ -8,13 +8,11 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { createApp } from './app';
 import logger from './utils/logger';
-import { PrismaClient } from '@prisma/client';
+import prisma from './config/database';
 import { initializeSocketServer } from './socket';
 
 // Load environment variables
 dotenv.config();
-
-const prisma = new PrismaClient();
 
 // Configuration
 const PORT = parseInt(process.env.PORT || '3000', 10);

@@ -226,6 +226,97 @@ export async function updateUserRole(req: Request, res: Response) {
 }
 
 /**
+ * POST /v1/admin/users/:id/roles
+ * Add role to user
+ */
+export async function addUserRole(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const data = adminService.addUserRoleSchema.parse(req.body) as any;
+    const result = await adminService.addUserRole(id, data.role);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Role added successfully',
+    });
+  } catch (error: any) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid role',
+        details: error.errors,
+      });
+    }
+
+    if (error.message === 'User not found') {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (error.message === 'User already has this role') {
+      return res.status(409).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add role',
+    });
+  }
+}
+
+/**
+ * DELETE /v1/admin/users/:id/roles/:role
+ * Remove role from user
+ */
+export async function removeUserRole(req: Request, res: Response) {
+  try {
+    const { id, role } = req.params;
+
+    // Validate role
+    const validRoles = ['student', 'faculty', 'industry', 'staff', 'admin'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid role',
+      });
+    }
+
+    const result = await adminService.removeUserRole(id, role as any);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Role removed successfully',
+    });
+  } catch (error: any) {
+    if (error.message === 'User not found') {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (error.message === 'User does not have this role') {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to remove role',
+    });
+  }
+}
+
+/**
  * POST /v1/admin/users/:id/suspend
  * Suspend user account
  */
@@ -329,6 +420,27 @@ export async function getActivityReport(req: Request, res: Response) {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch activity report',
+    });
+  }
+}
+
+/**
+ * GET /v1/admin/event-analytics
+ * Get comprehensive event analytics
+ */
+export async function getEventAnalytics(req: Request, res: Response) {
+  try {
+    const analytics = await adminService.getEventAnalytics();
+
+    res.json({
+      success: true,
+      data: analytics,
+    });
+  } catch (error: any) {
+    console.error('Event analytics error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch event analytics',
     });
   }
 }

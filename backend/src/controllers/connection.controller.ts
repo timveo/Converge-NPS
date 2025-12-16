@@ -5,7 +5,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import { ConnectionService } from '../services/connection.service';
 import {
   CreateConnectionSchema,
@@ -14,8 +14,6 @@ import {
   ConnectionsQuerySchema,
 } from '../types/schemas';
 import logger from '../utils/logger';
-
-const prisma = new PrismaClient();
 
 export class ConnectionController {
   /**

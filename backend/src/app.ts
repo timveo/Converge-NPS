@@ -18,7 +18,7 @@ import connectionRoutes from './routes/connection.routes';
 import sessionRoutes from './routes/session.routes';
 import projectRoutes from './routes/project.routes';
 import messageRoutes from './routes/message.routes';
-// import adminRoutes from './routes/admin.routes'; // TEMPORARILY DISABLED - schema mismatch
+import adminRoutes from './routes/admin.routes';
 import smartsheetRoutes from './routes/smartsheet.routes';
 import partnerRoutes from './routes/partner.routes';
 import staffRoutes from './routes/staff.routes';
@@ -163,7 +163,7 @@ export function createApp(): Application {
   app.use(`${API_VERSION}/messages`, messageRoutes);
   app.use(`${API_VERSION}/partners`, partnerRoutes);
   app.use(`${API_VERSION}/staff`, staffRoutes);
-  // app.use(`${API_VERSION}/admin`, adminRoutes); // TEMPORARILY DISABLED - schema mismatch
+  app.use(`${API_VERSION}/admin`, adminRoutes);
   app.use(`${API_VERSION}/admin/smartsheet`, smartsheetRoutes);
   app.use(`${API_VERSION}/recommendations`, recommendationRoutes);
 
