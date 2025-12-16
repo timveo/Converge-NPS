@@ -431,8 +431,13 @@ export default function ScannerPage() {
 
   const handleMessageUser = async () => {
     if (!profileData?.id || !profileData?.allow_messaging) return;
-    // Navigate to messages with this user
-    navigate(`/messages?to=${profileData.id}`);
+
+    const recipientId = profileData.id;
+
+    handleClose();
+    navigate('/messages', {
+      state: { startConversationWithUserId: recipientId },
+    });
   };
 
   // Check if profile has privacy limits
