@@ -4,38 +4,8 @@
  */
 
 import { AuthService } from '../../src/services/auth.service';
-import { PrismaClient } from '@prisma/client';
 import * as authUtils from '../../src/utils/auth';
-
-// Mock PrismaClient
-jest.mock('@prisma/client', () => {
-  const mockPrisma = {
-    profile: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-    },
-    userPassword: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-    },
-    emailVerification: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
-    },
-    userRole: {
-      create: jest.fn(),
-    },
-    userSession: {
-      create: jest.fn(),
-    },
-    $queryRaw: jest.fn(),
-    $executeRaw: jest.fn(),
-  };
-  return { PrismaClient: jest.fn(() => mockPrisma) };
-});
-
-// Get mocked prisma instance
-const prisma = new PrismaClient() as jest.Mocked<PrismaClient>;
+import prisma from '../../src/config/database';
 
 describe('AuthService', () => {
   beforeEach(() => {

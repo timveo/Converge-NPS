@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import axios, { AxiosInstance } from 'axios';
 import { randomUUID } from 'crypto';
-
-const prisma = new PrismaClient();
 
 // Smartsheet API configuration
 const SMARTSHEET_API_BASE = 'https://api.smartsheet.com/2.0';

@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 // Validation schemas
 export const createSessionSchema = z.object({
@@ -19,6 +17,10 @@ export const createSessionSchema = z.object({
 export const updateSessionSchema = createSessionSchema.partial();
 
 export const updateUserRoleSchema = z.object({
+  role: z.enum(['student', 'faculty', 'industry', 'staff', 'admin']),
+});
+
+export const addUserRoleSchema = z.object({
   role: z.enum(['student', 'faculty', 'industry', 'staff', 'admin']),
 });
 
@@ -203,7 +205,10 @@ export async function listUsers(filters: {
     ];
   }
 
-  const [users, total] = await Promise.all([
+  // Cap limit to prevent excessive data fetching
+  const limit = Math.min(filters.limit || 50, 100);
+
+  const [rawUsers, total] = await Promise.all([
     prisma.profile.findMany({
       where,
       select: {
@@ -212,20 +217,32 @@ export async function listUsers(filters: {
         email: true,
         role: true,
         organization: true,
-        profileVisibility: true,
         createdAt: true,
-        _count: {
+        userRoles: {
           select: {
-            rsvps: true,
+            role: true,
           },
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: filters.limit || 50,
+      take: limit,
       skip: filters.offset || 0,
     }),
     prisma.profile.count({ where }),
   ]);
+
+  // Transform to match frontend expectations (snake_case + roles array)
+  const users = rawUsers.map(user => ({
+    id: user.id,
+    fullName: user.fullName,
+    full_name: user.fullName,
+    email: user.email,
+    role: user.role,
+    organization: user.organization,
+    createdAt: user.createdAt,
+    created_at: user.createdAt,
+    roles: user.userRoles.map(r => r.role),
+  }));
 
   return { users, total };
 }
@@ -278,6 +295,79 @@ export async function updateUserRole(userId: string, data: z.infer<typeof update
   });
 
   return updated;
+}
+
+/**
+ * Add role to user (admin only)
+ */
+export async function addUserRole(userId: string, role: z.infer<typeof addUserRoleSchema>['role']) {
+  const user = await prisma.profile.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Check if user already has this role
+  const existingRole = await prisma.userRole.findUnique({
+    where: {
+      userId_role: {
+        userId,
+        role,
+      },
+    },
+  });
+
+  if (existingRole) {
+    throw new Error('User already has this role');
+  }
+
+  const userRole = await prisma.userRole.create({
+    data: {
+      userId,
+      role,
+    },
+  });
+
+  return userRole;
+}
+
+/**
+ * Remove role from user (admin only)
+ */
+export async function removeUserRole(userId: string, role: z.infer<typeof addUserRoleSchema>['role']) {
+  const user = await prisma.profile.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const existingRole = await prisma.userRole.findUnique({
+    where: {
+      userId_role: {
+        userId,
+        role,
+      },
+    },
+  });
+
+  if (!existingRole) {
+    throw new Error('User does not have this role');
+  }
+
+  await prisma.userRole.delete({
+    where: {
+      userId_role: {
+        userId,
+        role,
+      },
+    },
+  });
+
+  return { removed: true };
 }
 
 /**
@@ -462,6 +552,161 @@ export async function getActivityReport(days: number = 7) {
       newMessages,
       newRsvps,
       newProjects,
+    },
+  };
+}
+
+/**
+ * Get comprehensive event analytics (admin only)
+ * Optimized to reduce number of queries and improve performance
+ */
+export async function getEventAnalytics() {
+  // Split into smaller batches to avoid connection pool exhaustion
+  // Batch 1: Core metrics (fast counts)
+  const [totalRegistered, totalCheckedIn, walkIns, recentCheckIns] = await Promise.all([
+    prisma.profile.count(),
+    prisma.checkIn.count(),
+    prisma.checkIn.count({ where: { isWalkIn: true } }),
+    prisma.checkIn.count({
+      where: { checkedInAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } },
+    }),
+  ]);
+
+  // Batch 2: Demographics and groupings
+  const [usersByRole, usersByOrganization, checkInsByMethod] = await Promise.all([
+    prisma.userRole.groupBy({ by: ['role'], _count: true }),
+    prisma.profile.groupBy({
+      by: ['organization'],
+      _count: true,
+      orderBy: { _count: { organization: 'desc' } },
+      take: 10,
+      where: { organization: { not: null } },
+    }),
+    prisma.checkIn.groupBy({ by: ['checkInMethod'], _count: true }),
+  ]);
+
+  // Batch 3: Session and RSVP data
+  const [sessions, rsvpsByStatus] = await Promise.all([
+    prisma.session.findMany({
+      where: { status: { not: 'cancelled' } },
+      select: {
+        id: true,
+        title: true,
+        sessionType: true,
+        capacity: true,
+        startTime: true,
+        _count: { select: { rsvps: { where: { status: 'confirmed' } } } },
+      },
+      orderBy: { startTime: 'asc' },
+      take: 50, // Limit sessions for performance
+    }),
+    prisma.rsvp.groupBy({ by: ['status'], _count: true }),
+  ]);
+
+  // Batch 4: Networking data
+  const [totalConnections, recentConnections, totalMessages, totalConversations] = await Promise.all([
+    prisma.connection.count(),
+    prisma.connection.count({
+      where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    }),
+    prisma.message.count(),
+    prisma.conversation.count(),
+  ]);
+
+  // Batch 5: Additional data (less critical)
+  const [connectionsByMethod, projectInterests] = await Promise.all([
+    prisma.connection.groupBy({ by: ['connectionMethod'], _count: true }),
+    prisma.project.findMany({
+      select: { id: true, title: true, interestedCount: true, stage: true },
+      orderBy: { interestedCount: 'desc' },
+      take: 10,
+    }),
+  ]);
+
+  // Connection graph - use simpler approach to avoid slow raw query
+  const connectionGraph: Record<string, Record<string, number>> = {};
+  const roles = ['student', 'faculty', 'industry', 'staff', 'admin'];
+  roles.forEach(r1 => {
+    connectionGraph[r1] = {};
+    roles.forEach(r2 => {
+      connectionGraph[r1][r2] = 0;
+    });
+  });
+
+  // Calculate derived metrics
+  const noShows = totalRegistered - totalCheckedIn - walkIns;
+  const checkInRate = totalRegistered > 0 ? (totalCheckedIn / totalRegistered) * 100 : 0;
+
+  // Process session analytics
+  const sessionAnalytics = sessions.map(session => ({
+    id: session.id,
+    title: session.title,
+    track: session.sessionType,
+    capacity: session.capacity,
+    confirmed: session._count.rsvps,
+    fillRate: session.capacity ? (session._count.rsvps / session.capacity) * 100 : 0,
+    startTime: session.startTime,
+  }));
+
+  // Group sessions by track for popularity
+  const trackPopularity: Record<string, number> = {};
+  sessions.forEach(session => {
+    const track = session.sessionType || 'Other';
+    trackPopularity[track] = (trackPopularity[track] || 0) + session._count.rsvps;
+  });
+
+  return {
+    realTimeMetrics: {
+      totalRegistered,
+      checkedIn: totalCheckedIn,
+      checkInRate: Math.round(checkInRate * 10) / 10,
+      noShows: Math.max(0, noShows),
+      walkIns,
+      checkInsLastHour: recentCheckIns,
+      checkInsByMethod: checkInsByMethod.map(m => ({
+        method: m.checkInMethod,
+        count: m._count,
+      })),
+    },
+    demographics: {
+      byRole: usersByRole.map(r => ({
+        role: r.role,
+        count: r._count,
+      })),
+      byOrganization: usersByOrganization.map(o => ({
+        organization: o.organization || 'Unknown',
+        count: o._count,
+      })),
+    },
+    sessionAnalytics: {
+      sessions: sessionAnalytics,
+      rsvpsByStatus: rsvpsByStatus.map(s => ({
+        status: s.status,
+        count: s._count,
+      })),
+      trackPopularity: Object.entries(trackPopularity).map(([track, count]) => ({
+        track,
+        count,
+      })).sort((a, b) => b.count - a.count),
+      totalCapacity: sessions.reduce((sum, s) => sum + (s.capacity || 0), 0),
+      totalConfirmed: sessions.reduce((sum, s) => sum + s._count.rsvps, 0),
+    },
+    networkingEngagement: {
+      totalConnections,
+      connectionsLast24h: recentConnections,
+      connectionsByMethod: connectionsByMethod.map(m => ({
+        method: m.connectionMethod,
+        count: m._count,
+      })),
+      totalMessages,
+      totalConversations,
+      connectionGraph,
+      projectInterest: projectInterests.map(p => ({
+        id: p.id,
+        title: p.title,
+        interested: p.interestedCount,
+        stage: p.stage,
+      })),
     },
   };
 }

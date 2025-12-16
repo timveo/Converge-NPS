@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -127,13 +128,47 @@ export default function SessionManagement() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  // Skeleton components for loading state
+  const SessionCardSkeleton = () => (
+    <Card className="p-3 shadow-md border-gray-200">
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+          <Skeleton className="h-3 w-24 mb-2" />
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <Skeleton className="h-8 w-8 rounded" />
+          <Skeleton className="h-8 w-8 rounded" />
+        </div>
       </div>
-    );
-  }
+    </Card>
+  );
+
+  const SessionTableRowSkeleton = () => (
+    <tr>
+      <td className="px-6 py-4"><Skeleton className="h-4 w-48" /></td>
+      <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+      <td className="px-6 py-4"><Skeleton className="h-4 w-32" /></td>
+      <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
+      <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+      <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+      <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
+      <td className="px-6 py-4 text-right">
+        <div className="flex items-center justify-end space-x-2">
+          <Skeleton className="h-8 w-8 rounded" />
+          <Skeleton className="h-8 w-8 rounded" />
+        </div>
+      </td>
+    </tr>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
@@ -176,8 +211,46 @@ export default function SessionManagement() {
       </div>
 
       <main className="container mx-auto px-3 md:px-4 py-3 md:py-6 max-w-7xl">
-        {/* Empty State */}
-        {sessions.length === 0 ? (
+        {/* Loading State */}
+        {isLoading ? (
+          <>
+            {/* Mobile Skeleton */}
+            <div className="md:hidden space-y-2">
+              <SessionCardSkeleton />
+              <SessionCardSkeleton />
+              <SessionCardSkeleton />
+              <SessionCardSkeleton />
+            </div>
+            {/* Desktop Skeleton */}
+            <div className="hidden md:block">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Speaker</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Track</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSVPs</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      <SessionTableRowSkeleton />
+                      <SessionTableRowSkeleton />
+                      <SessionTableRowSkeleton />
+                      <SessionTableRowSkeleton />
+                      <SessionTableRowSkeleton />
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : sessions.length === 0 ? (
           <Card className="p-8 md:p-12 text-center shadow-md border-gray-200">
             <Calendar className="h-12 w-12 md:h-16 md:w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-sm md:text-lg font-semibold text-gray-900 mb-2">No sessions yet</h3>

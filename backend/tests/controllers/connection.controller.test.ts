@@ -5,27 +5,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { ConnectionController } from '../../src/controllers/connection.controller';
 import { ConnectionService } from '../../src/services/connection.service';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../src/config/database';
+
+// Cast prisma to any for mock methods
+const prismaMock = prisma as any;
 
 // Mock the ConnectionService
 jest.mock('../../src/services/connection.service');
-
-// Mock PrismaClient
-jest.mock('@prisma/client', () => {
-  const mockPrisma = {
-    connection: {
-      create: jest.fn(),
-      findFirst: jest.fn(),
-      findUnique: jest.fn(),
-      delete: jest.fn(),
-      deleteMany: jest.fn(),
-    },
-    qrCode: {
-      update: jest.fn(),
-    },
-  };
-  return { PrismaClient: jest.fn(() => mockPrisma) };
-});
 
 // Mock logger
 jest.mock('../../src/utils/logger', () => ({
@@ -37,8 +23,6 @@ jest.mock('../../src/utils/logger', () => ({
     debug: jest.fn(),
   },
 }));
-
-const prisma = new PrismaClient() as any;
 
 describe('ConnectionController', () => {
   let mockReq: Partial<Request>;
@@ -90,11 +74,11 @@ describe('ConnectionController', () => {
       };
 
       // Mock Prisma calls for bidirectional creation
-      prisma.connection.create
+      prismaMock.connection.create
         .mockResolvedValueOnce(mockConnection)
         .mockResolvedValueOnce({ id: 'conn-2' });
       
-      prisma.qrCode.update.mockResolvedValue({});
+      prismaMock.qrCode.update.mockResolvedValue({});
 
       await ConnectionController.qrScan(
         mockReq as Request,
@@ -103,8 +87,8 @@ describe('ConnectionController', () => {
       );
 
       expect(ConnectionService.getConnectionByQRCode).toHaveBeenCalledWith('QR123ABC');
-      expect(prisma.connection.create).toHaveBeenCalledTimes(2);
-      expect(prisma.qrCode.update).toHaveBeenCalledWith({
+      expect(prismaMock.connection.create).toHaveBeenCalledTimes(2);
+      expect(prismaMock.qrCode.update).toHaveBeenCalledWith({
         where: { userId: 'user-456' },
         data: {
           scanCount: { increment: 1 },
@@ -165,7 +149,7 @@ describe('ConnectionController', () => {
       });
 
       const error = new Error('Connection error');
-      prisma.connection.create.mockRejectedValue(error);
+      prismaMock.connection.create.mockRejectedValue(error);
 
       await ConnectionController.qrScan(
         mockReq as Request,
@@ -199,7 +183,7 @@ describe('ConnectionController', () => {
       };
 
       // Mock Prisma calls for bidirectional creation
-      prisma.connection.create
+      prismaMock.connection.create
         .mockResolvedValueOnce(mockConnection)
         .mockResolvedValueOnce({ id: 'conn-2' });
 
@@ -209,7 +193,7 @@ describe('ConnectionController', () => {
         mockNext
       );
 
-      expect(prisma.connection.create).toHaveBeenCalledTimes(2);
+      expect(prismaMock.connection.create).toHaveBeenCalledTimes(2);
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith({
         message: 'Connection created successfully',
@@ -247,7 +231,7 @@ describe('ConnectionController', () => {
       };
 
       // Mock Prisma calls for bidirectional creation
-      prisma.connection.create
+      prismaMock.connection.create
         .mockResolvedValueOnce(mockConnection)
         .mockResolvedValueOnce({ id: 'conn-2' });
 
@@ -257,7 +241,7 @@ describe('ConnectionController', () => {
         mockNext
       );
 
-      expect(prisma.connection.create).toHaveBeenCalledTimes(2);
+      expect(prismaMock.connection.create).toHaveBeenCalledTimes(2);
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith({
         message: 'Connection created successfully',
@@ -408,13 +392,13 @@ describe('ConnectionController', () => {
       mockReq.user = { id: 'user-123' } as any;
       mockReq.params = { id: 'conn-1' };
 
-      prisma.connection.findUnique.mockResolvedValue({
+      prismaMock.connection.findUnique.mockResolvedValue({
         id: 'conn-1',
         userId: 'user-123',
         connectedUserId: 'user-456',
       });
-      prisma.connection.delete.mockResolvedValue({});
-      prisma.connection.deleteMany.mockResolvedValue({ count: 1 });
+      prismaMock.connection.delete.mockResolvedValue({});
+      prismaMock.connection.deleteMany.mockResolvedValue({ count: 1 });
 
       await ConnectionController.deleteConnection(
         mockReq as Request,
@@ -422,13 +406,13 @@ describe('ConnectionController', () => {
         mockNext
       );
 
-      expect(prisma.connection.findUnique).toHaveBeenCalledWith({
+      expect(prismaMock.connection.findUnique).toHaveBeenCalledWith({
         where: { id: 'conn-1' },
       });
-      expect(prisma.connection.delete).toHaveBeenCalledWith({
+      expect(prismaMock.connection.delete).toHaveBeenCalledWith({
         where: { id: 'conn-1' },
       });
-      expect(prisma.connection.deleteMany).toHaveBeenCalledWith({
+      expect(prismaMock.connection.deleteMany).toHaveBeenCalledWith({
         where: { userId: 'user-456', connectedUserId: 'user-123' },
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
