@@ -93,16 +93,24 @@ export function createApp(): Application {
   app.use(cookieParser());
 
   // ===========================
-  // Request Logging
+  // Request/Response Logging
   // ===========================
 
-  app.use((req: Request, _res: Response, next: NextFunction) => {
-    logger.info(`${req.method} ${req.path}`, {
-      method: req.method,
-      path: req.path,
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now();
+    
+    // Log when response finishes
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      logger.info(`${req.method} ${req.path}`, {
+        statusCode: res.statusCode,
+        method: req.method,
+        path: req.path,
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      });
     });
+    
     next();
   });
 

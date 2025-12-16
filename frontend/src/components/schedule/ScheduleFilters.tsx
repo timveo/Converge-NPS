@@ -15,11 +15,11 @@ import {
 import { format } from "date-fns";
 
 export const SESSION_TYPES = [
-  { value: 'keynote', label: 'Keynote' },
-  { value: 'breakout', label: 'Breakout Session' },
-  { value: 'demo', label: 'Demo' },
-  { value: 'training', label: 'Training' },
-  { value: 'networking', label: 'Networking' }
+  { value: 'AI/ML', label: 'AI/ML' },
+  { value: 'Cybersecurity', label: 'Cybersecurity' },
+  { value: 'Autonomous Systems', label: 'Autonomous Systems' },
+  { value: 'Data Science', label: 'Data Science' },
+  { value: 'Other', label: 'Other' }
 ];
 
 export const TIME_SLOTS = [

@@ -9,23 +9,35 @@ const logger = winston.createLogger({
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.errors({ stack: true }),
     winston.format.splat(),
-    winston.format.json()
+    winston.format.printf(({ timestamp, level, message, statusCode, method, path, duration, ...meta }) => {
+      const logObject: any = {};
+      
+      // Add any additional metadata first to preserve order
+      Object.keys(meta).forEach(key => {
+        if (meta[key] !== undefined) {
+          logObject[key] = meta[key];
+        }
+      });
+      
+      // Add HTTP fields in specific order
+      if (statusCode !== undefined) logObject.statusCode = statusCode;
+      if (method !== undefined) logObject.method = method;
+      if (path !== undefined) logObject.path = path;
+      if (duration !== undefined) logObject.duration = duration;
+      
+      // Only add timestamp if there are other fields OR it's a message log
+      if (Object.keys(logObject).length > 0 || message) {
+        logObject.timestamp = timestamp;
+        return JSON.stringify(logObject);
+      }
+      
+      // Suppress logs that only contain timestamps
+      return null;
+    })
   ),
-  defaultMeta: { service: 'converge-nps-api' },
   transports: [
-    // Console transport
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(({ timestamp, level, message, ...meta }) => {
-          let msg = `${timestamp} [${level}]: ${message}`;
-          if (Object.keys(meta).length > 0 && meta.service !== 'converge-nps-api') {
-            msg += ` ${JSON.stringify(meta)}`;
-          }
-          return msg;
-        })
-      ),
-    }),
+    // Console transport (always active for Railway/cloud platforms)
+    new winston.transports.Console(),
   ],
 });
 

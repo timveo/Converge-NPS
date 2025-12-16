@@ -34,4 +34,4 @@ COPY nginx.conf /etc/nginx/templates/default.conf.template
 ENV PORT=80
 
 # Use nginx's built-in envsubst on startup
-CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;' >/dev/null 2>&1"]

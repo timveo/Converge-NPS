@@ -1,144 +1,59 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  UserCircle, 
-  QrCode, 
-  Users, 
-  MessageSquare, 
-  Calendar, 
+import {
+  UserCircle,
+  Sparkles,
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
-  Loader2
+  Smartphone
 } from "lucide-react";
-
-import { toast } from "sonner";
 
 interface OnboardingFlowProps {
   open: boolean;
   onComplete: () => void;
-  userProfile: {
-    id?: string;
-    full_name: string;
-    first_name?: string | null;
-    last_name?: string | null;
-    role: string | null;
-    organization: string | null;
-    bio: string | null;
-  } | null;
-  testMode?: boolean;
 }
 
-const INTEREST_OPTIONS = [
-  "AI/ML", "Cybersecurity", "Autonomous Systems", "Space Technology",
-  "Maritime", "Defense Innovation", "Energy", "Healthcare",
-  "Supply Chain", "Communications", "Robotics", "Data Analytics",
-];
-
-const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: OnboardingFlowProps) => {
+const OnboardingFlow = ({ open, onComplete }: OnboardingFlowProps) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [rank, setRank] = useState("");
-  const [role, setRole] = useState("");
-  const [accelerationInterests, setAccelerationInterests] = useState<string[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
-
-  // Initialize form fields from profile if available (and not in test mode)
-  useEffect(() => {
-    if (userProfile && !testMode) {
-      // Would need to fetch rank from profile if stored
-      setRole(userProfile.role || "");
-    }
-  }, [userProfile, testMode]);
-
-  // Check if step 1 form is complete - rank and role are required
-  const step1Complete = rank && role.trim();
 
   const steps = [
     {
-      icon: UserCircle,
+      icon: Sparkles,
       title: "Welcome to Converge @ NPS!",
-      description: "Let's get you started with a quick tour. You'll learn how to connect with attendees and make the most of this event. First we need some additional information.",
-      color: "text-primary",
-      isProfileStep: true
-    },
-    {
-      icon: QrCode,
-      title: "Connect with QR Codes",
-      description: "Network effortlessly by scanning QR codes! Tap the scan icon to instantly connect with other attendees.",
+      description: "Your gateway to meaningful connections and collaboration at the Naval Postgraduate School. Here's what you can do:",
       tips: [
-        "Share your QR code from your profile",
-        "Scan others' codes to create connections",
-        "Add notes after connecting"
-      ],
-      color: "text-accent"
-    },
-    {
-      icon: Users,
-      title: "Manage Your Connections",
-      description: "View all your connections in one place. See who you've met and reach out to collaborate.",
-      tips: [
-        "Browse your connection history",
-        "Add private notes about each connection",
-        "See mutual collaboration interests"
-      ],
-      color: "text-tech-cyan"
-    },
-    {
-      icon: MessageSquare,
-      title: "Real-Time Messaging",
-      description: "Send instant messages to your connections. Have private conversations during the event.",
-      tips: [
-        "Message any of your connections",
-        "See messaging history",
-        "Delete messages as needed"
+        "Scan QR codes to instantly connect with attendees",
+        "Send direct messages to your new connections",
+        "RSVP to sessions and manage your schedule"
       ],
       color: "text-primary"
     },
     {
-      icon: Calendar,
-      title: "Event Schedule & RSVPs",
-      description: "Browse sessions and workshops. RSVP to sessions you're interested in and check capacity!",
+      icon: Sparkles,
+      title: "Discover Opportunities",
+      description: "Converge brings together researchers, industry partners, and innovators. Explore what's available:",
       tips: [
-        "View the full event schedule",
-        "RSVP to sessions (subject to capacity)",
-        "Manage your RSVPs anytime"
+        "Browse research projects and find collaborators",
+        "Connect with 45+ industry partners",
+        "Discover funding and partnership opportunities"
       ],
       color: "text-accent"
     },
     {
-      icon: Users,
-      title: "Explore Opportunities",
-      description: "Discover research projects and collaboration opportunities. Find projects aligned with your interests!",
+      icon: Smartphone,
+      title: "Get the Most Out of Converge",
+      description: "For the best experience, complete your profile so others can find and connect with you. You can also install this app on your device for quick access.",
       tips: [
-        "Browse research projects by category",
-        "Bookmark projects you're interested in",
-        "Connect with principal investigators"
+        "Add your role, organization, and interests",
+        "Install the app from your Profile page",
+        "Access the help icon anytime to revisit this guide"
       ],
-      color: "text-tech-cyan"
-    },
-    {
-      icon: Users,
-      title: "Discover Industry Partners",
-      description: "Connect with industry partners attending the event. Explore potential collaborations and partnerships!",
-      tips: [
-        "Browse industry partner profiles",
-        "View technology focus areas",
-        "Save favorites for easy access"
-      ],
-      color: "text-primary"
-    },
-    {
-      icon: CheckCircle2,
-      title: "You're All Set!",
-      description: "For the best experience, complete your profile. It helps others find and connect with you. Enjoy the event!",
-      color: "text-green-500",
+      color: "text-tech-cyan",
       isFinalStep: true
     }
   ];
@@ -148,33 +63,7 @@ const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: Onb
   const Icon = currentStepData.icon;
   const isFinalStep = 'isFinalStep' in currentStepData && currentStepData.isFinalStep;
 
-  const toggleInterest = (interest: string) => {
-    setAccelerationInterests(prev => 
-      prev.includes(interest) 
-        ? prev.filter(i => i !== interest)
-        : [...prev, interest]
-    );
-  };
-
-  const handleNext = async () => {
-    // If on step 0, save profile data first (disabled - using testMode)
-    // TODO: Implement profile saving with backend API when needed
-    if (currentStep === 0 && !testMode) {
-      setIsSaving(true);
-      try {
-        // Profile saving functionality is disabled
-        // This would save rank, role, and acceleration_interests to backend
-        console.log('Profile save would happen here:', { rank, role, accelerationInterests });
-      } catch (error) {
-        toast.error("Error saving profile", {
-          description: "Please try again"
-        });
-        setIsSaving(false);
-        return;
-      }
-      setIsSaving(false);
-    }
-
+  const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -217,7 +106,6 @@ const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: Onb
 
           {currentStepData.tips && (
             <div className="space-y-2 md:space-y-3 mt-2 md:mt-4">
-              <p className="text-xs md:text-sm font-semibold text-foreground">Key Features:</p>
               {currentStepData.tips.map((tip, index) => (
                 <div key={index} className="flex items-start gap-2 md:gap-3">
                   <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 text-accent flex-shrink-0 mt-0.5" />
@@ -227,72 +115,13 @@ const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: Onb
             </div>
           )}
 
-          {/* Step 1: Profile Information Form - hidden in test mode */}
-          {currentStep === 0 && !testMode && (
-            <div className="mt-3 md:mt-4 space-y-3 md:space-y-4">
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="rank" className="text-xs md:text-sm">Military Rank / Title</Label>
-                <Select value={rank} onValueChange={setRank}>
-                  <SelectTrigger id="rank" className="h-11 md:h-10 text-sm">
-                    <SelectValue placeholder="Select rank or title" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
-                    <SelectItem value="ADM">ADM - Admiral</SelectItem>
-                    <SelectItem value="VADM">VADM - Vice Admiral</SelectItem>
-                    <SelectItem value="RADM">RADM - Rear Admiral</SelectItem>
-                    <SelectItem value="CAPT">CAPT - Captain</SelectItem>
-                    <SelectItem value="CDR">CDR - Commander</SelectItem>
-                    <SelectItem value="LCDR">LCDR - Lieutenant Commander</SelectItem>
-                    <SelectItem value="LT">LT - Lieutenant</SelectItem>
-                    <SelectItem value="LTJG">LTJG - Lieutenant Junior Grade</SelectItem>
-                    <SelectItem value="ENS">ENS - Ensign</SelectItem>
-                    <SelectItem value="Dr.">Dr.</SelectItem>
-                    <SelectItem value="Mr.">Mr.</SelectItem>
-                    <SelectItem value="Ms.">Ms.</SelectItem>
-                    <SelectItem value="Mrs.">Mrs.</SelectItem>
-                    <SelectItem value="N/A">N/A</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="role" className="text-xs md:text-sm">Role *</Label>
-                <Input
-                  id="role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  placeholder="Professor, CEO, Program Manager..."
-                  className="h-11 md:h-10 text-sm"
-                />
-              </div>
-              <div className="space-y-1 md:space-y-2">
-                <Label className="text-xs md:text-sm">Acceleration Interests</Label>
-                <div className="flex flex-wrap gap-1.5 md:gap-2">
-                  {INTEREST_OPTIONS.map((interest) => (
-                    <button
-                      key={interest}
-                      type="button"
-                      onClick={() => toggleInterest(interest)}
-                      className={`px-2 py-1 text-xs rounded-full border transition-colors ${
-                        accelerationInterests.includes(interest)
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50"
-                      }`}
-                    >
-                      {interest}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Spacer to push footer down when content is short */}
           <div className="flex-1" />
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 md:pt-3 border-t border-border/50">
           <div className="flex gap-2 w-full">
-            {currentStep > 0 && !isFinalStep && (
+            {currentStep > 0 && (
               <Button
                 variant="outline"
                 onClick={handlePrevious}
@@ -303,30 +132,9 @@ const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: Onb
                 <span className="hidden xs:inline">Previous</span>
               </Button>
             )}
-            
-            {/* Step 0: Profile form - Next button only */}
-            {currentStep === 0 && (
-              <Button
-                onClick={handleNext}
-                disabled={(!step1Complete && !testMode) || isSaving}
-                className="gap-1.5 md:gap-2 flex-1 h-11 md:h-10 text-xs md:text-sm"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    Next
-                    <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                  </>
-                )}
-              </Button>
-            )}
 
             {/* Final step: Two options - Edit Profile or Finish */}
-            {isFinalStep && (
+            {isFinalStep ? (
               <>
                 <Button
                   variant="outline"
@@ -344,27 +152,14 @@ const OnboardingFlow = ({ open, onComplete, userProfile, testMode = false }: Onb
                   <CheckCircle2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 </Button>
               </>
-            )}
-
-            {/* Middle steps: Skip and Next */}
-            {currentStep > 0 && currentStep < steps.length - 1 && (
-              <>
-                <Button
-                  variant="ghost"
-                  onClick={onComplete}
-                  className="gap-1 md:gap-2 h-11 md:h-10 text-xs md:text-sm"
-                  size="sm"
-                >
-                  Skip
-                </Button>
-                <Button
-                  onClick={handleNext}
-                  className="gap-1.5 md:gap-2 flex-1 h-11 md:h-10 text-xs md:text-sm"
-                >
-                  Next
-                  <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                </Button>
-              </>
+            ) : (
+              <Button
+                onClick={handleNext}
+                className="gap-1.5 md:gap-2 flex-1 h-11 md:h-10 text-xs md:text-sm"
+              >
+                Next
+                <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              </Button>
             )}
           </div>
         </DialogFooter>

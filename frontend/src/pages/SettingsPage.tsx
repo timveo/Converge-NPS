@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { ChevronLeft, Loader2, ChevronDown, Phone, Shield, Mail, Smartphone, LogOut } from "lucide-react";
+import InstallAppDialog from "@/components/InstallAppDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 const MILITARY_RANKS = [
   // Navy Officer
@@ -52,7 +54,8 @@ const ACCELERATION_INTERESTS = [
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const location = useLocation();
+  const { user, logout, updateUser } = useAuth();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     first_name: "",
@@ -71,39 +74,56 @@ export default function SettingsPage() {
   const [phone, setPhone] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [email, setEmail] = useState("");
-  const [profileOpen, setProfileOpen] = useState(false);
+  // Check if we should open profile section from navigation state
+  const openProfileFromNav = (location.state as { openProfile?: boolean })?.openProfile ?? false;
+  const [profileOpen, setProfileOpen] = useState(openProfileFromNav);
   const [interestsOpen, setInterestsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
 
   // Store original values to detect changes
   const [originalFormData, setOriginalFormData] = useState(formData);
   const [originalInterests, setOriginalInterests] = useState<string[]>([]);
 
+  // Track original privacy settings for change detection
+  const [originalPrivacy, setOriginalPrivacy] = useState({ allowQrScan: true, shareEmail: true });
+  const [originalPhone, setOriginalPhone] = useState("");
+
   useEffect(() => {
     if (!user) return;
 
+    // Parse fullName into first and last name
+    const nameParts = (user.fullName || "").split(' ');
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(' ') || "";
+
     const nextForm = {
-      first_name: user.fullName?.split(' ')[0] || "",
-      last_name: user.fullName?.split(' ').slice(1).join(' ') || "",
-      rank: "",
+      first_name: firstName,
+      last_name: lastName,
+      rank: user.rank || "",
       role: user.role || "",
       department: user.department || "",
       organization: user.organization || "",
       bio: user.bio || "",
-      linkedin_url: "",
-      website_url: "",
+      linkedin_url: user.linkedinUrl || "",
+      website_url: user.websiteUrl || "",
     };
 
     const nextInterests = user.accelerationInterests || [];
+    const nextShareEmail = !user.privacy?.hideContactInfo;
+    const nextAllowQrScan = user.privacy?.allowQrScanning !== false;
+    const nextPhone = user.phone || "";
 
     setFormData(nextForm);
     setOriginalFormData(nextForm);
     setInterests(nextInterests);
     setOriginalInterests(nextInterests);
     setEmail(user.email || "");
-    setPhone(user.phone || "");
-    setShareEmail(!user.privacy?.hideContactInfo);
-    setAllowQrScan(user.privacy?.allowQrScanning !== false);
+    setPhone(nextPhone);
+    setOriginalPhone(nextPhone);
+    setShareEmail(nextShareEmail);
+    setAllowQrScan(nextAllowQrScan);
+    setOriginalPrivacy({ allowQrScan: nextAllowQrScan, shareEmail: nextShareEmail });
   }, [user]);
 
   const toggleInterest = (interest: string) => {
@@ -124,7 +144,13 @@ export default function SettingsPage() {
       interests.length !== originalInterests.length ||
       interests.some(i => !originalInterests.includes(i));
 
-    return formChanged || interestsChanged;
+    const phoneChanged = phone !== originalPhone;
+
+    const privacyChanged =
+      allowQrScan !== originalPrivacy.allowQrScan ||
+      shareEmail !== originalPrivacy.shareEmail;
+
+    return formChanged || interestsChanged || phoneChanged || privacyChanged;
   };
 
   const calculateProfileCompletion = () => {
@@ -168,16 +194,97 @@ export default function SettingsPage() {
       return;
     }
 
+    // Normalize URLs - add https:// if missing protocol
+    let linkedinUrl = formData.linkedin_url.trim();
+    let websiteUrl = formData.website_url.trim();
+
+    if (linkedinUrl && !linkedinUrl.match(/^https?:\/\//i)) {
+      linkedinUrl = `https://${linkedinUrl}`;
+    }
+    if (websiteUrl && !websiteUrl.match(/^https?:\/\//i)) {
+      websiteUrl = `https://${websiteUrl}`;
+    }
+
+    // Update formData with normalized URLs for saving
+    const normalizedFormData = {
+      ...formData,
+      linkedin_url: linkedinUrl,
+      website_url: websiteUrl,
+    };
+
     setSaving(true);
 
-    // TODO: Implement actual profile update via API
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Combine first and last name for backend
+      const fullName = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim();
+
+      // Prepare profile update payload (camelCase for backend)
+      const profilePayload: Record<string, any> = {
+        fullName,
+        phone: phone || null,
+        rank: normalizedFormData.rank || null,
+        organization: normalizedFormData.organization || null,
+        department: normalizedFormData.department || null,
+        role: normalizedFormData.role || null,
+        bio: normalizedFormData.bio || null,
+        accelerationInterests: interests,
+        linkedinUrl: normalizedFormData.linkedin_url || null,
+        websiteUrl: normalizedFormData.website_url || null,
+      };
+
+      // Update profile
+      const profileResponse = await api.patch<{ message: string; profile: any }>('/users/me', profilePayload);
+
+      // Check if privacy settings changed
+      const privacyChanged =
+        allowQrScan !== originalPrivacy.allowQrScan ||
+        shareEmail !== originalPrivacy.shareEmail;
+
+      if (privacyChanged) {
+        // Update privacy settings separately
+        const privacyPayload = {
+          allowQrScanning: allowQrScan,
+          hideContactInfo: !shareEmail,
+        };
+        await api.patch<{ message: string; profile: any }>('/users/me/privacy', privacyPayload);
+      }
+
+      // Update local user state with new values
+      if (updateUser && profileResponse.profile) {
+        updateUser({
+          fullName,
+          phone: phone || null,
+          rank: normalizedFormData.rank || null,
+          organization: normalizedFormData.organization || user?.organization || "",
+          department: normalizedFormData.department || null,
+          role: normalizedFormData.role || user?.role || "",
+          bio: normalizedFormData.bio || null,
+          accelerationInterests: interests,
+          linkedinUrl: normalizedFormData.linkedin_url || null,
+          websiteUrl: normalizedFormData.website_url || null,
+          privacy: {
+            ...user?.privacy,
+            allowQrScanning: allowQrScan,
+            hideContactInfo: !shareEmail,
+            profileVisibility: user?.privacy?.profileVisibility || 'public',
+            allowMessaging: user?.privacy?.allowMessaging ?? true,
+          },
+        });
+      }
+
+      // Update original values to reflect saved state (with normalized URLs)
+      setOriginalFormData(normalizedFormData);
+      // Also update the form display with normalized URLs
+      setFormData(normalizedFormData);
+      setOriginalInterests([...interests]);
+      setOriginalPhone(phone);
+      setOriginalPrivacy({ allowQrScan, shareEmail });
+
       toast.success("Profile updated successfully");
-      navigate("/profile");
-    } catch (error) {
-      toast.error("Failed to update profile");
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      const errorMessage = error.response?.data?.error?.message || "Failed to update profile";
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -245,7 +352,7 @@ export default function SettingsPage() {
           {/* Profile Information */}
           <Collapsible open={profileOpen} onOpenChange={setProfileOpen}>
             <Card className="p-4 md:p-6 shadow-md border-border/50">
-              <CollapsibleTrigger className="flex items-center justify-between w-full">
+              <CollapsibleTrigger type="button" className="flex items-center justify-between w-full">
                 <h3 className="font-semibold text-sm md:text-lg text-foreground">Profile Information</h3>
                 <ChevronDown className={`h-4 w-4 md:h-5 md:w-5 text-muted-foreground transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
@@ -379,10 +486,10 @@ export default function SettingsPage() {
                     <Label htmlFor="linkedin_url" className="text-xs md:text-sm">LinkedIn URL</Label>
                     <Input
                       id="linkedin_url"
-                      type="url"
+                      type="text"
                       value={formData.linkedin_url}
                       onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
-                      placeholder="https://www.linkedin.com/in/yourprofile"
+                      placeholder="www.linkedin.com/in/yourprofile"
                       maxLength={200}
                       className="h-9 md:h-10 text-sm"
                     />
@@ -392,10 +499,10 @@ export default function SettingsPage() {
                     <Label htmlFor="website_url" className="text-xs md:text-sm">Personal/Company Website</Label>
                     <Input
                       id="website_url"
-                      type="url"
+                      type="text"
                       value={formData.website_url}
                       onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
-                      placeholder="https://www.yourwebsite.com"
+                      placeholder="www.yourwebsite.com"
                       maxLength={200}
                       className="h-9 md:h-10 text-sm"
                     />
@@ -424,7 +531,7 @@ export default function SettingsPage() {
           {/* Acceleration Interests */}
           <Collapsible open={interestsOpen} onOpenChange={setInterestsOpen}>
             <Card className="p-4 md:p-6 shadow-md border-border/50">
-              <CollapsibleTrigger className="flex items-center justify-between w-full">
+              <CollapsibleTrigger type="button" className="flex items-center justify-between w-full">
                 <h3 className="font-semibold text-sm md:text-lg text-foreground">Acceleration Interests</h3>
                 <ChevronDown className={`h-4 w-4 md:h-5 md:w-5 text-muted-foreground transition-transform duration-200 ${interestsOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
@@ -474,7 +581,7 @@ export default function SettingsPage() {
           {/* Privacy Settings */}
           <Collapsible open={privacyOpen} onOpenChange={setPrivacyOpen}>
             <Card className="p-4 md:p-6 shadow-md border-border/50">
-              <CollapsibleTrigger className="flex items-center justify-between w-full">
+              <CollapsibleTrigger type="button" className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <Shield className="h-4 w-4 md:h-5 md:w-5 text-accent" />
                   <h3 className="font-semibold text-sm md:text-lg text-foreground">Privacy Settings</h3>
@@ -533,11 +640,17 @@ export default function SettingsPage() {
                 type="button"
                 variant="outline"
                 size="sm"
+                onClick={() => setShowInstallDialog(true)}
               >
                 Install
               </Button>
             </div>
           </Card>
+
+          <InstallAppDialog
+            open={showInstallDialog}
+            onClose={() => setShowInstallDialog(false)}
+          />
 
           {hasChanges() && (
             <div className="flex gap-3 md:gap-4">

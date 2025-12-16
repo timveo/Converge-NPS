@@ -50,6 +50,15 @@ export const VerifyEmailSchema = z.object({
   token: z.string(),
 });
 
+export const TwoFactorSendSchema = z.object({
+  userId: z.string().uuid(),
+});
+
+export const TwoFactorVerifySchema = z.object({
+  userId: z.string().uuid(),
+  code: z.string().length(6).regex(/^\d{6}$/, 'Code must be 6 digits'),
+});
+
 // ===========================
 // Profile Schemas
 // ===========================

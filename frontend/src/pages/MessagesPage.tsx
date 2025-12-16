@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MessageCircle, Search, ChevronLeft } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useSocket } from '@/hooks/useSocket';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,15 +32,12 @@ interface Conversation {
 
 export default function MessagesPage() {
   const navigate = useNavigate();
+  const { socket, isConnected } = useSocket();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchConversations();
-  }, []);
-
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     try {
       const response = await api.get<{ success: boolean; data: Conversation[] }>('/messages/conversations');
       setConversations(response.data || []);
@@ -49,7 +47,40 @@ export default function MessagesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // Listen for new message notifications via Socket.IO
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = () => {
+      // Refresh conversations when a new message is received
+      fetchConversations();
+    };
+
+    socket.on('message_notification', handleNewMessage);
+    socket.on('new_message', handleNewMessage);
+
+    return () => {
+      socket.off('message_notification', handleNewMessage);
+      socket.off('new_message', handleNewMessage);
+    };
+  }, [socket, fetchConversations]);
+
+  // Polling fallback when Socket.IO is not connected
+  useEffect(() => {
+    if (isConnected) return;
+
+    // Poll every 5 seconds when socket is disconnected
+    const pollInterval = setInterval(fetchConversations, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [isConnected, fetchConversations]);
 
   const getDisplayName = (user: { fullName: string; organization?: string } | undefined) => {
     return user?.fullName || 'Unknown User';
