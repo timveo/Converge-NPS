@@ -392,8 +392,32 @@ export class ConnectionService {
 
   /**
    * Get connection by QR code data
+   * Supports multiple formats:
+   * 1. JSON format from QRCodeBadge: {type: "converge-nps-profile", id: <uuid>, v: 1}
+   * 2. Raw qrCodeData string from qr_codes table
+   * 3. Manual code (first 8 chars of user UUID)
    */
   static async getConnectionByQRCode(qrCodeData: string): Promise<{ userId: string } | null> {
+    // Try to parse as JSON (new format from QRCodeBadge)
+    try {
+      const parsed = JSON.parse(qrCodeData);
+      if (parsed.type === 'converge-nps-profile' && parsed.id) {
+        // Look up user directly by ID
+        const user = await prisma.profile.findUnique({
+          where: { id: parsed.id },
+          select: { id: true, allowQrScanning: true },
+        });
+
+        if (user && user.allowQrScanning !== false) {
+          return { userId: user.id };
+        }
+        return null;
+      }
+    } catch {
+      // Not JSON, continue with other lookup methods
+    }
+
+    // Try lookup by exact qrCodeData match in qr_codes table
     const qrCode = await prisma.qrCode.findFirst({
       where: {
         qrCodeData,
@@ -401,11 +425,28 @@ export class ConnectionService {
       },
     });
 
-    if (!qrCode) {
-      return null;
+    if (qrCode) {
+      return { userId: qrCode.userId };
     }
 
-    return { userId: qrCode.userId };
+    // Try lookup by manual code (first 8 chars of UUID, case-insensitive)
+    // Use raw SQL since Prisma doesn't support startsWith on UUID
+    if (qrCodeData.length >= 8 && qrCodeData.length <= 36) {
+      const manualCodePrefix = qrCodeData.substring(0, 8).toLowerCase();
+      const likePattern = `${manualCodePrefix}%`;
+      const users = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM profiles
+        WHERE LOWER(CAST(id AS TEXT)) LIKE ${likePattern}
+        AND (allow_qr_scanning IS NULL OR allow_qr_scanning = true)
+        LIMIT 1
+      `;
+
+      if (users.length > 0) {
+        return { userId: users[0].id };
+      }
+    }
+
+    return null;
   }
 
   /**
