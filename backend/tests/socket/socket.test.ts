@@ -7,26 +7,7 @@ import { Server } from 'socket.io';
 import { createServer, Server as HTTPServer } from 'http';
 import { io as Client, Socket as ClientSocket } from 'socket.io-client';
 import { sign } from 'jsonwebtoken';
-
-// Mock dependencies before importing socket module
-jest.mock('@prisma/client', () => {
-  const mockPrisma = {
-    conversationParticipant: {
-      findMany: jest.fn().mockResolvedValue([
-        { userId: 'user-1', user: { id: 'user-1', fullName: 'User 1' } },
-        { userId: 'user-2', user: { id: 'user-2', fullName: 'User 2' } },
-      ]),
-    },
-    message: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-    },
-    conversation: {
-      update: jest.fn(),
-    },
-  };
-  return { PrismaClient: jest.fn(() => mockPrisma) };
-});
+import prisma from '../../src/config/database';
 
 jest.mock('../../src/services/message.service', () => ({
   getConversationMessages: jest.fn(),
@@ -55,6 +36,12 @@ describe('Socket.IO Server', () => {
   });
 
   beforeEach((done) => {
+    // Set up default mock returns for prisma
+    (prisma.conversationParticipant.findMany as jest.Mock).mockResolvedValue([
+      { userId: 'user-1', user: { id: 'user-1', fullName: 'User 1' } },
+      { userId: 'user-2', user: { id: 'user-2', fullName: 'User 2' } },
+    ]);
+
     httpServer = createServer();
     io = initializeSocketServer(httpServer);
     httpServer.listen(() => {

@@ -54,6 +54,7 @@ jest.mock('../src/config/database', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      deleteMany: jest.fn(),
       count: jest.fn(),
     },
     message: {
@@ -215,6 +216,7 @@ jest.mock('@prisma/client', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      deleteMany: jest.fn(),
       count: jest.fn(),
     },
     message: {
