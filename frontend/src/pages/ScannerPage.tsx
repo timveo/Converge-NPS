@@ -69,6 +69,8 @@ export default function ScannerPage() {
   const [scanError, setScanError] = useState<{ title: string; message: string } | null>(null);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerRef = useRef<HTMLDivElement>(null);
+  const isScannerStoppingRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   // Track online/offline status
   useEffect(() => {
@@ -120,14 +122,37 @@ export default function ScannerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Cleanup scanner on unmount
+  // Track mounted state and cleanup scanner on unmount
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      if (html5QrCodeRef.current) {
-        html5QrCodeRef.current.stop().catch(() => {});
+      isMountedRef.current = false;
+      // Only stop if not already stopping
+      if (html5QrCodeRef.current && !isScannerStoppingRef.current) {
+        isScannerStoppingRef.current = true;
+        html5QrCodeRef.current.stop().catch(() => {}).finally(() => {
+          isScannerStoppingRef.current = false;
+        });
       }
     };
   }, []);
+
+  // Safe scanner stop function that prevents double stops
+  const stopScanner = async () => {
+    if (!html5QrCodeRef.current || isScannerStoppingRef.current) {
+      return;
+    }
+
+    isScannerStoppingRef.current = true;
+    try {
+      await html5QrCodeRef.current.stop();
+    } catch {
+      // Ignore errors - scanner may already be stopped
+    } finally {
+      isScannerStoppingRef.current = false;
+      html5QrCodeRef.current = null;
+    }
+  };
 
   const requestCameraAccess = async () => {
     try {
@@ -164,10 +189,15 @@ export default function ScannerPage() {
   useEffect(() => {
     if (scanStage !== 'scanning') return;
 
+    let cancelled = false;
+
     const initScanner = async () => {
       try {
         // Small delay to ensure DOM is ready
         await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Check if we were cancelled during the delay
+        if (cancelled || !isMountedRef.current) return;
 
         const html5QrCode = new Html5Qrcode("qr-scanner-container");
         html5QrCodeRef.current = html5QrCode;
@@ -179,7 +209,9 @@ export default function ScannerPage() {
             qrbox: { width: 250, height: 250 },
           },
           async (decodedText) => {
-            await handleScanSuccess(decodedText);
+            if (!cancelled && isMountedRef.current) {
+              await handleScanSuccess(decodedText);
+            }
           },
           () => {
             // Ignore errors during scanning (expected when no QR code in frame)
@@ -187,20 +219,33 @@ export default function ScannerPage() {
         );
       } catch (err) {
         console.error('Camera error:', err);
-        toast.error("Failed to access camera. Please allow camera permissions.");
-        setScanStage('idle');
+        if (!cancelled && isMountedRef.current) {
+          toast.error("Failed to access camera. Please allow camera permissions.");
+          setScanStage('idle');
+        }
       }
     };
 
     initScanner();
+
+    // Cleanup function for when scanStage changes or component unmounts
+    return () => {
+      cancelled = true;
+      // Stop the scanner when leaving scanning mode
+      if (html5QrCodeRef.current && !isScannerStoppingRef.current) {
+        isScannerStoppingRef.current = true;
+        html5QrCodeRef.current.stop().catch(() => {}).finally(() => {
+          isScannerStoppingRef.current = false;
+          html5QrCodeRef.current = null;
+        });
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanStage]);
 
   const handleScanSuccess = async (decodedText: string) => {
-    // Stop the scanner
-    if (html5QrCodeRef.current) {
-      await html5QrCodeRef.current.stop().catch(() => {});
-    }
+    // Stop the scanner safely
+    await stopScanner();
 
     try {
       const qrData = JSON.parse(decodedText);
@@ -472,20 +517,23 @@ export default function ScannerPage() {
     }
   };
 
-  const handleClose = () => {
-    if (html5QrCodeRef.current) {
-      html5QrCodeRef.current.stop().catch(() => {});
+  const handleClose = async () => {
+    // Stop scanner first, then update state
+    await stopScanner();
+
+    // Only update state if still mounted
+    if (isMountedRef.current) {
+      setScanStage('idle');
+      setSelectedIntents([]);
+      setNote("");
+      setReminderTime("");
+      setScannedData(null);
+      setProfileData(null);
+      setScanState('idle');
+      setScanError(null);
+      setShowManualEntry(false);
+      setManualCode("");
     }
-    setScanStage('idle');
-    setSelectedIntents([]);
-    setNote("");
-    setReminderTime("");
-    setScannedData(null);
-    setProfileData(null);
-    setScanState('idle');
-    setScanError(null);
-    setShowManualEntry(false);
-    setManualCode("");
   };
 
   const handleMessageUser = async () => {
@@ -1003,12 +1051,12 @@ export default function ScannerPage() {
             <Button
               variant="outline"
               className="w-full mb-2.5 md:mb-4 h-9 md:h-10 text-sm"
-              onClick={() => {
-                if (html5QrCodeRef.current) {
-                  html5QrCodeRef.current.stop().catch(() => {});
+              onClick={async () => {
+                await stopScanner();
+                if (isMountedRef.current) {
+                  setScanStage('idle');
+                  setShowManualEntry(true);
                 }
-                setScanStage('idle');
-                setShowManualEntry(true);
               }}
             >
               <Keyboard className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1.5 md:mr-2" />
