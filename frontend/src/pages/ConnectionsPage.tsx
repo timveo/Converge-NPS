@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { ChevronLeft, MessageSquare, CheckCircle2, Loader2, Trash2, Users, QrCode, Sparkles, Download, FileText, Bell, BellOff, Search, X, SlidersHorizontal, Lock, Edit, Save, BookOpen, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,9 +26,21 @@ import {
 import { api } from "@/lib/api";
 import { offlineDataCache } from "@/lib/offlineDataCache";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
+import { useDevice } from "@/hooks/useDeviceType";
 import { offlineQueue } from "@/lib/offlineQueue";
 import { useAuth } from "@/hooks/useAuth";
 import { OfflineDataBanner } from "@/components/OfflineDataBanner";
+
+// Lazy load desktop version
+const ConnectionsDesktopPage = lazy(() => import('./ConnectionsPage.desktop'));
+
+function ConnectionsSkeleton() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 interface Connection {
   id: string;
@@ -75,6 +87,22 @@ const USER_TYPES = [
 ];
 
 export default function ConnectionsPage() {
+  const { isDesktop } = useDevice();
+
+  // Render desktop version for desktop users
+  if (isDesktop) {
+    return (
+      <Suspense fallback={<ConnectionsSkeleton />}>
+        <ConnectionsDesktopPage />
+      </Suspense>
+    );
+  }
+
+  // Mobile/Tablet version
+  return <ConnectionsMobilePage />;
+}
+
+function ConnectionsMobilePage() {
   const { user } = useAuth();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);

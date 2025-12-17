@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useDevice } from '@/hooks/useDeviceType';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import {
   HelpCircle,
   Shield,
   ClipboardCheck,
+  Loader2,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Footer from '@/components/Footer';
@@ -26,7 +28,35 @@ import ThemeToggle from '@/components/ThemeToggle';
 import OnboardingFlow from '@/components/OnboardingFlow';
 import { OfflineDataBanner } from '@/components/OfflineDataBanner';
 
+// Lazy load desktop version
+const DashboardDesktopPage = lazy(() => import('./DashboardPage.desktop'));
+
+// Loading fallback for desktop
+function DashboardSkeleton() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
 export default function DashboardPage() {
+  const { isDesktop } = useDevice();
+
+  // Render desktop version for desktop users
+  if (isDesktop) {
+    return (
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardDesktopPage />
+      </Suspense>
+    );
+  }
+
+  // Mobile/Tablet version continues below
+  return <DashboardMobilePage />;
+}
+
+function DashboardMobilePage() {
   const { user, updateUser } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
 

@@ -1,9 +1,13 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import {
   Camera, CheckCircle, XCircle, AlertCircle, UserPlus,
-  RefreshCw, ChevronLeft
+  RefreshCw, ChevronLeft, Loader2
 } from "lucide-react";
+import { useDevice } from "@/hooks/useDeviceType";
+
+// Lazy load desktop version
+const StaffCheckinDesktopPage = lazy(() => import('./StaffCheckinPage.desktop'));
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -35,7 +39,31 @@ interface RecentCheckIn {
   checkedInAt: string;
 }
 
+function StaffCheckinSkeleton() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
 export default function StaffCheckinPage() {
+  const { isDesktop } = useDevice();
+
+  // Render desktop version for desktop users
+  if (isDesktop) {
+    return (
+      <Suspense fallback={<StaffCheckinSkeleton />}>
+        <StaffCheckinDesktopPage />
+      </Suspense>
+    );
+  }
+
+  // Mobile/Tablet version
+  return <StaffCheckinMobilePage />;
+}
+
+function StaffCheckinMobilePage() {
   const [scanning, setScanning] = useState(false);
   const [lastScan, _setLastScan] = useState<LastScan | null>(null);
   const [stats, setStats] = useState<Stats>({ total_registered: 0, checked_in: 0 });

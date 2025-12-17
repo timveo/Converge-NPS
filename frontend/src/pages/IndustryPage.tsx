@@ -1,8 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone, Users } from "lucide-react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone, Users } from "lucide-react";
+import { useDevice } from "@/hooks/useDeviceType";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { offlineDataCache } from "@/lib/offlineDataCache";
 import { OfflineDataBanner } from "@/components/OfflineDataBanner";
+
+// Lazy load desktop version
+const IndustryDesktopPage = lazy(() => import('./IndustryPage.desktop'));
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,7 +64,31 @@ interface IndustryPartner {
   pocRank?: string | null;
 }
 
+function IndustrySkeleton() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
 export default function IndustryPage() {
+  const { isDesktop } = useDevice();
+
+  // Render desktop version for desktop users
+  if (isDesktop) {
+    return (
+      <Suspense fallback={<IndustrySkeleton />}>
+        <IndustryDesktopPage />
+      </Suspense>
+    );
+  }
+
+  // Mobile/Tablet version
+  return <IndustryMobilePage />;
+}
+
+function IndustryMobilePage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [partners, setPartners] = useState<IndustryPartner[]>([]);
