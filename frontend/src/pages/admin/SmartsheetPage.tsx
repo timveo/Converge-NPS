@@ -50,6 +50,7 @@ const importOptions: Array<{ type: Exclude<ImportType, 'opportunities'>; label: 
 export default function SmartsheetPage() {
   const [importing, setImporting] = useState<ImportType | null>(null);
   const [importJobs, setImportJobs] = useState<ImportJob[]>(initialImportJobs);
+  const [exportingAttendees, setExportingAttendees] = useState(false);
 
   const handleImport = async (option: { type: ImportType; label: string }) => {
     setImporting(option.type);
@@ -83,6 +84,34 @@ export default function SmartsheetPage() {
       toast.error(error.response?.data?.error || `Failed to import ${option.label}`);
     } finally {
       setImporting(null);
+    }
+  };
+
+  const handleExportAttendees = async () => {
+    setExportingAttendees(true);
+    try {
+      const response = await api.post<
+        ApiResponse<{ total: number; added: number; updated: number; failed: number; errors?: Array<{ message?: string }> }>
+      >(
+        '/admin/smartsheet/export/attendees'
+      );
+      const result = response.data;
+
+      const summary =
+        `Export complete\n\n` +
+        `Total: ${result?.total ?? 0}\n` +
+        `Added: ${result?.added ?? 0}\n` +
+        `Updated: ${result?.updated ?? 0}\n` +
+        `Failed: ${result?.failed ?? 0}` +
+        (result?.errors && result.errors.length > 0
+          ? `\n\nErrors:\n${result.errors.slice(0, 3).map(e => e.message).join('\n')}`
+          : '');
+
+      toast.success(summary.replace(/\n/g, ' '));
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to export attendees');
+    } finally {
+      setExportingAttendees(false);
     }
   };
 
@@ -171,7 +200,12 @@ export default function SmartsheetPage() {
               </div>
             </CardHeader>
             <CardContent className="p-3 md:p-6 pt-0 space-y-2 md:space-y-3">
-              <Button variant="outline" className="w-full h-10 md:h-11 text-sm">
+              <Button
+                variant="outline"
+                className="w-full h-10 md:h-11 text-sm"
+                onClick={handleExportAttendees}
+                disabled={exportingAttendees || importing !== null}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Export Attendees
               </Button>
