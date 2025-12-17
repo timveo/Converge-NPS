@@ -290,8 +290,8 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-muted">
-      {/* Header - Navy gradient matching the design */}
-      <header className="bg-gradient-navy text-primary-foreground px-4 py-3 shrink-0">
+      {/* Header - Navy gradient matching the design - fixed at top */}
+      <header className="bg-gradient-navy text-primary-foreground px-4 py-3 shrink-0 sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -319,8 +319,8 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Messages Area - pb-24 to account for fixed input at bottom */}
+      <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <p>No messages yet. Start the conversation!</p>
@@ -387,9 +387,9 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="bg-card border-t border-border p-4 shrink-0 safe-bottom">
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+      {/* Input Area - Fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-40">
+        <form onSubmit={handleSendMessage} className="flex items-center gap-2 max-w-screen-lg mx-auto">
           <input
             type="text"
             value={newMessage}
@@ -398,7 +398,7 @@ export default function ChatPage() {
               handleTyping();
             }}
             placeholder="Type a message..."
-            className="flex-1 px-4 py-3 bg-muted border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            className="flex-1 px-4 py-3 bg-muted border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
           />
           <Button
             type="submit"
