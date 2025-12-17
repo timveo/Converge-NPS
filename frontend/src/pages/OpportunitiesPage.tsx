@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Plus, ChevronLeft, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { api } from "@/lib/api";
+import { offlineDataCache } from '@/lib/offlineDataCache';
+import { OfflineDataBanner } from '@/components/OfflineDataBanner';
 
 // Source types
 const SOURCE_TYPES = ["NPS", "Military/Gov"];
@@ -127,12 +130,14 @@ export default function OpportunitiesPage() {
 
   const loadData = async () => {
     try {
-      setLoading(true);
+      if (projects.length === 0 && opportunities.length === 0) {
+        setLoading(true);
+      }
 
       // Fetch NPS projects
       const [projectsRes, oppsRes] = await Promise.all([
-        api.get('/projects').catch(() => ({ data: { data: [] } })),
-        api.get('/opportunities').catch(() => ({ data: { data: [] } }))
+        api.get('/projects'),
+        api.get('/opportunities')
       ]);
 
       const projectsData = (projectsRes as any).data?.data || (projectsRes as any).data || [];
@@ -140,8 +145,34 @@ export default function OpportunitiesPage() {
 
       setProjects(projectsData);
       setOpportunities(oppsData);
+
+      const writeCache = () => {
+        void Promise.all([
+          offlineDataCache.set('projects', projectsData),
+          offlineDataCache.set('opportunities', oppsData),
+        ]).catch((e) => console.error('Failed to write opportunities cache', e));
+      };
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(writeCache);
+      } else {
+        setTimeout(writeCache, 0);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
+
+      try {
+        const [cachedProjects, cachedOpps] = await Promise.all([
+          offlineDataCache.get<Project[]>('projects'),
+          offlineDataCache.get<Opportunity[]>('opportunities'),
+        ]);
+
+        if (cachedProjects?.data || cachedOpps?.data) {
+          setProjects(cachedProjects?.data ?? []);
+          setOpportunities(cachedOpps?.data ?? []);
+        }
+      } catch {
+        // ignore
+      }
     } finally {
       setLoading(false);
     }
@@ -413,6 +444,10 @@ export default function OpportunitiesPage() {
           </div>
         </header>
 
+        <div className="pt-3 md:pt-4">
+          <OfflineDataBanner />
+        </div>
+
         <main className="py-3 md:py-6 space-y-4">
           {/* Search Input */}
           <div className="relative">
@@ -502,9 +537,23 @@ export default function OpportunitiesPage() {
           {/* Unified List */}
           <div className="space-y-4">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Loading opportunities...</p>
+              <div className="space-y-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Card key={i} className="p-4 md:p-6">
+                    <div className="mb-3">
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                      <Skeleton className="h-6 w-24 rounded-full" />
+                    </div>
+                  </Card>
+                ))}
               </div>
             ) : filteredItems.length === 0 ? (
               <Card className="p-12 text-center">

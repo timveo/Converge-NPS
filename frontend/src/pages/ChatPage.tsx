@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { offlineDataCache } from '@/lib/offlineDataCache';
+import { offlineQueue } from '@/lib/offlineQueue';
 
 interface Message {
   id: string;
@@ -59,19 +61,31 @@ export default function ChatPage() {
   // Fetch conversation and messages
   useEffect(() => {
     if (!conversationId) return;
+    const cid = conversationId;
 
     const fetchData = async () => {
       try {
-        const messagesRes = await api.get<{ success: boolean; data: Message[]; conversation: Conversation }>(`/messages/conversations/${conversationId}/messages`);
+        const messagesRes = await api.get<{ success: boolean; data: Message[]; conversation: Conversation }>(`/messages/conversations/${cid}/messages`);
         setMessages(messagesRes.data || []);
         if (messagesRes.conversation) {
           setConversation(messagesRes.conversation);
         }
 
-        await api.post(`/messages/conversations/${conversationId}/read`);
+        void offlineDataCache.setThread(cid, {
+          conversation: messagesRes.conversation,
+          messages: messagesRes.data || [],
+        }).catch((e) => console.error('Failed to write message thread cache', e));
+
+        await api.post(`/messages/conversations/${cid}/read`);
         setIsLoading(false);
       } catch (error) {
         console.error('Failed to fetch conversation', error);
+
+        const cached = await offlineDataCache.getThread<{ conversation: Conversation | null; messages: Message[] }>(cid);
+        if (cached?.data) {
+          setConversation(cached.data.conversation);
+          setMessages(cached.data.messages || []);
+        }
         setIsLoading(false);
       }
     };
@@ -209,12 +223,32 @@ export default function ChatPage() {
       socket.emit('typing_stop', { conversationId });
     } else {
       try {
+        if (!navigator.onLine) {
+          await offlineQueue.add(user!.id, 'message', {
+            conversationId,
+            content: tempMessage.content,
+          });
+          return;
+        }
         await api.post('/messages', {
           conversationId,
           content: tempMessage.content,
         });
       } catch (error) {
         console.error('Failed to send message', error);
+        // If offline or network error, keep the temp message and queue it
+        if (!navigator.onLine || !((error as any)?.response)) {
+          try {
+            await offlineQueue.add(user!.id, 'message', {
+              conversationId,
+              content: tempMessage.content,
+            });
+            return;
+          } catch {
+            // fall through
+          }
+        }
+
         setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
       }
     }

@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
 import { AppLayout } from '@/components/layout/AppLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
@@ -42,7 +41,6 @@ import StaffCheckinPage from '@/pages/staff/StaffCheckinPage';
 function App() {
   return (
     <>
-      <OfflineIndicator />
       <Routes>
         {/* Public routes */}
         <Route path="/auth" element={<AuthPage />} />
