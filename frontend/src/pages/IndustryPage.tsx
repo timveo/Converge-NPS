@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone } from "lucide-react";
+import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone, Users } from "lucide-react";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { offlineDataCache } from "@/lib/offlineDataCache";
 import { OfflineDataBanner } from "@/components/OfflineDataBanner";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { RecommendationCard } from "@/components/RecommendationCard";
@@ -47,6 +48,16 @@ interface IndustryPartner {
   team_members: any;
   hide_contact_info: boolean | null;
   organization_type?: string | null;
+  poc_user_id?: string | null;
+  poc_first_name?: string | null;
+  poc_last_name?: string | null;
+  poc_email?: string | null;
+  poc_rank?: string | null;
+  pocUserId?: string | null;
+  pocFirstName?: string | null;
+  pocLastName?: string | null;
+  pocEmail?: string | null;
+  pocRank?: string | null;
 }
 
 export default function IndustryPage() {
@@ -92,19 +103,22 @@ export default function IndustryPage() {
   const isFavorite = (partnerId: string) => favorites.has(partnerId);
 
   const handleContact = async (partner: IndustryPartner) => {
-    if (!partner.primary_contact_email || partner.hide_contact_info) {
-      console.info("Contact information not available");
+    const pocUserId = partner.pocUserId || partner.poc_user_id;
+    
+    if (!pocUserId) {
+      toast.error("POC is not registered in app");
       return;
     }
 
     try {
-      const response = await api.post('/conversations', { email: partner.primary_contact_email });
+      const response = await api.post('/messages/conversations', { participantId: pocUserId });
       const conversation = (response as any).data?.data || (response as any).data;
       if (conversation?.id) {
         navigate(`/messages/${conversation.id}`);
       }
     } catch (error) {
       console.error('Failed to start conversation:', error);
+      toast.error("Failed to start conversation");
     }
   };
 
@@ -171,13 +185,18 @@ export default function IndustryPage() {
         primary_contact_title: p.primaryContactTitle || p.primary_contact_title,
         primary_contact_email: p.primaryContactEmail || p.primary_contact_email,
         primary_contact_phone: p.primaryContactPhone || p.primary_contact_phone,
-        technology_focus_areas: p.technologyFocusAreas || p.technology_focus_areas || [],
+        technology_focus_areas: p.technologyFocusAreas || p.technology_focus_areas || p.researchAreas || p.research_areas || [],
         dod_sponsors: p.dodSponsors || p.dod_sponsors,
         seeking_collaboration: p.seekingCollaboration || p.seeking_collaboration || [],
         booth_location: p.boothLocation || p.booth_location,
         team_members: p.teamMembers || p.team_members,
         hide_contact_info: p.hideContactInfo || p.hide_contact_info,
-        organization_type: p.organizationType || p.organization_type
+        organization_type: p.organizationType || p.organization_type || p.partnershipType || p.partnership_type,
+        poc_user_id: p.pocUserId || p.poc_user_id,
+        poc_first_name: p.pocFirstName || p.poc_first_name,
+        poc_last_name: p.pocLastName || p.poc_last_name,
+        poc_email: p.pocEmail || p.poc_email,
+        poc_rank: p.pocRank || p.poc_rank
       }));
       setPartners(mappedPartners);
 
@@ -575,6 +594,18 @@ export default function IndustryPage() {
                           favorited ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
                         )} />
                       </Button>
+                    </div>
+
+                    {/* POC Info */}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-3">
+                      <Users className="h-4 w-4 shrink-0" />
+                      <span className="truncate">
+                        {(partner.poc_rank || partner.pocRank) && <span className="font-medium">{partner.poc_rank || partner.pocRank}</span>}
+                        {(partner.poc_rank || partner.pocRank) && (partner.poc_first_name || partner.pocFirstName || partner.poc_last_name || partner.pocLastName) && ' '}
+                        {(partner.poc_first_name || partner.pocFirstName || partner.poc_last_name || partner.pocLastName)
+                          ? `${partner.poc_first_name || partner.pocFirstName || ''} ${partner.poc_last_name || partner.pocLastName || ''}`.trim()
+                          : 'Unknown'}
+                      </span>
                     </div>
 
                     {/* Expandable content */}

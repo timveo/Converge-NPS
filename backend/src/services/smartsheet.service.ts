@@ -936,7 +936,8 @@ export async function clearFailedSyncs(): Promise<number> {
 
 // Helper function to get cell value by column name
 function getCellValue(row: SmartsheetRow, columns: any[], columnName: string): any {
-  const column = columns.find(col => col.title === columnName);
+  const normalizedName = columnName.toLowerCase().trim();
+  const column = columns.find(col => col.title?.toLowerCase().trim() === normalizedName);
   if (!column) return null;
 
   const cell = row.cells.find(c => c.columnId === column.id);
@@ -1139,6 +1140,7 @@ export async function importProjects(): Promise<ImportResult> {
 
     const sheet = await fetchSheetData(sheetId);
 
+
     for (const row of sheet.rows) {
       try {
         const title = getCellValue(row, sheet.columns, 'Project Title') || getCellValue(row, sheet.columns, 'Title') || getCellValue(row, sheet.columns, 'Collaborative Project 1 - Title');
@@ -1152,6 +1154,11 @@ export async function importProjects(): Promise<ImportResult> {
         const researchAreas = parseArray(getCellValue(row, sheet.columns, 'Research Areas'));
         const seeking = parseArray(getCellValue(row, sheet.columns, 'Seeking') || getCellValue(row, sheet.columns, 'Looking For'));
         const students = parseArray(getCellValue(row, sheet.columns, 'Students') || getCellValue(row, sheet.columns, 'Team Members') || getCellValue(row, sheet.columns, 'Advisor(s)'));
+        const pocFullName = getCellValue(row, sheet.columns, 'POC Full Name') || getCellValue(row, sheet.columns, 'POC Name');
+        const { firstName: pocFirstName, lastName: pocLastName } = splitFullName(pocFullName || '');
+        const pocEmail = getCellValue(row, sheet.columns, 'POC Email') || getCellValue(row, sheet.columns, 'POC E-mail');
+        const pocRank = getCellValue(row, sheet.columns, 'Rank/Title') || getCellValue(row, sheet.columns, 'POC Rank') || getCellValue(row, sheet.columns, 'POC Title');
+        
 
         // Validation
         if (!title) {
@@ -1166,39 +1173,18 @@ export async function importProjects(): Promise<ImportResult> {
           continue;
         }
 
-        // Find or create PI profile
+        // Try to find existing PI profile by email (do not create new profiles)
         let piId: string | null = null;
+        const effectivePiEmail = piEmail || pocEmail;
 
-        if (piEmail && isValidEmail(piEmail)) {
-          let piProfile = await prisma.profile.findUnique({
-            where: { email: piEmail },
+        if (effectivePiEmail && isValidEmail(effectivePiEmail)) {
+          const piProfile = await prisma.profile.findUnique({
+            where: { email: effectivePiEmail.toLowerCase() },
           });
-
-          if (!piProfile && piName) {
-            // Create placeholder profile for PI
-            piProfile = await prisma.profile.create({
-              data: {
-                id: randomUUID(),
-                fullName: piName,
-                email: piEmail,
-                organization: department || undefined,
-                profileVisibility: 'public',
-                allowQrScanning: true,
-                allowMessaging: true,
-                hideContactInfo: false,
-              },
-            });
-          }
 
           if (piProfile) {
             piId = piProfile.id;
           }
-        }
-
-        if (!piId) {
-          result.errors.push({ row: row.rowNumber, message: 'Could not find or create PI profile', data: { title, piEmail } });
-          result.failed++;
-          continue;
         }
 
         // Map research stage to ProjectStage enum
@@ -1222,6 +1208,17 @@ export async function importProjects(): Promise<ImportResult> {
           },
         });
 
+        // Try to find POC user by email if provided
+        let pocUserId: string | null = null;
+        if (pocEmail && isValidEmail(pocEmail)) {
+          const pocUser = await prisma.profile.findUnique({
+            where: { email: pocEmail.toLowerCase() },
+          });
+          if (pocUser) {
+            pocUserId = pocUser.id;
+          }
+        }
+
         const projectData = {
           title,
           description,
@@ -1233,6 +1230,11 @@ export async function importProjects(): Promise<ImportResult> {
           researchAreas,
           seeking,
           students,
+          pocUserId,
+          pocFirstName: pocFirstName || null,
+          pocLastName: pocLastName || null,
+          pocEmail: pocEmail || null,
+          pocRank: pocRank || null,
         };
 
         if (existing) {
@@ -1307,6 +1309,10 @@ export async function importOpportunities(): Promise<ImportResult> {
         const location = getCellValue(row, sheet.columns, 'Location');
         const duration = getCellValue(row, sheet.columns, 'Duration');
         const dodAlignment = parseArray(getCellValue(row, sheet.columns, 'DoD Alignment') || getCellValue(row, sheet.columns, 'DoD Priority Areas'));
+        const pocFullName = getCellValue(row, sheet.columns, 'POC Full Name') || getCellValue(row, sheet.columns, 'POC Name');
+        const { firstName: pocFirstName, lastName: pocLastName } = splitFullName(pocFullName || '');
+        const pocEmail = getCellValue(row, sheet.columns, 'POC Email') || getCellValue(row, sheet.columns, 'POC E-mail');
+        const pocRank = getCellValue(row, sheet.columns, 'Rank/Title') || getCellValue(row, sheet.columns, 'POC Rank') || getCellValue(row, sheet.columns, 'POC Title');
 
         // Validation
         if (!title) {
@@ -1341,6 +1347,17 @@ export async function importOpportunities(): Promise<ImportResult> {
           },
         });
 
+        // Try to find POC user by email if provided
+        let pocUserId: string | null = null;
+        if (pocEmail) {
+          const pocUser = await prisma.profile.findUnique({
+            where: { email: pocEmail.toLowerCase() },
+          });
+          if (pocUser) {
+            pocUserId = pocUser.id;
+          }
+        }
+
         const opportunityData = {
           title,
           description,
@@ -1355,6 +1372,11 @@ export async function importOpportunities(): Promise<ImportResult> {
           dodAlignment,
           status: 'active' as any,
           featured: false,
+          pocUserId,
+          pocFirstName: pocFirstName || null,
+          pocLastName: pocLastName || null,
+          pocEmail: pocEmail || null,
+          pocRank: pocRank || null,
         };
 
         if (existing) {
@@ -1420,6 +1442,10 @@ export async function importPartners(): Promise<ImportResult> {
         const contactEmail = getCellValue(row, sheet.columns, 'Contact Email');
         const contactPhone = getCellValue(row, sheet.columns, 'Contact Phone');
         const dodSponsors = getCellValue(row, sheet.columns, 'DoD Sponsors') || getCellValue(row, sheet.columns, 'Government Sponsors');
+        const pocFullName = getCellValue(row, sheet.columns, 'POC Full Name') || getCellValue(row, sheet.columns, 'POC Name');
+        const { firstName: pocFirstName, lastName: pocLastName } = splitFullName(pocFullName || '');
+        const pocEmail = getCellValue(row, sheet.columns, 'POC Email') || getCellValue(row, sheet.columns, 'POC E-mail');
+        const pocRank = getCellValue(row, sheet.columns, 'Rank/Title') || getCellValue(row, sheet.columns, 'POC Rank') || getCellValue(row, sheet.columns, 'POC Title');
 
         // Validation
         if (!companyName) {
@@ -1440,15 +1466,29 @@ export async function importPartners(): Promise<ImportResult> {
           where: { name: companyName },
         });
 
+        // Try to find POC user by email if provided
+        let pocUserId: string | null = null;
+        if (pocEmail) {
+          const pocUser = await prisma.profile.findUnique({
+            where: { email: pocEmail.toLowerCase() },
+          });
+          if (pocUser) {
+            pocUserId = pocUser.id;
+          }
+        }
+
         const partnerData = {
           name: companyName,
           description,
           partnershipType: organizationType,
           websiteUrl: website,
           researchAreas: technologyFocus,
-          contactName,
-          contactEmail,
           isFeatured: false,
+          pocUserId,
+          pocFirstName: pocFirstName || null,
+          pocLastName: pocLastName || null,
+          pocEmail: pocEmail || null,
+          pocRank: pocRank || null,
         };
 
         if (partner) {

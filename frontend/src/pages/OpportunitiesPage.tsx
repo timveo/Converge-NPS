@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { api } from "@/lib/api";
 import { offlineDataCache } from '@/lib/offlineDataCache';
 import { OfflineDataBanner } from '@/components/OfflineDataBanner';
+import { toast } from "sonner";
 
 // Source types
 const SOURCE_TYPES = ["NPS", "Military/Gov"];
@@ -41,6 +42,17 @@ interface Project {
   interested?: number;
   pi_id?: string;
   created_at: string;
+  // POC fields - support both camelCase (API) and snake_case
+  poc_user_id?: string;
+  poc_first_name?: string;
+  poc_last_name?: string;
+  poc_email?: string;
+  poc_rank?: string;
+  pocUserId?: string;
+  pocFirstName?: string;
+  pocLastName?: string;
+  pocEmail?: string;
+  pocRank?: string;
   profiles?: {
     id: string;
     full_name: string;
@@ -64,6 +76,17 @@ interface Opportunity {
   requirements?: string;
   benefits?: string;
   sponsor_contact_id?: string;
+  // POC fields - support both camelCase (API) and snake_case
+  poc_user_id?: string;
+  poc_first_name?: string;
+  poc_last_name?: string;
+  poc_email?: string;
+  poc_rank?: string;
+  pocUserId?: string;
+  pocFirstName?: string;
+  pocLastName?: string;
+  pocEmail?: string;
+  pocRank?: string;
   created_at: string;
 }
 
@@ -106,21 +129,22 @@ export default function OpportunitiesPage() {
     });
   };
 
-  const handleContact = async (e: React.MouseEvent, contactId?: string) => {
+  const handleContact = async (e: React.MouseEvent, pocUserId?: string | null) => {
     e.stopPropagation();
-    if (!contactId) {
-      console.info("Contact information not available");
+    if (!pocUserId) {
+      toast.error("POC is not registered in app");
       return;
     }
 
     try {
-      const response = await api.post('/conversations', { participantId: contactId });
+      const response = await api.post('/messages/conversations', { participantId: pocUserId });
       const conversation = (response as any).data?.data || (response as any).data;
       if (conversation?.id) {
         navigate(`/messages/${conversation.id}`);
       }
     } catch (error) {
       console.error('Failed to start conversation:', error);
+      toast.error("Failed to start conversation");
     }
   };
 
@@ -617,7 +641,13 @@ export default function OpportunitiesPage() {
                       <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
                         <div className="flex items-center gap-2 min-w-0">
                           <Users className="h-4 w-4 shrink-0" />
-                          <span className="truncate">{item.profiles?.full_name || 'Unknown'}</span>
+                          <span className="truncate">
+                            {(item.poc_rank || item.pocRank) && <span className="font-medium">{item.poc_rank || item.pocRank}</span>}
+                            {(item.poc_rank || item.pocRank) && (item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName) && ' '}
+                            {(item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName)
+                              ? `${item.poc_first_name || item.pocFirstName || ''} ${item.poc_last_name || item.pocLastName || ''}`.trim()
+                              : item.profiles?.full_name || 'Unknown'}
+                          </span>
                           {item.department && (
                             <span className="text-xs hidden md:inline">• {item.department}</span>
                           )}
@@ -700,7 +730,7 @@ export default function OpportunitiesPage() {
                       <div className="flex items-center gap-2 mt-3">
                         <Button
                           className="flex-1 h-11 md:h-10 text-sm gap-2"
-                          onClick={(e) => handleContact(e, item.pi_id)}
+                          onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.pi_id)}
                         >
                           <MessageSquare className="h-4 w-4" />
                           Contact
@@ -765,6 +795,17 @@ export default function OpportunitiesPage() {
                         </div>
                       )}
 
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                        <Users className="h-4 w-4 shrink-0" />
+                        <span className="truncate">
+                          {(item.poc_rank || item.pocRank) && <span className="font-medium">{item.poc_rank || item.pocRank}</span>}
+                          {(item.poc_rank || item.pocRank) && (item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName) && ' '}
+                          {(item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName)
+                            ? `${item.poc_first_name || item.pocFirstName || ''} ${item.poc_last_name || item.pocLastName || ''}`.trim()
+                            : 'Unknown'}
+                        </span>
+                      </div>
+
                       <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
                         <div className="flex items-center gap-3">
                           {item.location && <span className="text-xs">{item.location}</span>}
@@ -802,7 +843,7 @@ export default function OpportunitiesPage() {
                       <div className="flex items-center gap-2 mt-3">
                         <Button
                           className="flex-1 h-11 md:h-10 text-sm gap-2"
-                          onClick={(e) => handleContact(e, item.sponsor_contact_id)}
+                          onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.sponsor_contact_id)}
                         >
                           <MessageSquare className="h-4 w-4" />
                           Contact
