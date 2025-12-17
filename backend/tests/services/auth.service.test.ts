@@ -285,21 +285,18 @@ describe('AuthService', () => {
 
   describe('resetPassword', () => {
     it('should reset password successfully', async () => {
-      (prismaMock.passwordReset.findFirst as jest.Mock).mockResolvedValue({
-        userId: 'user-123',
-        tokenHash: 'hashed-token',
-        expiresAt: new Date(Date.now() + 3600000),
-        used: false,
-      });
+      // Service uses $queryRaw to find reset token
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ user_id: 'user-123' }]);
       (prisma.userPassword.update as jest.Mock).mockResolvedValue({});
-      (prismaMock.passwordReset.update as jest.Mock).mockResolvedValue({});
+      (prisma.$executeRaw as jest.Mock).mockResolvedValue(1);
       (prisma.userSession.deleteMany as jest.Mock).mockResolvedValue({ count: 1 });
 
       await expect(AuthService.resetPassword('valid-token', 'NewSecurePass123!')).resolves.not.toThrow();
     });
 
     it('should throw UnauthorizedError for invalid token', async () => {
-      (prismaMock.passwordReset.findFirst as jest.Mock).mockResolvedValue(null);
+      // Service uses $queryRaw, returns empty array for invalid token
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([]);
 
       await expect(AuthService.resetPassword('invalid-token', 'NewPass123!')).rejects.toThrow(
         'Invalid or expired reset token'
@@ -307,14 +304,10 @@ describe('AuthService', () => {
     });
 
     it('should invalidate all sessions after password reset', async () => {
-      (prismaMock.passwordReset.findFirst as jest.Mock).mockResolvedValue({
-        userId: 'user-123',
-        tokenHash: 'hashed-token',
-        expiresAt: new Date(Date.now() + 3600000),
-        used: false,
-      });
+      // Service uses $queryRaw to find reset token
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ user_id: 'user-123' }]);
       (prisma.userPassword.update as jest.Mock).mockResolvedValue({});
-      (prismaMock.passwordReset.update as jest.Mock).mockResolvedValue({});
+      (prisma.$executeRaw as jest.Mock).mockResolvedValue(1);
       (prisma.userSession.deleteMany as jest.Mock).mockResolvedValue({ count: 1 });
 
       await AuthService.resetPassword('valid-token', 'NewSecurePass123!');
