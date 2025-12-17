@@ -100,6 +100,7 @@ interface SmartsheetSheet {
     id: string;
     title: string;
     type: string;
+    systemColumnType?: string; // System columns like AUTO_NUMBER, CREATED_DATE, etc.
   }>;
   rows: SmartsheetRow[];
 }
@@ -336,8 +337,22 @@ function normalizeEmail(value: unknown): string {
 
 function findColumnIdByTitles(columns: SmartsheetSheet['columns'], titles: string[]): string | null {
   const normalizedTargets = titles.map(t => t.trim().toLowerCase());
-  const col = columns.find(c => normalizedTargets.includes(c.title.trim().toLowerCase()));
+  // Filter out system columns - they cannot be written to
+  const col = columns.find(c => 
+    !c.systemColumnType && normalizedTargets.includes(c.title.trim().toLowerCase())
+  );
   return col?.id ?? null;
+}
+
+function splitFullName(fullName: string | null | undefined): { firstName: string; lastName: string } {
+  if (!fullName) return { firstName: '', lastName: '' };
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: '' };
+  }
+  const lastName = parts.pop() || '';
+  const firstName = parts.join(' ');
+  return { firstName, lastName };
 }
 
 function buildCellsForAttendeeProfile(profile: any, columns: SmartsheetSheet['columns']) {
@@ -350,16 +365,23 @@ function buildCellsForAttendeeProfile(profile: any, columns: SmartsheetSheet['co
     cells.push({ columnId, value });
   };
 
+  const { firstName, lastName } = splitFullName(profile.fullName);
+
   setIfPresent(['Profile ID', 'User ID', 'Id', 'ID'], profile.id);
   setIfPresent(['Full Name', 'Name'], profile.fullName);
+  setIfPresent(['First Name', 'FirstName', 'First NAme'], firstName);
+  setIfPresent(['Last Name', 'LastName'], lastName);
   setIfPresent(['Email', 'Email Address'], profile.email);
-  setIfPresent(['Phone', 'Phone Number'], profile.phone || '');
-  setIfPresent(['Rank', 'Rank/Title'], profile.rank || '');
-  setIfPresent(['Organization', 'Company'], profile.organization || '');
+  setIfPresent(['Phone', 'Phone Number', 'Phone #', 'Mobile', 'Cell'], profile.phone || '');
+  setIfPresent(['Rank', 'Rank/Title', 'Title'], profile.rank || '');
+  setIfPresent(['Organization', 'Organizations', 'Company'], profile.organization || '');
   setIfPresent(['Department'], profile.department || '');
-  setIfPresent(['Role', 'Position', 'Participant Type'], profile.role || '');
-  setIfPresent(['LinkedIn', 'LinkedIn URL'], profile.linkedinUrl || profile.linkedin || '');
-  setIfPresent(['Website', 'Personal/Company Website'], profile.websiteUrl || profile.website || '');
+  setIfPresent(['Branch of Service', 'Branch', 'Service Branch'], profile.branchOfService || '');
+  setIfPresent(['Role', 'Position'], profile.role || '');
+  setIfPresent(['Participant Type', 'Type'], profile.participantType || profile.role || '');
+  setIfPresent(['LinkedIn', 'LinkedIn URL', 'Linkedin URL'], profile.linkedinUrl || '');
+  setIfPresent(['Website', 'Personal/Company Website', 'Company Website'], profile.websiteUrl || '');
+  setIfPresent(['RSVP Date', 'RSVP date', 'RSVPDate'], profile.rsvpDate ? new Date(profile.rsvpDate).toISOString().split('T')[0] : '');
 
   return cells;
 }
@@ -416,13 +438,26 @@ export async function exportAttendees(): Promise<ExportResult> {
     }
   }
 
-  const profiles = await prisma.profile.findMany();
+  const profiles = await prisma.profile.findMany({
+    include: {
+      rsvps: {
+        orderBy: { createdAt: 'asc' },
+        take: 1,
+      },
+    },
+  });
   result.total = profiles.length;
+
+  // Enrich profiles with RSVP date
+  const enrichedProfiles = profiles.map(p => ({
+    ...p,
+    rsvpDate: p.rsvps[0]?.createdAt || null,
+  }));
 
   const toAdd: Array<{ profile: any; row: any }> = [];
   const toUpdate: Array<{ profile: any; row: any }> = [];
 
-  for (const profile of profiles) {
+  for (const profile of enrichedProfiles) {
     const email = normalizeEmail(profile.email);
     if (!email) {
       result.failed++;
@@ -461,8 +496,16 @@ export async function exportAttendees(): Promise<ExportResult> {
     const batch = toAdd.slice(i, i + batchSize);
 
     try {
+      const rowsPayload = batch.map(b => ({
+        toBottom: true,
+        cells: b.row.cells.map((c: any) => ({
+          columnId: Number(c.columnId),
+          value: c.value,
+        })),
+      }));
+      console.log('Smartsheet add rows payload (first row):', JSON.stringify(rowsPayload[0], null, 2));
       const response = await queueRequest(() =>
-        client.post(`/sheets/${sheetId}/rows`, batch.map(b => b.row))
+        client.post(`/sheets/${sheetId}/rows`, rowsPayload)
       );
 
       const rowResults: Array<{ id?: string }> = response.data?.result ?? [];
@@ -484,17 +527,19 @@ export async function exportAttendees(): Promise<ExportResult> {
         }
       }
     } catch (error: any) {
+      const errorDetail = error.response?.data?.message || error.response?.data?.detail || error.message;
+      console.error('Smartsheet add rows error:', JSON.stringify(error.response?.data || error.message, null, 2));
       for (const item of batch) {
         result.failed++;
         result.errors.push({
-          message: error.message,
+          message: errorDetail,
           email: item.profile.email,
           profileId: item.profile.id,
         });
         await logAttendeeExportResult({
           profileId: item.profile.id,
           status: 'failed',
-          errorDetails: error.message,
+          errorDetails: errorDetail,
         });
       }
     }
@@ -504,8 +549,15 @@ export async function exportAttendees(): Promise<ExportResult> {
     const batch = toUpdate.slice(i, i + batchSize);
 
     try {
+      const rowsPayload = batch.map(b => ({
+        id: Number(b.row.id),
+        cells: b.row.cells.map((c: any) => ({
+          columnId: Number(c.columnId),
+          value: c.value,
+        })),
+      }));
       await queueRequest(() =>
-        client.put(`/sheets/${sheetId}/rows`, batch.map(b => b.row))
+        client.put(`/sheets/${sheetId}/rows`, rowsPayload)
       );
 
       for (const item of batch) {
@@ -513,17 +565,19 @@ export async function exportAttendees(): Promise<ExportResult> {
         await logAttendeeExportResult({ profileId: item.profile.id, status: 'success' });
       }
     } catch (error: any) {
+      const errorDetail = error.response?.data?.message || error.response?.data?.detail || error.message;
+      console.error('Smartsheet update rows error:', JSON.stringify(error.response?.data || error.message, null, 2));
       for (const item of batch) {
         result.failed++;
         result.errors.push({
-          message: error.message,
+          message: errorDetail,
           email: item.profile.email,
           profileId: item.profile.id,
         });
         await logAttendeeExportResult({
           profileId: item.profile.id,
           status: 'failed',
-          errorDetails: error.message,
+          errorDetails: errorDetail,
         });
       }
     }
