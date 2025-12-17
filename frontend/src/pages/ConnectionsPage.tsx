@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { ChevronLeft, MessageSquare, CheckCircle2, Loader2, Trash2, Users, QrCode, Sparkles, Download, FileText, Bell, BellOff, Search, X, SlidersHorizontal, Lock, Edit, Save, BookOpen, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,8 +24,12 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { api } from "@/lib/api";
+import { offlineDataCache } from "@/lib/offlineDataCache";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { useDevice } from "@/hooks/useDeviceType";
+import { offlineQueue } from "@/lib/offlineQueue";
+import { useAuth } from "@/hooks/useAuth";
+import { OfflineDataBanner } from "@/components/OfflineDataBanner";
 
 // Lazy load desktop version
 const ConnectionsDesktopPage = lazy(() => import('./ConnectionsPage.desktop'));
@@ -98,6 +103,7 @@ export default function ConnectionsPage() {
 }
 
 function ConnectionsMobilePage() {
+  const { user } = useAuth();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -156,6 +162,15 @@ function ConnectionsMobilePage() {
   const handleConnectRecommendation = async (userId: string) => {
     setConnectingUser(userId);
     try {
+      if (!navigator.onLine) {
+        if (user?.id) {
+          await offlineQueue.add(user.id, 'create_connection', { connectedUserId: userId });
+          toast.success('Connection queued offline. Will sync when back online.');
+        } else {
+          toast.error('You must be logged in to add connections');
+        }
+        return;
+      }
       await api.post('/connections', { connectedUserId: userId });
       toast.success('Connection added successfully');
       setRecommendations(prev => prev.filter(rec => rec.id !== userId));
@@ -170,6 +185,9 @@ function ConnectionsMobilePage() {
 
   const fetchConnections = async () => {
     try {
+      if (connections.length === 0) {
+        setLoading(true);
+      }
       const response = await api.get('/connections');
       const data = (response as any).connections || (response as any).data || [];
 
@@ -189,11 +207,25 @@ function ConnectionsMobilePage() {
           acceleration_interests: conn.connectedUser?.accelerationInterests || conn.profile?.acceleration_interests || []
         } : null
       }));
-
       setConnections(mappedConnections);
+
+      const writeCache = () => {
+        void offlineDataCache.set('connections:list', mappedConnections)
+          .catch((e) => console.error('Failed to write connections cache', e));
+      };
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(writeCache);
+      } else {
+        setTimeout(writeCache, 0);
+      }
     } catch (error: any) {
       console.error('Error fetching connections:', error);
-      toast.error('Failed to load connections');
+      const cached = await offlineDataCache.get<Connection[]>('connections:list');
+      if (cached?.data) {
+        setConnections(cached.data);
+      } else {
+        toast.error('Failed to load connections');
+      }
     } finally {
       setLoading(false);
     }
@@ -275,6 +307,19 @@ function ConnectionsMobilePage() {
   const handleSaveNote = async (connectionId: string) => {
     setSavingNote(true);
     try {
+      if (!navigator.onLine) {
+        if (user?.id) {
+          await offlineQueue.add(user.id, 'connection_note', { connectionId, notes: editedNote });
+          toast.success('Note queued offline. Will sync when back online.');
+          setConnections(prev => prev.map(c =>
+            c.id === connectionId ? { ...c, notes: editedNote } : c
+          ));
+          setEditingNoteId(null);
+          return;
+        }
+        toast.error('You must be logged in to edit notes');
+        return;
+      }
       await api.patch(`/connections/${connectionId}`, { notes: editedNote });
       toast.success("Note saved");
       setConnections(prev => prev.map(c =>
@@ -282,9 +327,34 @@ function ConnectionsMobilePage() {
       ));
       setEditingNoteId(null);
     } catch (error: any) {
-      toast.error('Failed to save note');
+      const message = error.response?.data?.error || 'Failed to save note';
+      toast.error(message);
     } finally {
       setSavingNote(false);
+    }
+  };
+
+  const handleRemoveReminder = async (connectionId: string) => {
+    try {
+      if (!navigator.onLine) {
+        if (user?.id) {
+          await offlineQueue.add(user.id, 'connection_update', {
+            connectionId,
+            data: { followUpReminder: null, reminderSent: false },
+          });
+          toast.success('Reminder update queued offline. Will sync when back online.');
+          fetchConnections();
+          return;
+        }
+        toast.error('You must be logged in to update reminders');
+        return;
+      }
+      await api.patch(`/connections/${connectionId}`, { followUpReminder: null, reminderSent: false });
+      toast.success("Reminder removed");
+      fetchConnections();
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to remove reminder';
+      toast.error(message);
     }
   };
 
@@ -339,16 +409,6 @@ function ConnectionsMobilePage() {
     }
   };
 
-  const handleRemoveReminder = async (connectionId: string) => {
-    try {
-      await api.patch(`/connections/${connectionId}`, { followUpReminder: null, reminderSent: false });
-      toast.success("Reminder removed");
-      fetchConnections();
-    } catch (error: any) {
-      toast.error('Failed to remove reminder');
-    }
-  };
-
   const clearFilters = () => {
     setFilters({ intents: [], userTypes: [], sortBy: 'recent' });
     setSearchQuery('');
@@ -390,14 +450,6 @@ function ConnectionsMobilePage() {
 
   const activeFilterCount = filters.intents.length + filters.userTypes.length;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-subtle pb-24">
       {/* Header */}
@@ -428,6 +480,11 @@ function ConnectionsMobilePage() {
             </div>
           </div>
         </Card>
+      </div>
+
+      {/* Offline Banner */}
+      <div className="container mx-auto px-4 md:px-4">
+        <OfflineDataBanner />
       </div>
 
       {/* Search and Filters */}
@@ -722,7 +779,23 @@ function ConnectionsMobilePage() {
 
       {/* Connections List */}
       <main className="container mx-auto px-3 md:px-4 space-y-2.5 md:space-y-4">
-        {filteredConnections.length === 0 ? (
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="p-4 md:p-5">
+                <div className="flex items-start gap-3 md:gap-4">
+                  <Skeleton className="w-12 h-12 md:w-14 md:h-14 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <Skeleton className="h-10 w-24 rounded-md" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : filteredConnections.length === 0 ? (
           <Card className="p-6 md:p-12 text-center">
             <div className="w-14 h-14 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 bg-secondary/50 rounded-full flex items-center justify-center">
               <Users className="h-7 w-7 md:h-10 md:w-10 text-muted-foreground" />

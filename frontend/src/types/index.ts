@@ -206,7 +206,9 @@ export type OperationType =
   | 'qr_scan'
   | 'message'
   | 'rsvp'
+  | 'rsvp_delete'
   | 'connection_note'
+  | 'connection_update'
   | 'create_connection';
 
 export type QueueStatus = 'pending' | 'processing' | 'completed' | 'failed';

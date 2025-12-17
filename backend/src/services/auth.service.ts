@@ -331,19 +331,15 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     // Store reset token (upsert to handle existing tokens)
-    await prisma.passwordReset.upsert({
-      where: { userId: user.id },
-      update: {
-        tokenHash: resetTokenHash,
-        expiresAt,
-        used: false,
-      },
-      create: {
-        userId: user.id,
-        tokenHash: resetTokenHash,
-        expiresAt,
-      },
-    });
+    await prisma.$executeRaw`
+      INSERT INTO password_resets (user_id, token_hash, expires_at, used)
+      VALUES (${user.id}::uuid, ${resetTokenHash}, ${expiresAt}::timestamptz, false)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        token_hash = EXCLUDED.token_hash,
+        expires_at = EXCLUDED.expires_at,
+        used = false;
+    `;
 
     return { token: resetToken, userName: user.fullName || undefined };
   }
@@ -355,19 +351,20 @@ export class AuthService {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     // Find reset token
-    const reset = await prisma.passwordReset.findFirst({
-      where: {
-        tokenHash,
-        expiresAt: { gt: new Date() },
-        used: false,
-      },
-    });
+    const reset = await prisma.$queryRaw<Array<{ user_id: string }>>`
+      SELECT user_id
+      FROM password_resets
+      WHERE token_hash = ${tokenHash}
+        AND expires_at > NOW()
+        AND used = false
+      LIMIT 1;
+    `;
 
-    if (!reset) {
+    if (!reset || reset.length === 0) {
       throw new UnauthorizedError('Invalid or expired reset token');
     }
 
-    const userId = reset.userId;
+    const userId = reset[0].user_id;
 
     // Hash new password
     const passwordHash = await hashPassword(newPassword);
@@ -379,10 +376,11 @@ export class AuthService {
     });
 
     // Mark token as used
-    await prisma.passwordReset.update({
-      where: { userId },
-      data: { used: true },
-    });
+    await prisma.$executeRaw`
+      UPDATE password_resets
+      SET used = true
+      WHERE user_id = ${userId}::uuid;
+    `;
 
     // Invalidate all sessions (force re-login)
     await prisma.userSession.deleteMany({

@@ -38,18 +38,33 @@ async function processQueueItem(item: OfflineQueueItem): Promise<void> {
       await api.post('/connections/qr-scan', item.payload);
       break;
 
+    case 'create_connection':
+      await api.post('/connections', item.payload);
+      break;
+
     case 'message':
       await api.post('/messages', item.payload);
       break;
 
     case 'rsvp':
-      await api.post('/rsvps', item.payload);
+      await api.post(`/sessions/${(item.payload as any).sessionId}/rsvp`, item.payload);
+      break;
+
+    case 'rsvp_delete':
+      await api.delete(`/sessions/rsvps/${(item.payload as any).rsvpId}`);
       break;
 
     case 'connection_note':
       await api.patch(
-        `/connections/${item.payload.connectionId}`,
-        { notes: item.payload.notes }
+        `/connections/${(item.payload as any).connectionId}`,
+        { notes: (item.payload as any).notes }
+      );
+      break;
+
+    case 'connection_update':
+      await api.patch(
+        `/connections/${(item.payload as any).connectionId}`,
+        (item.payload as any).data
       );
       break;
 

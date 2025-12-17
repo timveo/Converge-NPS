@@ -67,6 +67,14 @@ interface FailedSync {
   createdAt: Date;
 }
 
+interface ExportResult {
+  total: number;
+  added: number;
+  updated: number;
+  failed: number;
+  errors: Array<{ message: string; email?: string; profileId?: string }>;
+}
+
 interface ImportResult {
   imported: number;
   updated: number;
@@ -92,6 +100,7 @@ interface SmartsheetSheet {
     id: string;
     title: string;
     type: string;
+    systemColumnType?: string; // System columns like AUTO_NUMBER, CREATED_DATE, etc.
   }>;
   rows: SmartsheetRow[];
 }
@@ -315,6 +324,266 @@ export async function syncAllUsers(): Promise<BatchSyncResult> {
     failed: results.filter(r => !r.success).length,
     errors: results.filter(r => !r.success).map(r => r.error || 'Unknown error'),
   };
+}
+
+function normalizeString(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  return String(value).trim();
+}
+
+function normalizeEmail(value: unknown): string {
+  return normalizeString(value).toLowerCase();
+}
+
+function findColumnIdByTitles(columns: SmartsheetSheet['columns'], titles: string[]): string | null {
+  const normalizedTargets = titles.map(t => t.trim().toLowerCase());
+  // Filter out system columns - they cannot be written to
+  const col = columns.find(c => 
+    !c.systemColumnType && normalizedTargets.includes(c.title.trim().toLowerCase())
+  );
+  return col?.id ?? null;
+}
+
+function splitFullName(fullName: string | null | undefined): { firstName: string; lastName: string } {
+  if (!fullName) return { firstName: '', lastName: '' };
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: '' };
+  }
+  const lastName = parts.pop() || '';
+  const firstName = parts.join(' ');
+  return { firstName, lastName };
+}
+
+function buildCellsForAttendeeProfile(profile: any, columns: SmartsheetSheet['columns']) {
+  const cells: Array<{ columnId: string; value?: any }> = [];
+
+  const setIfPresent = (titles: string[], value: any) => {
+    const columnId = findColumnIdByTitles(columns, titles);
+    if (!columnId) return;
+    if (value === undefined) return;
+    cells.push({ columnId, value });
+  };
+
+  const { firstName, lastName } = splitFullName(profile.fullName);
+
+  setIfPresent(['Profile ID', 'User ID', 'Id', 'ID'], profile.id);
+  setIfPresent(['Full Name', 'Name'], profile.fullName);
+  setIfPresent(['First Name', 'FirstName', 'First NAme'], firstName);
+  setIfPresent(['Last Name', 'LastName'], lastName);
+  setIfPresent(['Email', 'Email Address'], profile.email);
+  setIfPresent(['Phone', 'Phone Number', 'Phone #', 'Mobile', 'Cell'], profile.phone || '');
+  setIfPresent(['Rank', 'Rank/Title', 'Title'], profile.rank || '');
+  setIfPresent(['Organization', 'Organizations', 'Company'], profile.organization || '');
+  setIfPresent(['Department'], profile.department || '');
+  setIfPresent(['Branch of Service', 'Branch', 'Service Branch'], profile.branchOfService || '');
+  setIfPresent(['Role', 'Position'], profile.role || '');
+  setIfPresent(['Participant Type', 'Type'], profile.participantType || profile.role || '');
+  setIfPresent(['LinkedIn', 'LinkedIn URL', 'Linkedin URL'], profile.linkedinUrl || '');
+  setIfPresent(['Website', 'Personal/Company Website', 'Company Website'], profile.websiteUrl || '');
+  setIfPresent(['RSVP Date', 'RSVP date', 'RSVPDate'], profile.rsvpDate ? new Date(profile.rsvpDate).toISOString().split('T')[0] : '');
+
+  return cells;
+}
+
+async function logAttendeeExportResult(params: {
+  profileId: string;
+  status: 'success' | 'failed';
+  errorDetails?: string;
+}) {
+  await prisma.smartsheetSync.create({
+    data: {
+      userId: params.profileId,
+      syncType: 'export',
+      direction: 'upload',
+      entityType: 'attendee',
+      status: params.status,
+      errorDetails: params.errorDetails,
+      processedCount: params.status === 'success' ? 1 : 0,
+      totalCount: 1,
+      startedAt: new Date(),
+      completedAt: new Date(),
+    },
+  });
+}
+
+export async function exportAttendees(): Promise<ExportResult> {
+  const result: ExportResult = {
+    total: 0,
+    added: 0,
+    updated: 0,
+    failed: 0,
+    errors: [],
+  };
+
+  const sheetId = SHEET_IDS.attendees;
+  if (!sheetId) {
+    throw new Error('SMARTSHEET_ATTENDEES_SHEET_ID not configured');
+  }
+
+  const client = getSmartsheetClient();
+  const sheet = await fetchSheetData(sheetId);
+
+  const emailColumnId = findColumnIdByTitles(sheet.columns, ['Email', 'Email Address']);
+  if (!emailColumnId) {
+    throw new Error('Attendees sheet is missing an Email column');
+  }
+
+  const existingByEmail = new Map<string, string>();
+  for (const row of sheet.rows) {
+    const cell = row.cells.find(c => c.columnId === emailColumnId);
+    const email = normalizeEmail(cell?.value ?? cell?.displayValue);
+    if (email) {
+      existingByEmail.set(email, row.id);
+    }
+  }
+
+  const profiles = await prisma.profile.findMany({
+    include: {
+      rsvps: {
+        orderBy: { createdAt: 'asc' },
+        take: 1,
+      },
+    },
+  });
+  result.total = profiles.length;
+
+  // Enrich profiles with RSVP date
+  const enrichedProfiles = profiles.map(p => ({
+    ...p,
+    rsvpDate: p.rsvps[0]?.createdAt || null,
+  }));
+
+  const toAdd: Array<{ profile: any; row: any }> = [];
+  const toUpdate: Array<{ profile: any; row: any }> = [];
+
+  for (const profile of enrichedProfiles) {
+    const email = normalizeEmail(profile.email);
+    if (!email) {
+      result.failed++;
+      result.errors.push({ message: 'Missing email on profile', profileId: profile.id });
+      await logAttendeeExportResult({
+        profileId: profile.id,
+        status: 'failed',
+        errorDetails: 'Missing email on profile',
+      });
+      continue;
+    }
+
+    const cells = buildCellsForAttendeeProfile(profile, sheet.columns);
+    if (cells.length === 0) {
+      result.failed++;
+      result.errors.push({ message: 'No matching columns found on attendees sheet', email, profileId: profile.id });
+      await logAttendeeExportResult({
+        profileId: profile.id,
+        status: 'failed',
+        errorDetails: 'No matching columns found on attendees sheet',
+      });
+      continue;
+    }
+
+    const existingRowId = existingByEmail.get(email);
+    if (existingRowId) {
+      toUpdate.push({ profile, row: { id: existingRowId, cells } });
+    } else {
+      toAdd.push({ profile, row: { cells } });
+    }
+  }
+
+  const batchSize = 200;
+
+  for (let i = 0; i < toAdd.length; i += batchSize) {
+    const batch = toAdd.slice(i, i + batchSize);
+
+    try {
+      const rowsPayload = batch.map(b => ({
+        toBottom: true,
+        cells: b.row.cells.map((c: any) => ({
+          columnId: Number(c.columnId),
+          value: c.value,
+        })),
+      }));
+      console.log('Smartsheet add rows payload (first row):', JSON.stringify(rowsPayload[0], null, 2));
+      const response = await queueRequest(() =>
+        client.post(`/sheets/${sheetId}/rows`, rowsPayload)
+      );
+
+      const rowResults: Array<{ id?: string }> = response.data?.result ?? [];
+
+      for (let j = 0; j < batch.length; j++) {
+        const profileId = batch[j].profile.id;
+        const rowId = rowResults[j]?.id;
+        if (rowId) {
+          result.added++;
+          await logAttendeeExportResult({ profileId, status: 'success' });
+        } else {
+          result.failed++;
+          result.errors.push({ message: 'Smartsheet did not return row id for created row', profileId });
+          await logAttendeeExportResult({
+            profileId,
+            status: 'failed',
+            errorDetails: 'Smartsheet did not return row id for created row',
+          });
+        }
+      }
+    } catch (error: any) {
+      const errorDetail = error.response?.data?.message || error.response?.data?.detail || error.message;
+      console.error('Smartsheet add rows error:', JSON.stringify(error.response?.data || error.message, null, 2));
+      for (const item of batch) {
+        result.failed++;
+        result.errors.push({
+          message: errorDetail,
+          email: item.profile.email,
+          profileId: item.profile.id,
+        });
+        await logAttendeeExportResult({
+          profileId: item.profile.id,
+          status: 'failed',
+          errorDetails: errorDetail,
+        });
+      }
+    }
+  }
+
+  for (let i = 0; i < toUpdate.length; i += batchSize) {
+    const batch = toUpdate.slice(i, i + batchSize);
+
+    try {
+      const rowsPayload = batch.map(b => ({
+        id: Number(b.row.id),
+        cells: b.row.cells.map((c: any) => ({
+          columnId: Number(c.columnId),
+          value: c.value,
+        })),
+      }));
+      await queueRequest(() =>
+        client.put(`/sheets/${sheetId}/rows`, rowsPayload)
+      );
+
+      for (const item of batch) {
+        result.updated++;
+        await logAttendeeExportResult({ profileId: item.profile.id, status: 'success' });
+      }
+    } catch (error: any) {
+      const errorDetail = error.response?.data?.message || error.response?.data?.detail || error.message;
+      console.error('Smartsheet update rows error:', JSON.stringify(error.response?.data || error.message, null, 2));
+      for (const item of batch) {
+        result.failed++;
+        result.errors.push({
+          message: errorDetail,
+          email: item.profile.email,
+          profileId: item.profile.id,
+        });
+        await logAttendeeExportResult({
+          profileId: item.profile.id,
+          status: 'failed',
+          errorDetails: errorDetail,
+        });
+      }
+    }
+  }
+
+  return result;
 }
 
 // Sync RSVP to Smartsheet

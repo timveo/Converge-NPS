@@ -1,11 +1,15 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone } from "lucide-react";
 import { useDevice } from "@/hooks/useDeviceType";
+import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
+import { offlineDataCache } from "@/lib/offlineDataCache";
+import { OfflineDataBanner } from "@/components/OfflineDataBanner";
 
 // Lazy load desktop version
 const IndustryDesktopPage = lazy(() => import('./IndustryPage.desktop'));
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
@@ -16,7 +20,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { RecommendationCard } from "@/components/RecommendationCard";
-import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 
 interface Recommendation {
   id: string;
@@ -179,7 +182,9 @@ function IndustryMobilePage() {
 
   const fetchPartners = async () => {
     try {
-      setLoading(true);
+      if (partners.length === 0) {
+        setLoading(true);
+      }
       const response = await api.get('/partners');
       const data = (response as any).data?.data || (response as any).data || [];
 
@@ -202,10 +207,24 @@ function IndustryMobilePage() {
         hide_contact_info: p.hideContactInfo || p.hide_contact_info,
         organization_type: p.organizationType || p.organization_type
       }));
-
       setPartners(mappedPartners);
+
+      const writeCache = () => {
+        void offlineDataCache.set('industry:partners', mappedPartners)
+          .catch((e) => console.error('Failed to write partners cache', e));
+      };
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(writeCache);
+      } else {
+        setTimeout(writeCache, 0);
+      }
     } catch (error) {
       console.error('Error loading partners:', error);
+
+      const cached = await offlineDataCache.get<IndustryPartner[]>('industry:partners');
+      if (cached?.data) {
+        setPartners(cached.data);
+      }
     } finally {
       setLoading(false);
     }
@@ -261,14 +280,6 @@ function IndustryMobilePage() {
   const hasActiveFilters = selectedTechAreas.length > 0 || selectedSeeking.length > 0 || searchQuery.trim() !== "" || selectedDodSponsor !== "" || showFavoritesOnly;
   const activeFilterCount = selectedTechAreas.length + selectedSeeking.length + (selectedDodSponsor ? 1 : 0);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-subtle pb-24">
       <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4">
@@ -287,6 +298,10 @@ function IndustryMobilePage() {
             </div>
           </div>
         </header>
+      </div>
+
+      <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4">
+        <OfflineDataBanner />
       </div>
 
       <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
@@ -499,7 +514,25 @@ function IndustryMobilePage() {
 
       {/* Partner list */}
       <main className="container mx-auto px-4 md:px-4 space-y-3 md:space-y-4">
-        {filteredPartners.length === 0 ? (
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="p-4 md:p-6">
+                <div className="flex items-start gap-3 md:gap-4">
+                  <Skeleton className="w-12 h-12 md:w-16 md:h-16 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-32" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : filteredPartners.length === 0 ? (
           <Card className="p-8 md:p-12 text-center">
             {showFavoritesOnly ? (
               <>
