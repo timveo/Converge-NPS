@@ -35,6 +35,11 @@ describe('Socket.IO Server', () => {
     process.env.FRONTEND_URL = 'http://localhost:5173';
   });
 
+  afterAll(() => {
+    // Ensure all timers are cleared to prevent leaks
+    jest.useRealTimers();
+  });
+
   beforeEach((done) => {
     // Set up default mock returns for prisma
     (prisma.conversationParticipant.findMany as jest.Mock).mockResolvedValue([
@@ -78,11 +83,20 @@ describe('Socket.IO Server', () => {
         transports: ['websocket'],
       });
 
-      socket.on('connect', () => resolve(socket));
-      socket.on('connect_error', (err) => reject(err));
+      // Timeout after 5 seconds - clear on success/error to prevent leaks
+      const timeout = setTimeout(() => {
+        socket.disconnect();
+        reject(new Error('Connection timeout'));
+      }, 5000);
 
-      // Timeout after 5 seconds
-      setTimeout(() => reject(new Error('Connection timeout')), 5000);
+      socket.on('connect', () => {
+        clearTimeout(timeout);
+        resolve(socket);
+      });
+      socket.on('connect_error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
     });
   };
 

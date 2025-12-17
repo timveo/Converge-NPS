@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import { offlineDataCache } from '@/lib/offlineDataCache';
+import { OfflineDataBanner } from '@/components/OfflineDataBanner';
 
 interface Conversation {
   id: string;
@@ -69,11 +71,18 @@ export default function MessagesPage() {
 
   const fetchConversations = useCallback(async () => {
     try {
+      if (conversations.length === 0) {
+        setIsLoading(true);
+      }
       const response = await api.get<{ success: boolean; data: Conversation[] }>('/messages/conversations');
       setConversations(response.data || []);
+
+      void offlineDataCache.set('messages:conversations', response.data || [])
+        .catch((e) => console.error('Failed to write conversations cache', e));
     } catch (error) {
       console.error('Failed to fetch conversations', error);
-      setConversations([]);
+      const cached = await offlineDataCache.get<Conversation[]>('messages:conversations');
+      setConversations(cached?.data ?? []);
     } finally {
       setIsLoading(false);
     }
@@ -154,6 +163,11 @@ export default function MessagesPage() {
             </div>
           </div>
         </header>
+      </div>
+
+      {/* Offline Banner */}
+      <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4">
+        <OfflineDataBanner />
       </div>
 
       {/* Search Bar */}

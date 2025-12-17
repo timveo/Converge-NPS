@@ -447,7 +447,7 @@ export default function ScannerPage() {
       if (!user?.id || !scannedData?.uuid) return;
 
       await offlineQueue.add(user.id, 'qr_scan', {
-        qrCodeData: scannedData.uuid,
+        qrCodeData: scannedData.qrCodeData || scannedData.uuid,
         collaborativeIntents: selectedIntents,
         notes: note || '',
       });

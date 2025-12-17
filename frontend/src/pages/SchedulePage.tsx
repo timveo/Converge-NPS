@@ -17,6 +17,9 @@ import { format } from "date-fns";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { OfflineDataBanner } from "@/components/OfflineDataBanner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { offlineDataCache } from "@/lib/offlineDataCache";
+import { offlineQueue } from "@/lib/offlineQueue";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Recommendation {
   id: string;
@@ -50,6 +53,7 @@ interface RSVP {
 export default function SchedulePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const fromAdmin = location.state?.fromAdmin === true;
   const [sessions, setSessions] = useState<Session[]>([]);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
@@ -96,7 +100,9 @@ export default function SchedulePage() {
   };
 
   const fetchData = async () => {
-    setLoading(true);
+    if (sessions.length === 0) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const [sessionsRes, rsvpsRes] = await Promise.all([
@@ -127,9 +133,37 @@ export default function SchedulePage() {
 
       setSessions(mappedSessions);
       setRsvps(mappedRsvps);
+
+      const writeCache = () => {
+        void Promise.all([
+          offlineDataCache.set('schedule:sessions', mappedSessions),
+          offlineDataCache.set('schedule:rsvps:me', mappedRsvps),
+        ]).catch((e) => console.error('Failed to write schedule cache', e));
+      };
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(writeCache);
+      } else {
+        setTimeout(writeCache, 0);
+      }
     } catch (err: any) {
       console.error('Failed to fetch data', err);
-      setError('Failed to load sessions. Please try again.');
+
+      try {
+        const [cachedSessions, cachedRsvps] = await Promise.all([
+          offlineDataCache.get<Session[]>('schedule:sessions'),
+          offlineDataCache.get<RSVP[]>('schedule:rsvps:me'),
+        ]);
+
+        if (cachedSessions?.data) {
+          setSessions(cachedSessions.data);
+          setRsvps(cachedRsvps?.data ?? []);
+          setError(null);
+        } else {
+          setError('Failed to load sessions. Please try again.');
+        }
+      } catch {
+        setError('Failed to load sessions. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -255,6 +289,12 @@ export default function SchedulePage() {
       ));
 
       try {
+        if (!navigator.onLine) {
+          if (user?.id) {
+            await offlineQueue.add(user.id, 'rsvp_delete', { rsvpId: existingRsvp.id });
+          }
+          return;
+        }
         await api.delete(`/sessions/rsvps/${existingRsvp.id}`);
       } catch (err) {
         // Rollback on error
@@ -286,7 +326,15 @@ export default function SchedulePage() {
     ));
 
     try {
-      const response = await api.post(`/sessions/${sessionId}/rsvp`, { sessionId, status: 'confirmed' });
+      if (!navigator.onLine) {
+        if (user?.id) {
+          await offlineQueue.add(user.id, 'rsvp', { sessionId });
+        }
+        // Keep temp RSVP; it will reconcile when data is refreshed online
+        return;
+      }
+
+      const response = await api.post(`/sessions/${sessionId}/rsvp`, { sessionId });
       const newRsvp = (response as any).data || response;
       // Replace temp RSVP with real one
       setRsvps(prev => prev.map(r => r.id === tempId ? { id: newRsvp.id, sessionId, status: 'attending' } : r));

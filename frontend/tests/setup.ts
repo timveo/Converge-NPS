@@ -51,6 +51,45 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
 } as unknown as typeof ResizeObserver;
 
+// Mock IndexedDB for offline cache/queue tests
+// The idb library checks for IDBRequest class, so we need to define it
+class MockIDBRequest {
+  result: unknown = null;
+  error: DOMException | null = null;
+  onsuccess: ((event: Event) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  onupgradeneeded: ((event: Event) => void) | null = null;
+  readyState: string = 'pending';
+  source: unknown = null;
+  transaction: unknown = null;
+}
+
+// Define IDBRequest globally for idb library checks
+Object.defineProperty(global, 'IDBRequest', {
+  value: MockIDBRequest,
+  writable: true,
+});
+
+// Mock the idb module directly to avoid IndexedDB complexity in tests
+vi.mock('idb', () => {
+  const mockDb = {
+    put: vi.fn().mockResolvedValue(undefined),
+    get: vi.fn().mockResolvedValue(undefined),
+    getAll: vi.fn().mockResolvedValue([]),
+    getAllFromIndex: vi.fn().mockResolvedValue([]),
+    delete: vi.fn().mockResolvedValue(undefined),
+    clear: vi.fn().mockResolvedValue(undefined),
+    count: vi.fn().mockResolvedValue(0),
+    objectStoreNames: { contains: () => true },
+    createObjectStore: vi.fn(),
+    close: vi.fn(),
+  };
+  
+  return {
+    openDB: vi.fn().mockResolvedValue(mockDb),
+  };
+});
+
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
