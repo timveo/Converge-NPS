@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { MessageCircle, Search, ChevronLeft } from 'lucide-react';
+import { MessageCircle, Search, ChevronLeft, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
+import { useDevice } from '@/hooks/useDeviceType';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { offlineDataCache } from '@/lib/offlineDataCache';
 import { OfflineDataBanner } from '@/components/OfflineDataBanner';
+
+// Lazy load desktop version
+const MessagesDesktopPage = lazy(() => import('./MessagesPage.desktop'));
+
+function MessagesSkeleton() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 interface Conversation {
   id: string;
@@ -33,6 +45,22 @@ interface Conversation {
 }
 
 export default function MessagesPage() {
+  const { isDesktop } = useDevice();
+
+  // Render desktop version for desktop users
+  if (isDesktop) {
+    return (
+      <Suspense fallback={<MessagesSkeleton />}>
+        <MessagesDesktopPage />
+      </Suspense>
+    );
+  }
+
+  // Mobile/Tablet version
+  return <MessagesMobilePage />;
+}
+
+function MessagesMobilePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { socket, isConnected } = useSocket();

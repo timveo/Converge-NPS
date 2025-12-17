@@ -196,3 +196,48 @@ All colors MUST be HSL.
     gap: 8px; /* Apple HIG minimum spacing */
   }
 }
+
+/* React Resizable Panels */
+[data-group] {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+[data-group][data-orientation="horizontal"] {
+  flex-direction: row;
+}
+
+[data-group][data-orientation="vertical"] {
+  flex-direction: column;
+}
+
+[data-panel] {
+  overflow: hidden;
+}
+
+[data-separator] {
+  flex-shrink: 0;
+  background-color: hsl(var(--border));
+  transition: background-color 0.15s ease;
+}
+
+[data-separator]:hover,
+[data-separator][data-resize-handle-state="hover"] {
+  background-color: hsl(var(--primary) / 0.5);
+}
+
+[data-separator][data-resize-handle-state="drag"] {
+  background-color: hsl(var(--primary));
+}
+
+[data-group][data-orientation="horizontal"] > [data-separator] {
+  width: 4px;
+  cursor: col-resize;
+}
+
+[data-group][data-orientation="vertical"] > [data-separator] {
+  height: 4px;
+  cursor: row-resize;
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -19,7 +19,19 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDevice } from '@/hooks/useDeviceType';
 import { toast } from 'sonner';
+
+// Lazy load desktop version
+const AdminDashboardDesktop = lazy(() => import('./AdminDashboard.desktop'));
+
+function AdminDashboardSkeleton() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 interface RecentUser {
   id: string;
@@ -53,6 +65,22 @@ const COLORS = {
 };
 
 export default function AdminDashboard() {
+  const { isDesktop } = useDevice();
+
+  // Render desktop version for desktop users
+  if (isDesktop) {
+    return (
+      <Suspense fallback={<AdminDashboardSkeleton />}>
+        <AdminDashboardDesktop />
+      </Suspense>
+    );
+  }
+
+  // Mobile/Tablet version
+  return <AdminDashboardMobile />;
+}
+
+function AdminDashboardMobile() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);

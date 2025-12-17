@@ -1,6 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, ChevronLeft, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare } from "lucide-react";
+import { Plus, ChevronLeft, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare, Loader2 } from "lucide-react";
+import { useDevice } from "@/hooks/useDeviceType";
+
+// Lazy load desktop version
+const OpportunitiesDesktopPage = lazy(() => import('./OpportunitiesPage.desktop'));
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -69,7 +73,31 @@ interface Opportunity {
 
 type CombinedItem = (Project & { sourceType: 'NPS' }) | (Opportunity & { sourceType: 'Military/Gov' });
 
+function OpportunitiesSkeleton() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
 export default function OpportunitiesPage() {
+  const { isDesktop } = useDevice();
+
+  // Render desktop version for desktop users
+  if (isDesktop) {
+    return (
+      <Suspense fallback={<OpportunitiesSkeleton />}>
+        <OpportunitiesDesktopPage />
+      </Suspense>
+    );
+  }
+
+  // Mobile/Tablet version
+  return <OpportunitiesMobilePage />;
+}
+
+function OpportunitiesMobilePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const fromAdmin = location.state?.fromAdmin === true;

@@ -19,6 +19,17 @@ vi.mock('@/hooks/useSocket', () => ({
   }),
 }));
 
+// Mock useDevice to return mobile view for these tests
+// This ensures we test the mobile version and avoid loading the desktop version
+// which requires additional Router context (useSearchParams)
+vi.mock('@/hooks/useDeviceType', () => ({
+  useDevice: () => ({
+    isDesktop: false,
+    isMobile: true,
+    isTablet: false,
+  }),
+}));
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<any>('react-router-dom');
   return {
