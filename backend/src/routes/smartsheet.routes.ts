@@ -19,6 +19,7 @@ router.get('/failed', smartsheetController.getFailedSyncs);
 router.post('/sync/:type', smartsheetController.triggerSync);
 router.post('/retry/:id', smartsheetController.retrySync);
 router.delete('/clear-failed', smartsheetController.clearFailedSyncs);
+router.post('/export/attendees', smartsheetController.exportAttendees);
 
 // =============================================================================
 // IMPORT (Inbound: Smartsheet → App)

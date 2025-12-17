@@ -137,6 +137,28 @@ export async function clearFailedSyncs(req: Request, res: Response) {
   }
 }
 
+/**
+ * POST /api/v1/admin/smartsheet/export/attendees
+ * Export attendee profiles to Smartsheet
+ */
+export async function exportAttendees(req: Request, res: Response) {
+  try {
+    const result = await smartsheetService.exportAttendees();
+
+    res.json({
+      success: true,
+      data: result,
+      message: `Export complete: ${result.added} added, ${result.updated} updated, ${result.failed} failed out of ${result.total} total profiles`,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to export attendees',
+      details: error.message,
+    });
+  }
+}
+
 // =============================================================================
 // DATA IMPORT ENDPOINTS
 // =============================================================================
