@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone } from "lucide-react";
+import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone } from "lucide-react";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { offlineDataCache } from "@/lib/offlineDataCache";
 import { OfflineDataBanner } from "@/components/OfflineDataBanner";
