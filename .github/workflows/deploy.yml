@@ -271,7 +271,7 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: Run database migrations
-        run: railway run --service Backend --environment Development -- npx prisma migrate deploy
+        run: railway run --service Backend --environment Development -- npx prisma migrate deploy --schema=./prisma/schema.prisma
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
@@ -306,7 +306,7 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
       - name: Run database migrations
-        run: railway run --service Backend --environment Staging -- npx prisma migrate deploy
+        run: railway run --service Backend --environment Staging -- npx prisma migrate deploy --schema=./prisma/schema.prisma
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
@@ -341,7 +341,7 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
 
       - name: Run database migrations
-        run: railway run --service Backend --environment Production -- npx prisma migrate deploy
+        run: railway run --service Backend --environment Production -- npx prisma migrate deploy --schema=./prisma/schema.prisma
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
 
