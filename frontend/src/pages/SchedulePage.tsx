@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { Calendar, ChevronLeft, Search, X, List, CalendarDays, AlertTriangle, Sparkles, Clock } from "lucide-react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { Calendar, ChevronLeft, Search, X, List, CalendarDays, AlertTriangle, Sparkles, Clock, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,6 +17,18 @@ import { format } from "date-fns";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { OfflineDataBanner } from "@/components/OfflineDataBanner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useDevice } from "@/hooks/useDeviceType";
+
+// Lazy load desktop version
+const ScheduleDesktopPage = lazy(() => import('./SchedulePage.desktop'));
+
+function ScheduleSkeleton() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 interface Recommendation {
   id: string;
@@ -48,6 +60,22 @@ interface RSVP {
 }
 
 export default function SchedulePage() {
+  const { isDesktop } = useDevice();
+
+  // Render desktop version for desktop users
+  if (isDesktop) {
+    return (
+      <Suspense fallback={<ScheduleSkeleton />}>
+        <ScheduleDesktopPage />
+      </Suspense>
+    );
+  }
+
+  // Mobile/Tablet version
+  return <ScheduleMobilePage />;
+}
+
+function ScheduleMobilePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const fromAdmin = location.state?.fromAdmin === true;
