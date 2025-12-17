@@ -104,11 +104,14 @@ model Profile {
   messagesSent             Message[]                 @relation("MessageSender")
   offlineQueue             OfflineQueue[]
   opportunities            Opportunity[]             @relation("OpportunityPoster")
+  opportunitiesAsPoc       Opportunity[]             @relation("OpportunityPOC")
   opportunityInterests     OpportunityInterest[]
   partnerFavorites         PartnerFavorite[]
+  partnersAsPoc            Partner[]                 @relation("PartnerPOC")
   projectBookmarks         ProjectBookmark[]
   projectInterests         ProjectInterest[]
   projectsAsPi             Project[]                 @relation("ProjectPI")
+  projectsAsPoc            Project[]                 @relation("ProjectPOC")
   qrCode                   QrCode?
   rsvps                    Rsvp[]
   smartsheetSyncs          SmartsheetSync[]
@@ -245,7 +248,7 @@ model Project {
   id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title           String
   description     String
-  piId            String            @map("pi_id") @db.Uuid
+  piId            String?           @map("pi_id") @db.Uuid
   piRole          String?           @map("pi_role")
   department      String?
   stage           ProjectStage
@@ -256,16 +259,23 @@ model Project {
   seeking         String[]
   demoSchedule    String?           @map("demo_schedule")
   interestedCount Int               @default(0) @map("interested_count")
+  pocUserId       String?           @map("poc_user_id") @db.Uuid
+  pocFirstName    String?           @map("poc_first_name")
+  pocLastName     String?           @map("poc_last_name")
+  pocEmail        String?           @map("poc_email")
+  pocRank         String?           @map("poc_rank")
   createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   bookmarks       ProjectBookmark[]
   interests       ProjectInterest[]
-  pi              Profile           @relation("ProjectPI", fields: [piId], references: [id])
+  pi              Profile?          @relation("ProjectPI", fields: [piId], references: [id])
+  poc             Profile?          @relation("ProjectPOC", fields: [pocUserId], references: [id])
 
   @@index([piId])
   @@index([stage])
   @@index([classification])
   @@index([department])
+  @@index([pocUserId])
   @@index([researchAreas], type: Gin)
   @@index([seeking], type: Gin)
   @@index([keywords], type: Gin)
@@ -309,6 +319,11 @@ model Opportunity {
   description         String?
   sponsorOrganization String?               @map("sponsor_organization")
   sponsorContactId    String?               @map("sponsor_contact_id") @db.Uuid
+  pocUserId           String?               @map("poc_user_id") @db.Uuid
+  pocFirstName        String?               @map("poc_first_name")
+  pocLastName         String?               @map("poc_last_name")
+  pocEmail            String?               @map("poc_email")
+  pocRank             String?               @map("poc_rank")
   postedBy            String                @map("posted_by") @db.Uuid
   requirements        String?
   benefits            String?
@@ -320,12 +335,14 @@ model Opportunity {
   featured            Boolean               @default(false)
   createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  poc                 Profile?              @relation("OpportunityPOC", fields: [pocUserId], references: [id])
   poster              Profile               @relation("OpportunityPoster", fields: [postedBy], references: [id])
   interests           OpportunityInterest[]
 
   @@index([type])
   @@index([status])
   @@index([postedBy])
+  @@index([pocUserId])
   @@index([deadline])
   @@index([featured])
   @@index([dodAlignment], type: Gin)
@@ -353,19 +370,24 @@ model Partner {
   id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name            String            @unique
   description     String?
-  contactName     String?           @map("contact_name")
-  contactEmail    String?           @map("contact_email")
   websiteUrl      String?           @map("website_url")
   logoUrl         String?           @map("logo_url")
   partnershipType String?           @map("partnership_type")
   researchAreas   String[]          @map("research_areas")
+  pocUserId       String?           @map("poc_user_id") @db.Uuid
+  pocFirstName    String?           @map("poc_first_name")
+  pocLastName     String?           @map("poc_last_name")
+  pocEmail        String?           @map("poc_email")
+  pocRank         String?           @map("poc_rank")
   isFeatured      Boolean           @default(false) @map("is_featured")
   createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  poc             Profile?          @relation("PartnerPOC", fields: [pocUserId], references: [id])
   favorites       PartnerFavorite[]
 
   @@index([isFeatured])
   @@index([partnershipType])
+  @@index([pocUserId])
   @@index([researchAreas], type: Gin)
   @@map("partners")
 }

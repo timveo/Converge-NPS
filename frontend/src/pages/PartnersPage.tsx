@@ -1,32 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Star, MapPin, Building2, ChevronLeft } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Search, Star, MapPin, Building2, ChevronLeft, Users } from 'lucide-react';
+import { api } from '@/lib/api';
 
-const mockPartners = [
-  {
-    id: '1',
-    name: 'Lockheed Martin',
-    description: 'Global security and aerospace company',
-    type: 'Large Defense Contractor',
-    techFocus: ['AI/ML', 'Autonomous Systems'],
-    boothLocation: 'Booth A-12',
-  },
-  {
-    id: '2',
-    name: 'Shield AI',
-    description: 'AI-powered autonomous systems for defense',
-    type: 'Startup',
-    techFocus: ['AI/ML', 'Robotics'],
-    boothLocation: 'Booth B-8',
-  },
-];
+interface Partner {
+  id: string;
+  name: string;
+  description?: string;
+  partnership_type?: string;
+  research_areas?: string[];
+  website_url?: string;
+  logo_url?: string;
+  is_featured?: boolean;
+  poc_user_id?: string;
+  poc_first_name?: string;
+  poc_last_name?: string;
+  poc_email?: string;
+  poc_rank?: string;
+}
 
 export default function PartnersPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadPartners();
+  }, []);
+
+  const loadPartners = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/partners');
+      const data = (response as any).data?.data || (response as any).data || [];
+      setPartners(data);
+    } catch (error) {
+      console.error('Failed to load partners:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredPartners = partners.filter(partner =>
+    partner.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    partner.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    partner.research_areas?.some(area => area.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="min-h-screen bg-gradient-subtle pb-24">
@@ -66,42 +90,82 @@ export default function PartnersPage() {
 
       {/* Partners List */}
       <main className="container mx-auto px-4 md:px-4 space-y-3 md:space-y-4">
-        {mockPartners.map((partner) => (
-          <Card key={partner.id} className="cursor-pointer transition-all hover:shadow-md active:scale-[0.98]">
-            <div className="p-4 md:p-6">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Building2 className="w-5 h-5 text-primary flex-shrink-0" />
-                    <h3 className="text-base md:text-lg font-semibold truncate">{partner.name}</h3>
-                  </div>
-                  <p className="text-sm md:text-sm text-muted-foreground">{partner.description}</p>
-                </div>
-                <Button variant="ghost" size="icon" className="flex-shrink-0">
-                  <Star className="w-4 h-4 md:w-5 md:h-5" />
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mb-3">
-                <MapPin className="w-3 h-3 md:w-4 md:h-4" />
-                <span>{partner.boothLocation}</span>
-              </div>
-
-              <div className="mb-3">
-                <p className="text-xs md:text-sm text-muted-foreground mb-2">Technology Focus:</p>
-                <div className="flex flex-wrap gap-1 md:gap-2">
-                  {partner.techFocus.map((tech) => (
-                    <Badge key={tech} variant="secondary" className="text-xs md:text-sm">
-                      {tech}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              <Badge variant="outline" className="text-xs md:text-sm">{partner.type}</Badge>
-            </div>
+        {loading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="p-4 md:p-6">
+                <Skeleton className="h-5 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-full mb-3" />
+                <Skeleton className="h-4 w-1/2" />
+              </Card>
+            ))}
+          </div>
+        ) : filteredPartners.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Partners Found</h3>
+            <p className="text-muted-foreground">Try adjusting your search</p>
           </Card>
-        ))}
+        ) : (
+          filteredPartners.map((partner) => (
+            <Card key={partner.id} className="cursor-pointer transition-all hover:shadow-md active:scale-[0.98]">
+              <div className="p-4 md:p-6">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="w-5 h-5 text-primary flex-shrink-0" />
+                      <h3 className="text-base md:text-lg font-semibold truncate">{partner.name}</h3>
+                      {partner.is_featured && (
+                        <Badge className="bg-tech-cyan-DEFAULT text-background shrink-0 text-xs">Featured</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm md:text-sm text-muted-foreground">{partner.description}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="flex-shrink-0">
+                    <Star className="w-4 h-4 md:w-5 md:h-5" />
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                  <Users className="h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {partner.poc_rank && <span className="font-medium">{partner.poc_rank}</span>}
+                    {partner.poc_rank && (partner.poc_first_name || partner.poc_last_name) && ' '}
+                    {partner.poc_first_name || partner.poc_last_name 
+                      ? `${partner.poc_first_name || ''} ${partner.poc_last_name || ''}`.trim()
+                      : 'Unknown'}
+                  </span>
+                </div>
+
+                {partner.website_url && (
+                  <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mb-3">
+                    <MapPin className="w-3 h-3 md:w-4 md:h-4" />
+                    <a href={partner.website_url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate">
+                      {partner.website_url}
+                    </a>
+                  </div>
+                )}
+
+                {partner.research_areas && partner.research_areas.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs md:text-sm text-muted-foreground mb-2">Technology Focus:</p>
+                    <div className="flex flex-wrap gap-1 md:gap-2">
+                      {partner.research_areas.map((area) => (
+                        <Badge key={area} variant="secondary" className="text-xs md:text-sm">
+                          {area}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {partner.partnership_type && (
+                  <Badge variant="outline" className="text-xs md:text-sm">{partner.partnership_type}</Badge>
+                )}
+              </div>
+            </Card>
+          ))
+        )}
       </main>
     </div>
   );

@@ -50,7 +50,8 @@ export async function listPartners(filters: PartnerFilters) {
     where.OR = [
       { name: { contains: search, mode: 'insensitive' } },
       { description: { contains: search, mode: 'insensitive' } },
-      { contactName: { contains: search, mode: 'insensitive' } },
+      { pocFirstName: { contains: search, mode: 'insensitive' } },
+      { pocLastName: { contains: search, mode: 'insensitive' } },
     ];
   }
 
@@ -68,6 +69,11 @@ export async function listPartners(filters: PartnerFilters) {
         websiteUrl: true,
         partnershipType: true,
         researchAreas: true,
+        pocUserId: true,
+        pocFirstName: true,
+        pocLastName: true,
+        pocEmail: true,
+        pocRank: true,
         isFeatured: true,
         createdAt: true,
       },
@@ -99,9 +105,12 @@ export async function getPartnerById(partnerId: string, userId?: string) {
       logoUrl: true,
       websiteUrl: true,
       partnershipType: true,
-      contactName: true,
-      contactEmail: true,
       researchAreas: true,
+      pocUserId: true,
+      pocFirstName: true,
+      pocLastName: true,
+      pocEmail: true,
+      pocRank: true,
       isFeatured: true,
       createdAt: true,
       updatedAt: true,

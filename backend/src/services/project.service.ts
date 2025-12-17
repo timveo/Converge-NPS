@@ -57,7 +57,28 @@ export async function listProjects(filters: {
 
   const projects = await prisma.project.findMany({
     where,
-    include: {
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      piId: true,
+      piRole: true,
+      department: true,
+      stage: true,
+      classification: true,
+      researchAreas: true,
+      keywords: true,
+      students: true,
+      seeking: true,
+      demoSchedule: true,
+      interestedCount: true,
+      pocUserId: true,
+      pocFirstName: true,
+      pocLastName: true,
+      pocEmail: true,
+      pocRank: true,
+      createdAt: true,
+      updatedAt: true,
       pi: {
         select: {
           id: true,
@@ -414,7 +435,29 @@ export async function listOpportunities(filters: {
 
   const opportunities = await prisma.opportunity.findMany({
     where,
-    include: {
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      description: true,
+      sponsorOrganization: true,
+      sponsorContactId: true,
+      postedBy: true,
+      requirements: true,
+      benefits: true,
+      location: true,
+      duration: true,
+      deadline: true,
+      dodAlignment: true,
+      status: true,
+      featured: true,
+      pocUserId: true,
+      pocFirstName: true,
+      pocLastName: true,
+      pocEmail: true,
+      pocRank: true,
+      createdAt: true,
+      updatedAt: true,
       poster: {
         select: {
           id: true,
