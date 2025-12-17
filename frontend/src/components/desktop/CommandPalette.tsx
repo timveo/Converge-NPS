@@ -206,10 +206,11 @@ export function CommandPalette() {
 
   // Group commands
   const groupedCommands = commands.reduce((acc, cmd) => {
-    if (!acc[cmd.group]) {
+    const group = acc[cmd.group];
+    if (!group) {
       acc[cmd.group] = [];
     }
-    acc[cmd.group].push(cmd);
+    acc[cmd.group]!.push(cmd);
     return acc;
   }, {} as Record<string, CommandItem[]>);
 

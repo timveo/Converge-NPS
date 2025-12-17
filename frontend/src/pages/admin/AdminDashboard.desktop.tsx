@@ -4,11 +4,9 @@ import { motion } from 'framer-motion';
 import {
   Users,
   Calendar,
-  TrendingUp,
   UserCog,
   Download,
   Database,
-  Briefcase,
   BarChart3,
   RefreshCw,
   UserCheck,
@@ -17,13 +15,9 @@ import {
   MessageSquare,
   Link2,
   ChevronRight,
-  Zap,
-  Activity,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
   BarChart,
   Bar,
   XAxis,
@@ -40,9 +34,6 @@ import { toast } from 'sonner';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
 import {
   DashboardWidget,
-  DashboardTwoColumnRow,
-  DashboardThreeColumnRow,
-  KPICard,
 } from '@/components/desktop/layouts';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -565,7 +556,7 @@ export default function AdminDashboardDesktop() {
                 </div>
               ) : analytics?.demographics.byOrganization.length ? (
                 <div className="space-y-2">
-                  {analytics.demographics.byOrganization.slice(0, 5).map((org, i) => {
+                  {analytics.demographics.byOrganization.slice(0, 5).map((org) => {
                     const maxCount = analytics.demographics.byOrganization[0]?.count || 1;
                     const percentage = (org.count / maxCount) * 100;
 

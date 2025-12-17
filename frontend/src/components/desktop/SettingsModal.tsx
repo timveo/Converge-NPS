@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, ChevronDown, Phone, Shield, Mail, Smartphone, Moon, Sun, Monitor } from 'lucide-react';
+import { X, Loader2, ChevronDown, Phone, Shield, Mail, Moon, Sun, Monitor } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from 'next-themes';

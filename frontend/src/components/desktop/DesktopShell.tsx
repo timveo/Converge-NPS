@@ -16,7 +16,6 @@ interface DesktopShellContentProps {
 
 function DesktopShellContent({ children }: DesktopShellContentProps) {
   const {
-    sidebarCollapsed,
     profileModalOpen,
     closeProfileModal,
     settingsModalOpen,

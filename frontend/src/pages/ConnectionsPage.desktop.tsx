@@ -210,7 +210,7 @@ export default function ConnectionsDesktopPage() {
 
       setConnections(mappedConnections);
       if (mappedConnections.length > 0 && !selectedConnection) {
-        setSelectedConnection(mappedConnections[0]);
+        setSelectedConnection(mappedConnections[0] ?? null);
       }
     } catch (error: any) {
       console.error('Error fetching connections:', error);
@@ -277,7 +277,7 @@ export default function ConnectionsDesktopPage() {
       setConnections(connections.filter((c) => c.id !== connectionId));
       if (selectedConnection?.id === connectionId) {
         const remaining = connections.filter((c) => c.id !== connectionId);
-        setSelectedConnection(remaining.length > 0 ? remaining[0] : null);
+        setSelectedConnection(remaining.length > 0 ? remaining[0] ?? null : null);
       }
     } catch (error: any) {
       toast.error('Failed to delete connection');

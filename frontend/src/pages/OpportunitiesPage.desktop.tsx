@@ -41,9 +41,6 @@ import { ThreePanelLayout } from '@/components/desktop/layouts/ThreePanelLayout'
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-// Source types
-const SOURCE_TYPES = ['NPS', 'Military/Gov'];
-
 // NPS Projects filters
 const PROJECT_STAGES = ['Concept', 'Prototype', 'Pilot Ready', 'Deployed'];
 const FUNDING_STATUSES = ['Funded', 'Seeking Funding', 'Partially Funded'];

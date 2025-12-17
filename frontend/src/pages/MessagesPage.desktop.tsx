@@ -616,10 +616,11 @@ export default function MessagesDesktopPage() {
             <AnimatePresence>
               {messages.map((message, index) => {
                 const isOwn = message.senderId === user?.id;
+                const prevMessage = messages[index - 1];
                 const showDate =
                   index === 0 ||
-                  new Date(message.sentAt).toDateString() !==
-                    new Date(messages[index - 1].sentAt).toDateString();
+                  (prevMessage && new Date(message.sentAt).toDateString() !==
+                    new Date(prevMessage.sentAt).toDateString());
 
                 return (
                   <motion.div

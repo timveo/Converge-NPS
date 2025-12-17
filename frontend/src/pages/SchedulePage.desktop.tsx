@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Calendar,
   Clock,
@@ -14,11 +13,9 @@ import {
   ChevronRight,
   CheckCircle2,
   Loader2,
-  Download,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -41,7 +38,7 @@ import { DesktopShell } from '@/components/desktop/DesktopShell';
 import { SESSION_TYPES, TIME_SLOTS, ScheduleFilters } from '@/components/schedule/ScheduleFilters';
 import { ConflictDialog } from '@/components/schedule/ConflictDialog';
 import { api } from '@/lib/api';
-import { format, isSameDay, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { useDismissedRecommendations } from '@/hooks/useDismissedRecommendations';
 import { cn } from '@/lib/utils';
 
@@ -75,9 +72,6 @@ interface RSVP {
 }
 
 export default function ScheduleDesktopPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const fromAdmin = location.state?.fromAdmin === true;
   const [sessions, setSessions] = useState<Session[]>([]);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +92,7 @@ export default function ScheduleDesktopPage() {
     conflictingSession: Session | null;
   }>({ show: false, newSession: null, conflictingSession: null });
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const { dismiss, isDismissed } = useDismissedRecommendations('schedule');
+  const { isDismissed } = useDismissedRecommendations('schedule');
 
   useEffect(() => {
     fetchData();
@@ -154,7 +148,7 @@ export default function ScheduleDesktopPage() {
 
       // Select first session by default
       if (mappedSessions.length > 0 && !selectedSession) {
-        setSelectedSession(mappedSessions[0]);
+        setSelectedSession(mappedSessions[0] ?? null);
       }
     } catch (err: any) {
       console.error('Failed to fetch data', err);
@@ -332,34 +326,6 @@ export default function ScheduleDesktopPage() {
       setRsvps(previousRsvps);
       setSessions(previousSessions);
     }
-  };
-
-  const handleAddToCalendar = (session: Session) => {
-    const startDate = new Date(session.start_time);
-    const endDate = new Date(session.end_time);
-
-    const formatDate = (d: Date) => d.toISOString().replace(/-|:|\.\d{3}/g, '').slice(0, -1);
-
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-DTSTART:${formatDate(startDate)}
-DTEND:${formatDate(endDate)}
-SUMMARY:${session.title}
-DESCRIPTION:${session.description || ''}
-LOCATION:${session.location || ''}
-END:VEVENT
-END:VCALENDAR`;
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${session.title.replace(/\s+/g, '_')}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   const displayed = activeTab === 'my-schedule' ? myScheduleSessions : filteredSessions;
