@@ -24,6 +24,7 @@ import { BottomNav } from '@/components/navigation/BottomNav';
 import QRCodeBadge from '@/components/QRCodeBadge';
 import ThemeToggle from '@/components/ThemeToggle';
 import OnboardingFlow from '@/components/OnboardingFlow';
+import { OfflineDataBanner } from '@/components/OfflineDataBanner';
 
 export default function DashboardPage() {
   const { user, updateUser } = useAuth();
@@ -315,6 +316,7 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-4 md:py-8 pb-4 md:pb-8 max-w-6xl">
+        <OfflineDataBanner />
         {/* Welcome Banner - Compact on mobile */}
         <Card className="p-3 md:p-6 mb-4 md:mb-8 bg-gradient-to-br from-card to-accent/5 border-accent/30">
           <div className="flex items-center justify-between">
