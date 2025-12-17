@@ -144,6 +144,51 @@ async function main() {
     },
   });
 
+  const staff1 = await prisma.profile.create({
+    data: {
+      id: randomUUID(),
+      fullName: 'Desiree Dillehay',
+      email: 'ddillehay@npsfoundation.org',
+      role: 'admin',
+      organization: 'NPSF',
+      bio: 'System administrator',
+      accelerationInterests: ['Event Management', 'Technology Integration'],
+      profileVisibility: 'public',
+      allowQrScanning: true,
+      allowMessaging: true,
+    },
+  });
+
+  const staff2 = await prisma.profile.create({
+    data: {
+      id: randomUUID(),
+      fullName: 'Todd Lyons',
+      email: 'tlyons@npsfoundation.org',
+      role: 'admin',
+      organization: 'NPSF',
+      bio: 'System administrator',
+      accelerationInterests: ['Event Management', 'Technology Integration'],
+      profileVisibility: 'public',
+      allowQrScanning: true,
+      allowMessaging: true,
+    },
+  });
+
+  const staff3 = await prisma.profile.create({
+    data: {
+      id: randomUUID(),
+      fullName: 'Tim Martin',
+      email: 'tmartin@npsfoundation.org',
+      role: 'admin',
+      organization: 'NPSF',
+      bio: 'System administrator',
+      accelerationInterests: ['Event Management', 'Technology Integration'],
+      profileVisibility: 'public',
+      allowQrScanning: true,
+      allowMessaging: true,
+    },
+  });
+
   console.log('✅ Created 5 test users');
 
   // Create password records for all users
@@ -155,6 +200,9 @@ async function main() {
       { userId: student2.id, passwordHash },
       { userId: faculty.id, passwordHash },
       { userId: industry1.id, passwordHash },
+      { userId: staff1.id, passwordHash },
+      { userId: staff2.id, passwordHash },
+      { userId: staff3.id, passwordHash }
     ],
   });
   console.log('✅ Created password records');
