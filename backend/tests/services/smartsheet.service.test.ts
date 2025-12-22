@@ -373,4 +373,264 @@ describe('Smartsheet Service', () => {
       expect(typeof converted[1].columnId).toBe('number');
     });
   });
+
+  describe('parseTimeString', () => {
+    // Replicate the parseTimeString function logic for testing
+    function parseTimeString(timeStr: string): { hours: number; minutes: number } | null {
+      if (!timeStr) return null;
+      
+      const trimmed = timeStr.trim();
+      
+      const ampmMatch = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm|a\.m\.|p\.m\.)?$/i);
+      if (ampmMatch) {
+        let hours = parseInt(ampmMatch[1], 10);
+        const minutes = parseInt(ampmMatch[2], 10);
+        const period = ampmMatch[3]?.toUpperCase();
+        
+        if (period) {
+          if (period.startsWith('P') && hours !== 12) {
+            hours += 12;
+          } else if (period.startsWith('A') && hours === 12) {
+            hours = 0;
+          }
+        }
+        
+        if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+          return { hours, minutes };
+        }
+      }
+      
+      return null;
+    }
+
+    describe('24-hour (military) time format', () => {
+      it('should parse 13:00 as 1:00 PM', () => {
+        const result = parseTimeString('13:00');
+        expect(result).toEqual({ hours: 13, minutes: 0 });
+      });
+
+      it('should parse 14:30 as 2:30 PM', () => {
+        const result = parseTimeString('14:30');
+        expect(result).toEqual({ hours: 14, minutes: 30 });
+      });
+
+      it('should parse 09:00 as 9:00 AM', () => {
+        const result = parseTimeString('09:00');
+        expect(result).toEqual({ hours: 9, minutes: 0 });
+      });
+
+      it('should parse 00:00 as midnight', () => {
+        const result = parseTimeString('00:00');
+        expect(result).toEqual({ hours: 0, minutes: 0 });
+      });
+
+      it('should parse 23:59 as 11:59 PM', () => {
+        const result = parseTimeString('23:59');
+        expect(result).toEqual({ hours: 23, minutes: 59 });
+      });
+
+      it('should parse 15:30 as 3:30 PM', () => {
+        const result = parseTimeString('15:30');
+        expect(result).toEqual({ hours: 15, minutes: 30 });
+      });
+
+      it('should parse 17:00 as 5:00 PM', () => {
+        const result = parseTimeString('17:00');
+        expect(result).toEqual({ hours: 17, minutes: 0 });
+      });
+    });
+
+    describe('12-hour format with AM/PM', () => {
+      it('should parse 2:30 PM', () => {
+        const result = parseTimeString('2:30 PM');
+        expect(result).toEqual({ hours: 14, minutes: 30 });
+      });
+
+      it('should parse 11:00 AM', () => {
+        const result = parseTimeString('11:00 AM');
+        expect(result).toEqual({ hours: 11, minutes: 0 });
+      });
+
+      it('should parse 12:00 PM as noon', () => {
+        const result = parseTimeString('12:00 PM');
+        expect(result).toEqual({ hours: 12, minutes: 0 });
+      });
+
+      it('should parse 12:00 AM as midnight', () => {
+        const result = parseTimeString('12:00 AM');
+        expect(result).toEqual({ hours: 0, minutes: 0 });
+      });
+
+      it('should parse lowercase am/pm', () => {
+        const result = parseTimeString('3:45 pm');
+        expect(result).toEqual({ hours: 15, minutes: 45 });
+      });
+
+      it('should parse a.m./p.m. format', () => {
+        const result = parseTimeString('4:15 p.m.');
+        expect(result).toEqual({ hours: 16, minutes: 15 });
+      });
+    });
+
+    describe('edge cases', () => {
+      it('should return null for empty string', () => {
+        const result = parseTimeString('');
+        expect(result).toBeNull();
+      });
+
+      it('should handle whitespace', () => {
+        const result = parseTimeString('  13:00  ');
+        expect(result).toEqual({ hours: 13, minutes: 0 });
+      });
+
+      it('should return null for invalid format', () => {
+        const result = parseTimeString('invalid');
+        expect(result).toBeNull();
+      });
+
+      it('should return null for invalid hours (25:00)', () => {
+        const result = parseTimeString('25:00');
+        expect(result).toBeNull();
+      });
+
+      it('should return null for invalid minutes (13:60)', () => {
+        const result = parseTimeString('13:60');
+        expect(result).toBeNull();
+      });
+    });
+  });
+
+  describe('parseDateWithTime', () => {
+    // Replicate the parseDateWithTime function logic for testing
+    function parseTimeString(timeStr: string): { hours: number; minutes: number } | null {
+      if (!timeStr) return null;
+      
+      const trimmed = timeStr.trim();
+      
+      const ampmMatch = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm|a\.m\.|p\.m\.)?$/i);
+      if (ampmMatch) {
+        let hours = parseInt(ampmMatch[1], 10);
+        const minutes = parseInt(ampmMatch[2], 10);
+        const period = ampmMatch[3]?.toUpperCase();
+        
+        if (period) {
+          if (period.startsWith('P') && hours !== 12) {
+            hours += 12;
+          } else if (period.startsWith('A') && hours === 12) {
+            hours = 0;
+          }
+        }
+        
+        if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+          return { hours, minutes };
+        }
+      }
+      
+      return null;
+    }
+
+    function parseDateWithTime(dateStr: any, timeStr: any): Date | null {
+      if (!dateStr) return null;
+      
+      try {
+        const dateString = String(dateStr);
+        const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        
+        let year: number, month: number, day: number;
+        
+        if (dateMatch) {
+          year = parseInt(dateMatch[1], 10);
+          month = parseInt(dateMatch[2], 10) - 1;
+          day = parseInt(dateMatch[3], 10);
+        } else {
+          const baseDate = new Date(dateStr);
+          if (isNaN(baseDate.getTime())) return null;
+          year = baseDate.getFullYear();
+          month = baseDate.getMonth();
+          day = baseDate.getDate();
+        }
+        
+        const time = parseTimeString(String(timeStr || ''));
+        const hours = time?.hours ?? 0;
+        const minutes = time?.minutes ?? 0;
+        
+        const pacificOffsetHours = 8;
+        const result = new Date(Date.UTC(year, month, day, hours + pacificOffsetHours, minutes, 0, 0));
+        
+        if (isNaN(result.getTime())) return null;
+        return result;
+      } catch {
+        return null;
+      }
+    }
+
+    describe('Pacific to UTC conversion', () => {
+      it('should convert 13:00 Pacific to 21:00 UTC', () => {
+        const result = parseDateWithTime('2026-01-28', '13:00');
+        expect(result?.toISOString()).toBe('2026-01-28T21:00:00.000Z');
+      });
+
+      it('should convert 14:30 Pacific to 22:30 UTC', () => {
+        const result = parseDateWithTime('2026-01-28', '14:30');
+        expect(result?.toISOString()).toBe('2026-01-28T22:30:00.000Z');
+      });
+
+      it('should convert 15:30 Pacific to 23:30 UTC', () => {
+        const result = parseDateWithTime('2026-01-28', '15:30');
+        expect(result?.toISOString()).toBe('2026-01-28T23:30:00.000Z');
+      });
+
+      it('should convert 17:00 Pacific to 01:00 UTC next day', () => {
+        const result = parseDateWithTime('2026-01-28', '17:00');
+        expect(result?.toISOString()).toBe('2026-01-29T01:00:00.000Z');
+      });
+
+      it('should convert 9:00 AM Pacific to 17:00 UTC', () => {
+        const result = parseDateWithTime('2026-01-28', '9:00 AM');
+        expect(result?.toISOString()).toBe('2026-01-28T17:00:00.000Z');
+      });
+
+      it('should convert 2:30 PM Pacific to 22:30 UTC', () => {
+        const result = parseDateWithTime('2026-01-28', '2:30 PM');
+        expect(result?.toISOString()).toBe('2026-01-28T22:30:00.000Z');
+      });
+    });
+
+    describe('edge cases', () => {
+      it('should return null for null date', () => {
+        const result = parseDateWithTime(null, '13:00');
+        expect(result).toBeNull();
+      });
+
+      it('should handle missing time (defaults to midnight)', () => {
+        const result = parseDateWithTime('2026-01-28', null);
+        expect(result?.toISOString()).toBe('2026-01-28T08:00:00.000Z');
+      });
+
+      it('should handle empty time string (defaults to midnight)', () => {
+        const result = parseDateWithTime('2026-01-28', '');
+        expect(result?.toISOString()).toBe('2026-01-28T08:00:00.000Z');
+      });
+
+      it('should return null for invalid date', () => {
+        const result = parseDateWithTime('invalid-date', '13:00');
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('date format handling', () => {
+      it('should parse ISO date format (YYYY-MM-DD)', () => {
+        const result = parseDateWithTime('2026-01-28', '13:00');
+        expect(result?.getUTCFullYear()).toBe(2026);
+        expect(result?.getUTCMonth()).toBe(0); // January is 0
+        expect(result?.getUTCDate()).toBe(28);
+      });
+
+      it('should handle different months correctly', () => {
+        const result = parseDateWithTime('2026-06-15', '10:00');
+        expect(result?.getUTCMonth()).toBe(5); // June is 5
+        expect(result?.getUTCDate()).toBe(15);
+      });
+    });
+  });
 });

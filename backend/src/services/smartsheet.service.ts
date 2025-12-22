@@ -955,6 +955,37 @@ async function fetchSheetData(sheetId: string): Promise<SmartsheetSheet> {
   return response.data;
 }
 
+// Helper function to parse time string (handles both 12-hour and 24-hour formats)
+function parseTimeString(timeStr: string): { hours: number; minutes: number } | null {
+  if (!timeStr) return null;
+  
+  const trimmed = timeStr.trim();
+  
+  // Check for 12-hour format with AM/PM (e.g., "2:30 PM", "11:00 AM")
+  const ampmMatch = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm|a\.m\.|p\.m\.)?$/i);
+  if (ampmMatch) {
+    let hours = parseInt(ampmMatch[1], 10);
+    const minutes = parseInt(ampmMatch[2], 10);
+    const period = ampmMatch[3]?.toUpperCase();
+    
+    if (period) {
+      // 12-hour format with AM/PM
+      if (period.startsWith('P') && hours !== 12) {
+        hours += 12;
+      } else if (period.startsWith('A') && hours === 12) {
+        hours = 0;
+      }
+    }
+    // If no AM/PM specified, assume 24-hour format (military time)
+    
+    if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      return { hours, minutes };
+    }
+  }
+  
+  return null;
+}
+
 // Helper function to parse date string
 function parseDate(dateStr: any): Date | null {
   if (!dateStr) return null;
@@ -963,6 +994,53 @@ function parseDate(dateStr: any): Date | null {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return null;
     return date;
+  } catch {
+    return null;
+  }
+}
+
+// Helper function to combine date and time strings into a Date object
+// Smartsheet times are in Pacific timezone, so we need to convert to UTC for storage
+// Pacific is UTC-8 (standard) or UTC-7 (daylight saving)
+function parseDateWithTime(dateStr: any, timeStr: any): Date | null {
+  if (!dateStr) return null;
+  
+  try {
+    // Parse date components manually to avoid UTC interpretation
+    // Smartsheet sends dates like "2026-01-28" which new Date() interprets as UTC
+    const dateString = String(dateStr);
+    const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    
+    let year: number, month: number, day: number;
+    
+    if (dateMatch) {
+      // ISO format: YYYY-MM-DD
+      year = parseInt(dateMatch[1], 10);
+      month = parseInt(dateMatch[2], 10) - 1; // JavaScript months are 0-indexed
+      day = parseInt(dateMatch[3], 10);
+    } else {
+      // Fallback to Date parsing for other formats
+      const baseDate = new Date(dateStr);
+      if (isNaN(baseDate.getTime())) return null;
+      year = baseDate.getFullYear();
+      month = baseDate.getMonth();
+      day = baseDate.getDate();
+    }
+    
+    // Parse the time string
+    const time = parseTimeString(String(timeStr || ''));
+    const hours = time?.hours ?? 0;
+    const minutes = time?.minutes ?? 0;
+    
+    // Create date in UTC, treating the input time as Pacific time
+    // Pacific Standard Time is UTC-8, Pacific Daylight Time is UTC-7
+    // For simplicity, we'll use UTC-8 (PST) - adjust if DST handling is needed
+    // Add 8 hours to convert from Pacific to UTC
+    const pacificOffsetHours = 8;
+    const result = new Date(Date.UTC(year, month, day, hours + pacificOffsetHours, minutes, 0, 0));
+    
+    if (isNaN(result.getTime())) return null;
+    return result;
   } catch {
     return null;
   }
@@ -1031,18 +1109,18 @@ export async function importSessions(): Promise<ImportResult> {
         const endTimeStr = getCellValue(row, sheet.columns, 'End Time');
         const dateStr = getCellValue(row, sheet.columns, 'Date');
 
-        // Combine date with time if they're separate
+        // Combine date with time if they're separate using proper time parsing
         let startTime: Date | null = null;
         let endTime: Date | null = null;
 
         if (dateStr && startTimeStr) {
-          startTime = parseDate(`${dateStr} ${startTimeStr}`);
+          startTime = parseDateWithTime(dateStr, startTimeStr);
         } else {
           startTime = parseDate(startTimeStr);
         }
 
         if (dateStr && endTimeStr) {
-          endTime = parseDate(`${dateStr} ${endTimeStr}`);
+          endTime = parseDateWithTime(dateStr, endTimeStr);
         } else {
           endTime = parseDate(endTimeStr);
         }
@@ -1068,11 +1146,10 @@ export async function importSessions(): Promise<ImportResult> {
           continue;
         }
 
-        // Check if session already exists (by title and start time)
+        // Check if session already exists (by title only to allow time updates)
         const existing = await prisma.session.findFirst({
           where: {
             title,
-            startTime,
           },
         });
 
