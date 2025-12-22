@@ -123,8 +123,8 @@ function DashboardMobilePage() {
       color: "from-accent to-primary"
     },
     {
-      title: "Industry Opportunities",
-      description: "45+ Organizations",
+      title: "Industry Partnerships",
+      description: "Our partners",
       icon: Briefcase,
       href: "/industry",
       color: "from-navy-light to-tech-cyan"
