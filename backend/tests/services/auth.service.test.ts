@@ -69,7 +69,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should assign default student role', async () => {
+    it('should assign default participant role', async () => {
       (prisma.profile.findUnique as jest.Mock).mockResolvedValue(null);
       (prisma.profile.create as jest.Mock).mockResolvedValue({ id: 'user-123' });
       (prisma.userPassword.create as jest.Mock).mockResolvedValue({});
@@ -80,7 +80,7 @@ describe('AuthService', () => {
 
       expect(prisma.userRole.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          role: 'student',
+          role: 'participant',
         }),
       });
     });
