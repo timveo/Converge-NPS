@@ -35,10 +35,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { ThreePanelLayout } from '@/components/desktop/layouts/ThreePanelLayout';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
-import { SESSION_TYPES, TIME_SLOTS, ScheduleFilters } from '@/components/schedule/ScheduleFilters';
+import { SESSION_TYPES, ScheduleFilters } from '@/components/schedule/ScheduleFilters';
 import { ConflictDialog } from '@/components/schedule/ConflictDialog';
 import { api } from '@/lib/api';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useDismissedRecommendations } from '@/hooks/useDismissedRecommendations';
 import { cn } from '@/lib/utils';
 
@@ -238,16 +238,6 @@ export default function ScheduleDesktopPage() {
       });
     }
 
-    if (filters.timeSlots.length) {
-      result = result.filter((s) => {
-        const h = new Date(s.start_time).getHours();
-        return filters.timeSlots.some((slot) => {
-          const ts = TIME_SLOTS.find((t) => t.value === slot);
-          return ts && h >= ts.start && h < ts.end;
-        });
-      });
-    }
-
     if (filters.days.length) {
       result = result.filter((s) =>
         filters.days.includes(format(new Date(s.start_time), 'yyyy-MM-dd'))
@@ -344,7 +334,7 @@ export default function ScheduleDesktopPage() {
     setFilters({ types: [], days: [], timeSlots: [], sortBy: 'time' });
   };
 
-  const activeFilterCount = filters.types.length + filters.days.length + filters.timeSlots.length;
+  const activeFilterCount = filters.types.length + filters.days.length;
 
   // Group sessions by day for calendar view
   const sessionsByDay = useMemo(() => {
@@ -444,32 +434,13 @@ export default function ScheduleDesktopPage() {
                       onCheckedChange={() => toggleArrayFilter('days', day)}
                     />
                     <Label htmlFor={`day-${day}`} className="cursor-pointer text-sm">
-                      {format(new Date(day), 'EEEE, MMM d')}
+                      {format(parseISO(day), 'EEEE, MMM d')}
                     </Label>
                   </div>
                 ))}
               </div>
             </div>
           )}
-
-          {/* Time Filter */}
-          <div>
-            <Label className="text-sm font-medium mb-3 block">Time of Day</Label>
-            <div className="space-y-2">
-              {TIME_SLOTS.map((slot) => (
-                <div key={slot.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`time-${slot.value}`}
-                    checked={filters.timeSlots.includes(slot.value)}
-                    onCheckedChange={() => toggleArrayFilter('timeSlots', slot.value)}
-                  />
-                  <Label htmlFor={`time-${slot.value}`} className="cursor-pointer text-sm">
-                    {slot.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* Type Filter */}
           {hasSessionTypes && (
@@ -636,7 +607,7 @@ export default function ScheduleDesktopPage() {
                 <div key={day}>
                   <div className="sticky top-0 bg-background/95 backdrop-blur-sm py-2 px-2 mb-2 border-b border-border">
                     <h3 className="font-semibold text-sm">
-                      {format(new Date(day), 'EEEE, MMMM d')}
+                      {format(parseISO(day), 'EEEE, MMMM d')}
                     </h3>
                   </div>
                   <div className="space-y-1">

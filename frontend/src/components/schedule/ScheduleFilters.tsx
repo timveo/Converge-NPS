@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 export const SESSION_TYPES = [
   { value: 'AI/ML', label: 'AI/ML' },
@@ -50,7 +50,7 @@ export const ScheduleFiltersPanel = ({
 }: ScheduleFiltersProps) => {
   const [showFilters, setShowFilters] = useState(false);
 
-  const activeFilterCount = filters.types.length + filters.days.length + filters.timeSlots.length;
+  const activeFilterCount = filters.types.length + filters.days.length;
 
   const updateFilter = (key: keyof ScheduleFilters, value: any) => {
     onFiltersChange({ ...filters, [key]: value });
@@ -109,20 +109,9 @@ export const ScheduleFiltersPanel = ({
               </Badge>
             );
           })}
-          {filters.timeSlots.map(slot => {
-            const label = TIME_SLOTS.find(t => t.value === slot)?.label?.split(' ')[0];
-            return (
-              <Badge key={slot} variant="secondary" className="gap-0.5 md:gap-1 text-[10px] md:text-xs py-0.5 px-1.5 md:py-1 md:px-2">
-                {label}
-                <button onClick={() => toggleArrayFilter('timeSlots', slot, false)}>
-                  <X className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                </button>
-              </Badge>
-            );
-          })}
           {filters.days.map(day => (
             <Badge key={day} variant="secondary" className="gap-0.5 md:gap-1 text-[10px] md:text-xs py-0.5 px-1.5 md:py-1 md:px-2">
-              {format(new Date(day), 'MMM d')}
+              {format(parseISO(day), 'MMM d')}
               <button onClick={() => toggleArrayFilter('days', day, false)}>
                 <X className="w-2.5 h-2.5 md:w-3 md:h-3" />
               </button>
@@ -161,29 +150,6 @@ export const ScheduleFiltersPanel = ({
               </div>
             )}
 
-            {/* Time Filter */}
-            <div className="space-y-1.5 md:space-y-3">
-              <Label className="text-xs md:text-sm font-semibold">Time</Label>
-              <div className="space-y-1 md:space-y-2">
-                {TIME_SLOTS.map(slot => (
-                  <div key={slot.value} className="flex items-center space-x-1.5 md:space-x-2">
-                    <Checkbox
-                      id={`time-${slot.value}`}
-                      checked={filters.timeSlots.includes(slot.value)}
-                      onCheckedChange={(checked) =>
-                        toggleArrayFilter('timeSlots', slot.value, !!checked)
-                      }
-                      className="h-3.5 w-3.5 md:h-4 md:w-4"
-                    />
-                    <Label htmlFor={`time-${slot.value}`} className="cursor-pointer text-[11px] md:text-sm">
-                      <span className="md:hidden">{slot.label.split(' ')[0]}</span>
-                      <span className="hidden md:inline">{slot.label}</span>
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Day Filter */}
             {uniqueDays.length > 1 && (
               <div className="space-y-1.5 md:space-y-3 col-span-2 sm:col-span-1">
@@ -200,8 +166,8 @@ export const ScheduleFiltersPanel = ({
                         className="h-3.5 w-3.5 md:h-4 md:w-4"
                       />
                       <Label htmlFor={`day-${day}`} className="cursor-pointer text-[11px] md:text-sm">
-                        <span className="md:hidden">{format(new Date(day), 'EEE, MMM d')}</span>
-                        <span className="hidden md:inline">{format(new Date(day), 'EEEE, MMM d')}</span>
+                        <span className="md:hidden">{format(parseISO(day), 'EEE, MMM d')}</span>
+                        <span className="hidden md:inline">{format(parseISO(day), 'EEEE, MMM d')}</span>
                       </Label>
                     </div>
                   ))}
