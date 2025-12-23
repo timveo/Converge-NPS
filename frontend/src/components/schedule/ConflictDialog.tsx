@@ -1,7 +1,7 @@
-import { XCircle } from "lucide-react";
+import { XCircle, ArrowRightLeft } from "lucide-react";
 import {
   AlertDialog,
-  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 
 interface Session {
@@ -24,6 +25,7 @@ interface ConflictDialogProps {
   onOpenChange: (open: boolean) => void;
   newSession: Session | null;
   conflictingSession: Session | null;
+  onSwitchRSVP?: () => void;
 }
 
 export const ConflictDialog = ({
@@ -31,6 +33,7 @@ export const ConflictDialog = ({
   onOpenChange,
   newSession,
   conflictingSession,
+  onSwitchRSVP,
 }: ConflictDialogProps) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -81,13 +84,27 @@ export const ConflictDialog = ({
               </Card>
 
               <p className="text-sm text-muted-foreground">
-                To RSVP for this session, please first cancel your registration for the conflicting session.
+                You can switch your RSVP to the new session, or keep your existing registration.
               </p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction>Got It</AlertDialogAction>
+        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+          {onSwitchRSVP && (
+            <Button
+              onClick={() => {
+                onSwitchRSVP();
+                onOpenChange(false);
+              }}
+              className="w-full sm:w-auto"
+            >
+              <ArrowRightLeft className="w-4 h-4 mr-2" />
+              Switch to New Session
+            </Button>
+          )}
+          <AlertDialogCancel className="w-full sm:w-auto mt-0">
+            Keep Existing RSVP
+          </AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

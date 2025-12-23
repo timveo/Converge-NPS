@@ -318,6 +318,48 @@ export default function ScheduleDesktopPage() {
     }
   };
 
+  const handleSwitchRSVP = async () => {
+    const newSession = conflictDialog.newSession;
+    const conflictingSession = conflictDialog.conflictingSession;
+    if (!newSession || !conflictingSession) return;
+
+    const existingRsvp = getRSVPForSession(conflictingSession.id);
+    if (!existingRsvp) return;
+
+    const previousRsvps = rsvps;
+    const previousSessions = sessions;
+    const tempId = `temp-${Date.now()}`;
+
+    setRsvps((prev) => [
+      ...prev.filter((r) => r.id !== existingRsvp.id),
+      { id: tempId, sessionId: newSession.id, status: 'attending' },
+    ]);
+    setSessions((prev) =>
+      prev.map((s) => {
+        if (s.id === conflictingSession.id) {
+          return { ...s, registered_count: Math.max(0, s.registered_count - 1) };
+        }
+        if (s.id === newSession.id) {
+          return { ...s, registered_count: s.registered_count + 1 };
+        }
+        return s;
+      })
+    );
+
+    try {
+      await api.delete(`/sessions/rsvps/${existingRsvp.id}`);
+      const response = await api.post(`/sessions/${newSession.id}/rsvp`, { sessionId: newSession.id });
+      const newRsvp = (response as any).data || response;
+      setRsvps((prev) =>
+        prev.map((r) => (r.id === tempId ? { id: newRsvp.id, sessionId: newSession.id, status: 'attending' } : r))
+      );
+    } catch (err) {
+      console.error('Failed to switch RSVP', err);
+      setRsvps(previousRsvps);
+      setSessions(previousSessions);
+    }
+  };
+
   const displayed = activeTab === 'my-schedule' ? myScheduleSessions : filteredSessions;
 
   const toggleArrayFilter = (key: 'types' | 'days' | 'timeSlots', value: string) => {
@@ -941,6 +983,7 @@ export default function ScheduleDesktopPage() {
         onOpenChange={(o) => setConflictDialog({ ...conflictDialog, show: o })}
         newSession={conflictDialog.newSession}
         conflictingSession={conflictDialog.conflictingSession}
+        onSwitchRSVP={handleSwitchRSVP}
       />
     </DesktopShell>
   );

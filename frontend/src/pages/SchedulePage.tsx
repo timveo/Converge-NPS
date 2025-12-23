@@ -364,6 +364,49 @@ function ScheduleMobilePage() {
     }
   };
 
+  const handleSwitchRSVP = async () => {
+    const newSession = conflictDialog.newSession;
+    const conflictingSession = conflictDialog.conflictingSession;
+    if (!newSession || !conflictingSession) return;
+
+    // Find the existing RSVP for the conflicting session
+    const existingRsvp = getRSVPForSession(conflictingSession.id);
+    if (!existingRsvp) return;
+
+    // Optimistic update - remove old RSVP and add new one
+    const previousRsvps = rsvps;
+    const previousSessions = sessions;
+    const tempId = `temp-${Date.now()}`;
+
+    setRsvps(prev => [
+      ...prev.filter(r => r.id !== existingRsvp.id),
+      { id: tempId, sessionId: newSession.id, status: 'attending' }
+    ]);
+    setSessions(prev => prev.map(s => {
+      if (s.id === conflictingSession.id) {
+        return { ...s, registered_count: Math.max(0, s.registered_count - 1) };
+      }
+      if (s.id === newSession.id) {
+        return { ...s, registered_count: s.registered_count + 1 };
+      }
+      return s;
+    }));
+
+    try {
+      // Cancel the existing RSVP
+      await api.delete(`/sessions/rsvps/${existingRsvp.id}`);
+      
+      // Create the new RSVP
+      const response = await api.post(`/sessions/${newSession.id}/rsvp`, { sessionId: newSession.id });
+      const newRsvp = (response as any).data || response;
+      setRsvps(prev => prev.map(r => r.id === tempId ? { id: newRsvp.id, sessionId: newSession.id, status: 'attending' } : r));
+    } catch (err) {
+      console.error('Failed to switch RSVP', err);
+      setRsvps(previousRsvps);
+      setSessions(previousSessions);
+    }
+  };
+
   const handleAddToCalendar = (session: Session) => {
     const startDate = new Date(session.start_time);
     const endDate = new Date(session.end_time);
@@ -656,6 +699,7 @@ END:VCALENDAR`;
         onOpenChange={(o) => setConflictDialog({ ...conflictDialog, show: o })}
         newSession={conflictDialog.newSession}
         conflictingSession={conflictDialog.conflictingSession}
+        onSwitchRSVP={handleSwitchRSVP}
       />
     </div>
   );
