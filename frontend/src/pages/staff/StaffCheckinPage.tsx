@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -71,10 +72,11 @@ function StaffCheckinMobilePage() {
   const [recentCheckIns, setRecentCheckIns] = useState<RecentCheckIn[]>([]);
   const [showWalkIn, setShowWalkIn] = useState(false);
   const [walkInData, setWalkInData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     organization: '',
-    role: ''
+    participantType: ''
   });
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -90,8 +92,6 @@ function StaffCheckinMobilePage() {
       });
     } catch (error) {
       console.error('Error loading stats:', error);
-      // Use mock data for development
-      setStats({ total_registered: 487, checked_in: 342 });
     } finally {
       setStatsLoading(false);
     }
@@ -103,18 +103,12 @@ function StaffCheckinMobilePage() {
       const data = (response as any).data || [];
       setRecentCheckIns(data.map((item: any) => ({
         id: item.id,
-        name: item.profile?.fullName || item.name || 'Unknown',
-        organization: item.profile?.organization || item.organization,
-        checkedInAt: item.checkedInAt || item.checked_in_at
+        name: item.name || 'Unknown',
+        organization: item.organization,
+        checkedInAt: item.checkedInAt
       })));
     } catch (error) {
       console.error('Error loading recent check-ins:', error);
-      // Mock data for development
-      setRecentCheckIns([
-        { id: '1', name: 'Dr. Sarah Johnson', organization: 'Naval Postgraduate School', checkedInAt: new Date().toISOString() },
-        { id: '2', name: 'Lt. Mike Chen', organization: 'US Navy', checkedInAt: new Date(Date.now() - 300000).toISOString() },
-        { id: '3', name: 'Alice Williams', organization: 'DARPA', checkedInAt: new Date(Date.now() - 600000).toISOString() },
-      ]);
     }
   }, []);
 
@@ -158,20 +152,22 @@ function StaffCheckinMobilePage() {
   };
 
   const handleWalkInSubmit = async () => {
-    if (!walkInData.fullName || !walkInData.email) {
-      toast.error('Please fill in required fields');
+    if (!walkInData.firstName || !walkInData.lastName || !walkInData.email || !walkInData.organization || !walkInData.participantType) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
     try {
       await api.post('/staff/walkin', walkInData);
-      toast.success(`${walkInData.fullName} registered and checked in!`);
+      const fullName = `${walkInData.firstName} ${walkInData.lastName}`.trim();
+      toast.success(`${fullName} registered and checked in!`);
       setShowWalkIn(false);
-      setWalkInData({ fullName: '', email: '', organization: '', role: '' });
+      setWalkInData({ firstName: '', lastName: '', email: '', organization: '', participantType: '' });
       loadStats();
       loadRecentCheckIns();
-    } catch (error) {
-      toast.error('Walk-in registration failed');
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Walk-in registration failed';
+      toast.error(message);
     }
   };
 
@@ -420,41 +416,69 @@ function StaffCheckinMobilePage() {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="fullName">Full Name *</Label>
-              <Input
-                id="fullName"
-                value={walkInData.fullName}
-                onChange={(e) => setWalkInData({ ...walkInData, fullName: e.target.value })}
-                className="mt-1"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  placeholder="John"
+                  value={walkInData.firstName}
+                  onChange={(e) => setWalkInData({ ...walkInData, firstName: e.target.value })}
+                  className="mt-1"
+                  maxLength={50}
+                />
+              </div>
+              <div>
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  placeholder="Doe"
+                  value={walkInData.lastName}
+                  onChange={(e) => setWalkInData({ ...walkInData, lastName: e.target.value })}
+                  className="mt-1"
+                  maxLength={50}
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 type="email"
+                placeholder="you@example.com"
                 value={walkInData.email}
                 onChange={(e) => setWalkInData({ ...walkInData, email: e.target.value })}
                 className="mt-1"
+                maxLength={255}
               />
             </div>
             <div>
-              <Label htmlFor="organization">Organization</Label>
+              <Label htmlFor="participantType">Participant Type *</Label>
+              <Select
+                value={walkInData.participantType}
+                onValueChange={(value) => setWalkInData({ ...walkInData, participantType: value })}
+              >
+                <SelectTrigger id="participantType" className="mt-1">
+                  <SelectValue placeholder="Select participant type" />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="faculty">Faculty/Staff</SelectItem>
+                  <SelectItem value="industry">Industry</SelectItem>
+                  <SelectItem value="alumni">Alumni</SelectItem>
+                  <SelectItem value="guest">Guest</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="organization">Organization / Company *</Label>
               <Input
                 id="organization"
+                placeholder="Your organization or company"
                 value={walkInData.organization}
                 onChange={(e) => setWalkInData({ ...walkInData, organization: e.target.value })}
                 className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <Input
-                id="role"
-                value={walkInData.role}
-                onChange={(e) => setWalkInData({ ...walkInData, role: e.target.value })}
-                className="mt-1"
+                maxLength={200}
               />
             </div>
           </div>

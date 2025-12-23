@@ -563,17 +563,14 @@ export async function getActivityReport(days: number = 7) {
 export async function getEventAnalytics() {
   // Split into smaller batches to avoid connection pool exhaustion
   // Batch 1: Core metrics (fast counts)
-  const [totalRegistered, totalCheckedIn, walkIns, recentCheckIns] = await Promise.all([
+  const [totalRegistered, totalCheckedIn, walkIns] = await Promise.all([
     prisma.profile.count(),
-    prisma.checkIn.count(),
-    prisma.checkIn.count({ where: { isWalkIn: true } }),
-    prisma.checkIn.count({
-      where: { checkedInAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } },
-    }),
+    prisma.profile.count({ where: { isCheckedIn: true } }),
+    prisma.profile.count({ where: { isWalkIn: true } }),
   ]);
 
   // Batch 2: Demographics and groupings
-  const [usersByRole, usersByOrganization, checkInsByMethod] = await Promise.all([
+  const [usersByRole, usersByOrganization] = await Promise.all([
     prisma.userRole.groupBy({ by: ['role'], _count: true }),
     prisma.profile.groupBy({
       by: ['organization'],
@@ -582,7 +579,6 @@ export async function getEventAnalytics() {
       take: 10,
       where: { organization: { not: null } },
     }),
-    prisma.checkIn.groupBy({ by: ['checkInMethod'], _count: true }),
   ]);
 
   // Batch 3: Session and RSVP data
@@ -662,11 +658,6 @@ export async function getEventAnalytics() {
       checkInRate: Math.round(checkInRate * 10) / 10,
       noShows: Math.max(0, noShows),
       walkIns,
-      checkInsLastHour: recentCheckIns,
-      checkInsByMethod: checkInsByMethod.map(m => ({
-        method: m.checkInMethod,
-        count: m._count,
-      })),
     },
     demographics: {
       byRole: usersByRole.map(r => ({

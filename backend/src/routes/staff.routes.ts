@@ -1,7 +1,7 @@
 /**
  * Staff Routes
  *
- * All staff-related endpoints (check-in, etc.)
+ * All staff-related endpoints (walk-in registration, etc.)
  */
 
 import { Router } from 'express';
@@ -22,14 +22,26 @@ router.post('/checkin', staffController.checkInAttendee);
 
 /**
  * GET /staff/checkin/stats
- * Get check-in statistics
+ * Get registration statistics
  */
 router.get('/checkin/stats', staffController.getCheckInStats);
+
+/**
+ * GET /staff/checkin/recent
+ * Get recent check-ins
+ */
+router.get('/checkin/recent', staffController.getRecentCheckIns);
 
 /**
  * GET /staff/search
  * Search for attendees
  */
 router.get('/search', staffController.searchAttendees);
+
+/**
+ * POST /staff/walkin
+ * Register and check in a walk-in attendee
+ */
+router.post('/walkin', staffController.registerWalkIn);
 
 export default router;

@@ -91,12 +91,13 @@ model Profile {
   hideContactInfo          Boolean                   @default(false) @map("hide_contact_info")
   onboardingCompleted      Boolean                   @default(false) @map("onboarding_completed")
   onboardingStep           Int                       @default(0) @map("onboarding_step")
+  isWalkIn                 Boolean                   @default(false) @map("is_walk_in")
+  isCheckedIn              Boolean                   @default(false) @map("is_checked_in")
+  checkedInById            String?                   @map("checked_in_by_id") @db.Uuid
   createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
   auditLogsTarget          AuditLog[]                @relation("AuditLogTarget")
   auditLogs                AuditLog[]                @relation("AuditLogUser")
-  checkedInBy              CheckIn[]                 @relation("CheckInStaff")
-  checkedIn                CheckIn?                  @relation("CheckedInUser")
   connectionsAsTarget      Connection[]              @relation("TargetUserConnections")
   connectionsAsUser        Connection[]              @relation("UserConnections")
   conversationParticipants ConversationParticipant[]
@@ -225,23 +226,6 @@ model Rsvp {
   @@index([sessionId])
   @@index([status])
   @@map("rsvps")
-}
-
-model CheckIn {
-  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId        String        @unique @map("user_id") @db.Uuid
-  checkedInBy   String        @map("checked_in_by") @db.Uuid
-  checkInMethod CheckInMethod @map("check_in_method")
-  isWalkIn      Boolean       @default(false) @map("is_walk_in")
-  checkedInAt   DateTime      @default(now()) @map("checked_in_at") @db.Timestamptz(6)
-  staff         Profile       @relation("CheckInStaff", fields: [checkedInBy], references: [id])
-  user          Profile       @relation("CheckedInUser", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([checkedInBy])
-  @@index([checkedInAt])
-  @@index([isWalkIn])
-  @@map("check_ins")
 }
 
 model Project {
