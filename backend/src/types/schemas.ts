@@ -236,20 +236,15 @@ export const SmartsheetSyncSchema = z.object({
 });
 
 // ===========================
-// Check-In Schemas
+// Walk-In Registration Schema
 // ===========================
 
-export const CheckInSchema = z.object({
-  userId: z.string().uuid(),
-  checkInMethod: z.enum(['qr_scan', 'manual_search', 'walk_in']),
-  isWalkIn: z.boolean().default(false),
-});
-
 export const WalkInRegistrationSchema = z.object({
-  fullName: z.string().min(2).max(100),
+  firstName: z.string().min(1).max(50),
+  lastName: z.string().min(1).max(50),
   email: z.string().email().max(255),
-  organization: z.string().max(100),
-  role: z.string().max(100),
+  organization: z.string().min(1).max(200),
+  participantType: z.enum(['student', 'faculty', 'industry', 'alumni', 'guest']),
 });
 
 // ===========================

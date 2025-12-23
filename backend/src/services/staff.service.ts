@@ -1,23 +1,19 @@
 /**
  * Staff Service
  *
- * Handles staff operations (check-in, etc.)
+ * Handles staff operations (walk-in registration, etc.)
  */
 
 import prisma from '../config/database';
 import { NotFoundError, ConflictError } from '../middleware/errorHandler';
-import { CheckInMethod } from '@prisma/client';
+import { AppRole } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
+import { randomUUID, randomBytes } from 'crypto';
 
 /**
- * Check in attendee
+ * Check in an attendee (updates Profile.isCheckedIn)
  */
-export async function checkInAttendee(
-  staffId: string,
-  userId: string,
-  checkInMethod: CheckInMethod,
-  isWalkIn: boolean = false
-) {
-  // Check if user exists
+export async function checkInAttendee(staffId: string, userId: string) {
   const user = await prisma.profile.findUnique({
     where: { id: userId },
   });
@@ -26,126 +22,75 @@ export async function checkInAttendee(
     throw new NotFoundError('User not found');
   }
 
-  // Check if already checked in
-  const existing = await prisma.checkIn.findUnique({
-    where: { userId },
-  });
-
-  if (existing) {
+  if (user.isCheckedIn) {
     throw new ConflictError('User already checked in');
   }
 
-  // Create check-in record
-  const checkIn = await prisma.checkIn.create({
+  const updated = await prisma.profile.update({
+    where: { id: userId },
     data: {
-      userId,
-      checkedInBy: staffId,
-      checkInMethod,
-      isWalkIn,
+      isCheckedIn: true,
+      checkedInById: staffId,
     },
-    include: {
-      user: {
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-          organization: true,
-          userRoles: {
-            select: { role: true },
-          },
-        },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      organization: true,
+      isCheckedIn: true,
+      isWalkIn: true,
+      userRoles: {
+        select: { role: true },
       },
     },
   });
 
-  return checkIn;
+  return updated;
 }
 
 /**
  * Get check-in statistics
  */
 export async function getCheckInStats() {
-  const [
-    totalCheckedIn,
-    byMethod,
-    walkIns,
-    byRole,
-    recentCheckIns,
-  ] = await Promise.all([
-    // Total checked in
-    prisma.checkIn.count(),
-
-    // By check-in method
-    prisma.checkIn.groupBy({
-      by: ['checkInMethod'],
-      _count: true,
-    }),
-
-    // Walk-ins count
-    prisma.checkIn.count({
-      where: { isWalkIn: true },
-    }),
-
-    // By user role (approximate - counts unique check-ins with roles)
-    prisma.checkIn.findMany({
-      include: {
-        user: {
-          include: {
-            userRoles: true,
-          },
-        },
-      },
-    }),
-
-    // Recent check-ins (last 50)
-    prisma.checkIn.findMany({
-      take: 50,
-      orderBy: { checkedInAt: 'desc' },
-      include: {
-        user: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            organization: true,
-          },
-        },
-        staff: {
-          select: {
-            id: true,
-            fullName: true,
-          },
-        },
-      },
-    }),
+  const [totalRegistered, checkedIn, walkIns] = await Promise.all([
+    prisma.profile.count(),
+    prisma.profile.count({ where: { isCheckedIn: true } }),
+    prisma.profile.count({ where: { isWalkIn: true } }),
   ]);
 
-  // Count by role
-  const roleCounts: Record<string, number> = {};
-  byRole.forEach(checkIn => {
-    checkIn.user.userRoles.forEach(userRole => {
-      const role = userRole.role;
-      roleCounts[role] = (roleCounts[role] || 0) + 1;
-    });
-  });
-
   return {
-    totalCheckedIn,
+    totalRegistered,
+    checkedIn,
     walkIns,
-    byMethod: byMethod.map(m => ({
-      method: m.checkInMethod,
-      count: m._count,
-    })),
-    byRole: Object.entries(roleCounts).map(([role, count]) => ({
-      role,
-      count,
-    })),
-    recent: recentCheckIns,
   };
 }
 
 /**
- * Search for attendees (for manual check-in)
+ * Get recent check-ins
+ */
+export async function getRecentCheckIns(limit: number = 50) {
+  const recentCheckIns = await prisma.profile.findMany({
+    where: { isCheckedIn: true },
+    orderBy: { updatedAt: 'desc' },
+    take: limit,
+    select: {
+      id: true,
+      fullName: true,
+      organization: true,
+      updatedAt: true,
+    },
+  });
+
+  return recentCheckIns.map(p => ({
+    id: p.id,
+    name: p.fullName,
+    organization: p.organization,
+    checkedInAt: p.updatedAt,
+  }));
+}
+
+/**
+ * Search for attendees
  */
 export async function searchAttendees(query: string, limit: number = 10) {
   const users = await prisma.profile.findMany({
@@ -163,26 +108,94 @@ export async function searchAttendees(query: string, limit: number = 10) {
       email: true,
       organization: true,
       department: true,
+      isWalkIn: true,
+      createdAt: true,
       userRoles: {
         select: { role: true },
       },
     },
   });
 
-  // Add check-in status
-  const userIds = users.map(u => u.id);
-  const checkIns = await prisma.checkIn.findMany({
-    where: {
-      userId: { in: userIds },
-    },
-    select: { userId: true, checkedInAt: true },
+  return users;
+}
+
+/**
+ * Register a walk-in attendee
+ */
+export async function registerWalkIn(
+  staffId: string,
+  data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    organization: string;
+    participantType: string;
+  }
+) {
+  // Check if email already exists
+  const existingUser = await prisma.profile.findUnique({
+    where: { email: data.email.toLowerCase() },
   });
 
-  const checkInMap = new Map(checkIns.map(c => [c.userId, c.checkedInAt]));
+  if (existingUser) {
+    throw new ConflictError('A user with this email already exists');
+  }
 
-  return users.map(user => ({
-    ...user,
-    checkedIn: checkInMap.has(user.id),
-    checkedInAt: checkInMap.get(user.id) || null,
-  }));
+  const fullName = `${data.firstName} ${data.lastName}`.trim();
+  
+  // Generate a random password for walk-in (they can reset later if needed)
+  const randomPassword = randomBytes(16).toString('hex');
+  const hashedPassword = await bcrypt.hash(randomPassword, 12);
+
+  // Create the profile in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // Create profile with isWalkIn = true and isCheckedIn = true
+    const profileId = randomUUID();
+    const profile = await tx.profile.create({
+      data: {
+        id: profileId,
+        email: data.email.toLowerCase(),
+        fullName,
+        organization: data.organization,
+        isWalkIn: true,
+        isCheckedIn: true,
+        checkedInById: staffId,
+      },
+    });
+
+    // Create password record in separate table
+    await tx.userPassword.create({
+      data: {
+        userId: profileId,
+        passwordHash: hashedPassword,
+      },
+    });
+
+    // Add user role - map participant types to AppRole
+    const roleMap: Record<string, AppRole> = {
+      student: 'student' as AppRole,
+      faculty: 'faculty' as AppRole,
+      industry: 'industry' as AppRole,
+      alumni: 'participant' as AppRole,
+      guest: 'participant' as AppRole,
+    };
+    const appRole: AppRole = roleMap[data.participantType] || ('participant' as AppRole);
+    
+    await tx.userRole.create({
+      data: {
+        userId: profile.id,
+        role: appRole,
+      },
+    });
+
+    return profile;
+  });
+
+  return {
+    id: result.id,
+    fullName: result.fullName,
+    email: result.email,
+    organization: result.organization,
+    createdAt: result.createdAt,
+  };
 }

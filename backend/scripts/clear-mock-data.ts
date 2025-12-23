@@ -19,8 +19,7 @@ async function clearMockData() {
     console.log('Deleting Conversations...');
     await prisma.conversations.deleteMany();
 
-    console.log('Deleting CheckIns...');
-    await prisma.checkIns.deleteMany();
+    // CheckIn model removed - check-in data now stored on Profile
 
     console.log('Deleting RSVPs...');
     await prisma.rsvps.deleteMany();
