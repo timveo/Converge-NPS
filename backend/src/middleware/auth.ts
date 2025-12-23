@@ -47,12 +47,22 @@ export async function authenticateToken(
     const decoded = verifyAccessToken(token);
 
     // Fetch user roles from database (for fresh role data)
-    const userRoles = await prisma.userRole.findMany({
-      where: { userId: decoded.sub },
-      select: { role: true },
-    });
-
-    const roles = userRoles.map((ur) => ur.role);
+    let roles: AppRole[] = [];
+    try {
+      const userRoles = await prisma.userRole.findMany({
+        where: { userId: decoded.sub },
+        select: { role: true },
+      });
+      roles = userRoles.map((ur) => ur.role);
+    } catch (dbError) {
+      // Database error shouldn't invalidate a valid token
+      // Fall back to roles from JWT payload if available
+      logger.warn('Failed to fetch user roles from database, using JWT roles', { userId: decoded.sub, error: dbError });
+      // Cast string roles from JWT to AppRole enum (they should match)
+      roles = (decoded.roles || []).filter((r): r is AppRole =>
+        Object.values(AppRole).includes(r as AppRole)
+      );
+    }
 
     // Attach user to request
     req.user = {

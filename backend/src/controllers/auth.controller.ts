@@ -18,6 +18,7 @@ import {
   TwoFactorVerifySchema,
 } from '../types/schemas';
 import logger from '../utils/logger';
+import { getAccessTokenExpiry } from '../utils/auth';
 
 export class AuthController {
   /**
@@ -131,6 +132,8 @@ export class AuthController {
         message: 'Login successful',
         user,
         accessToken,
+        refreshToken,
+        expiresIn: getAccessTokenExpiry(),
       });
     } catch (error) {
       next(error);
@@ -216,6 +219,8 @@ export class AuthController {
       res.status(200).json({
         message: 'Token refreshed',
         accessToken,
+        refreshToken: newRefreshToken,
+        expiresIn: getAccessTokenExpiry(),
       });
     } catch (error) {
       next(error);
