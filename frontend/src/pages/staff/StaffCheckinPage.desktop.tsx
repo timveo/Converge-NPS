@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Camera, CheckCircle, XCircle, AlertCircle, UserPlus,
-  RefreshCw
+  RefreshCw, Loader2
 } from "lucide-react";
+import { Html5Qrcode } from "html5-qrcode";
+import { triggerHapticFeedback } from "@/lib/mobileUtils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -50,8 +52,11 @@ export default function StaffCheckinDesktopPage() {
     organization: '',
     participantType: ''
   });
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [isProcessingQr, setIsProcessingQr] = useState(false);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const isScannerStoppingRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const loadStats = useCallback(async () => {
     setStatsLoading(true);
@@ -95,33 +100,173 @@ export default function StaffCheckinDesktopPage() {
     return () => clearInterval(interval);
   }, [loadStats, loadRecentCheckIns]);
 
+  // Safe scanner stop function
+  const stopScanner = useCallback(async () => {
+    if (!html5QrCodeRef.current || isScannerStoppingRef.current) {
+      return;
+    }
+    isScannerStoppingRef.current = true;
+    try {
+      await html5QrCodeRef.current.stop();
+    } catch {
+      // Ignore errors - scanner may already be stopped
+    } finally {
+      isScannerStoppingRef.current = false;
+      html5QrCodeRef.current = null;
+    }
+  }, []);
+
   const handleStartScan = async () => {
     setScanning(true);
+    setScanError(null);
+    triggerHapticFeedback('light');
+  };
+
+  const handleCloseScanner = useCallback(async () => {
+    await stopScanner();
+    setScanning(false);
+    setScanError(null);
+  }, [stopScanner]);
+
+  // Handle QR code scan success
+  const handleScanSuccess = useCallback(async (decodedText: string) => {
+    if (isProcessingQr) return;
+    setIsProcessingQr(true);
+
+    // Stop the scanner
+    await stopScanner();
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
-      streamRef.current = stream;
+      const qrData = JSON.parse(decodedText);
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+      // Handle the QR format: {type, id, v} or legacy {uuid}
+      const userId = qrData.id || qrData.uuid;
+
+      if (!userId) {
+        triggerHapticFeedback('heavy');
+        toast.error('Invalid QR code format');
+        setScanError('Invalid QR code - not from event app');
+        setIsProcessingQr(false);
+        return;
       }
-    } catch (err) {
-      console.error('Camera access error:', err);
-      toast.error("Failed to access camera. Please allow camera permissions.");
-      setScanning(false);
-    }
-  };
 
-  const handleCloseScanner = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+      // Validate type if present
+      if (qrData.type && qrData.type !== 'converge-nps-profile') {
+        triggerHapticFeedback('heavy');
+        toast.error('Invalid QR code type');
+        setScanError('This QR code is not from the Converge app');
+        setIsProcessingQr(false);
+        return;
+      }
+
+      // Call check-in API
+      try {
+        const response = await api.post('/staff/checkin', { userId });
+        const data = response as any;
+
+        triggerHapticFeedback('medium');
+        toast.success(`${data.data?.fullName || 'Attendee'} checked in!`);
+
+        // Update stats and recent check-ins
+        loadStats();
+        loadRecentCheckIns();
+
+        // Close scanner
+        setScanning(false);
+      } catch (error: any) {
+        triggerHapticFeedback('heavy');
+        const errorMessage = error.response?.data?.error?.message || 'Check-in failed';
+        const errorCode = error.response?.data?.error?.code;
+
+        if (errorCode === 'ALREADY_CHECKED_IN') {
+          toast.warning(errorMessage);
+          setScanError('Already checked in');
+        } else if (errorCode === 'NOT_FOUND') {
+          toast.error('User not found');
+          setScanError('User not found - try walk-in registration');
+        } else {
+          toast.error(errorMessage);
+          setScanError(errorMessage);
+        }
+      }
+    } catch {
+      triggerHapticFeedback('heavy');
+      toast.error('Unable to parse QR code');
+      setScanError('Cannot read QR code');
+    } finally {
+      setIsProcessingQr(false);
     }
-    setScanning(false);
-  };
+  }, [isProcessingQr, stopScanner, loadStats, loadRecentCheckIns]);
+
+  // Initialize scanner when scanning starts
+  useEffect(() => {
+    if (!scanning) return;
+
+    let cancelled = false;
+
+    const initScanner = async () => {
+      try {
+        // Wait for DOM element to be ready
+        let attempts = 0;
+        while (!document.getElementById('desktop-qr-scanner-container') && attempts < 20) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+          attempts++;
+        }
+
+        if (cancelled || !isMountedRef.current) return;
+
+        const container = document.getElementById('desktop-qr-scanner-container');
+        if (!container) {
+          console.error('Scanner container not found');
+          toast.error('Scanner initialization failed');
+          setScanning(false);
+          return;
+        }
+
+        const html5QrCode = new Html5Qrcode("desktop-qr-scanner-container");
+        html5QrCodeRef.current = html5QrCode;
+
+        const qrConfig = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        };
+
+        const onSuccess = async (decodedText: string) => {
+          if (!cancelled && isMountedRef.current) {
+            await handleScanSuccess(decodedText);
+          }
+        };
+
+        const onError = () => {}; // Ignore scan errors (no QR in frame)
+
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          qrConfig,
+          onSuccess,
+          onError
+        );
+      } catch (err) {
+        console.error('Camera error:', err);
+        if (!cancelled && isMountedRef.current) {
+          toast.error("Failed to access camera. Please allow camera permissions.");
+          setScanning(false);
+        }
+      }
+    };
+
+    initScanner();
+
+    return () => {
+      cancelled = true;
+      if (html5QrCodeRef.current && !isScannerStoppingRef.current) {
+        isScannerStoppingRef.current = true;
+        html5QrCodeRef.current.stop().catch(() => {}).finally(() => {
+          isScannerStoppingRef.current = false;
+          html5QrCodeRef.current = null;
+        });
+      }
+    };
+  }, [scanning, handleScanSuccess]);
 
   const handleWalkInSubmit = async () => {
     if (!walkInData.firstName || !walkInData.lastName || !walkInData.email || !walkInData.organization || !walkInData.participantType) {
@@ -143,10 +288,16 @@ export default function StaffCheckinDesktopPage() {
     }
   };
 
+  // Track mounted state and cleanup on unmount
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+      isMountedRef.current = false;
+      if (html5QrCodeRef.current && !isScannerStoppingRef.current) {
+        isScannerStoppingRef.current = true;
+        html5QrCodeRef.current.stop().catch(() => {}).finally(() => {
+          isScannerStoppingRef.current = false;
+        });
       }
     };
   }, []);
@@ -351,24 +502,25 @@ export default function StaffCheckinDesktopPage() {
             <DialogTitle>Scan Attendee QR Code</DialogTitle>
           </DialogHeader>
 
-          <div className="relative w-full aspect-square max-w-sm mx-auto overflow-hidden rounded-lg bg-muted">
-            <video
-              ref={videoRef}
-              className="w-full h-full object-cover"
-              playsInline
-              muted
-            />
-            <div className="absolute inset-0 border-2 border-primary/50 rounded-lg pointer-events-none">
-              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg" />
-              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
-              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
-              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
-            </div>
+          <div className="relative w-full max-w-sm mx-auto overflow-hidden rounded-lg bg-muted" style={{ minHeight: '300px' }}>
+            <div id="desktop-qr-scanner-container" style={{ width: '100%', minHeight: '300px' }} />
+            {isProcessingQr && (
+              <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            )}
           </div>
 
-          <p className="text-center text-sm text-muted-foreground">
-            Position QR code within the frame
-          </p>
+          {scanError ? (
+            <Alert variant="destructive" className="py-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{scanError}</AlertDescription>
+            </Alert>
+          ) : (
+            <p className="text-center text-sm text-muted-foreground">
+              Position QR code within the frame
+            </p>
+          )}
 
           <Button variant="outline" onClick={handleCloseScanner}>
             Cancel
