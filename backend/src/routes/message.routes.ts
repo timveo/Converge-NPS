@@ -14,6 +14,9 @@ router.post('/', authenticate, messageController.sendMessage);
 // GET /v1/messages/unread-count - Get unread count
 router.get('/unread-count', authenticate, messageController.getUnreadCount);
 
+// GET /v1/messages/users/search - Search users to start a conversation
+router.get('/users/search', authenticate, messageController.searchUsersForMessaging);
+
 /**
  * Conversation routes
  */

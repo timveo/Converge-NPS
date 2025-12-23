@@ -44,6 +44,12 @@ router.post('/', ConnectionController.createByUserId);
 router.get('/recommendations', ConnectionController.getRecommendations);
 
 /**
+ * GET /connections/check/:userId
+ * Check if current user is connected with another user (must come before /:id route)
+ */
+router.get('/check/:userId', ConnectionController.checkConnection);
+
+/**
  * GET /connections/export
  * Export connections as CSV (must come before /:id route)
  */

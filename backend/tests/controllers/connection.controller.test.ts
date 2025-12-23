@@ -326,69 +326,54 @@ describe('ConnectionController', () => {
     });
   });
 
-  describe('createByUserId', () => {
-    it('should create connection by user ID', async () => {
+  describe('checkConnection', () => {
+    it('should return connected true when connection exists', async () => {
       mockReq.user = { id: 'user-123' } as any;
-      mockReq.body = { connectedUserId: 'user-456' };
+      mockReq.params = { userId: 'user-456' };
 
-      const mockConnection = {
-        id: 'conn-1',
-        userId: 'user-123',
-        connectedUserId: 'user-456',
-        connectedUser: {
-          id: 'user-456',
-          fullName: 'Jane Doe',
-          email: 'jane@example.com',
+      prismaMock.connection.findFirst.mockResolvedValue({ id: 'conn-1' });
+
+      await ConnectionController.checkConnection(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(prismaMock.connection.findFirst).toHaveBeenCalledWith({
+        where: {
+          OR: [
+            { userId: 'user-123', connectedUserId: 'user-456' },
+            { userId: 'user-456', connectedUserId: 'user-123' },
+          ],
         },
-      };
-
-      // Mock Prisma calls for bidirectional creation
-      prismaMock.connection.create
-        .mockResolvedValueOnce(mockConnection)
-        .mockResolvedValueOnce({ id: 'conn-2' });
-
-      await ConnectionController.createByUserId(
-        mockReq as Request,
-        mockRes as Response,
-        mockNext
-      );
-
-      expect(prismaMock.connection.create).toHaveBeenCalledTimes(2);
-      expect(mockRes.status).toHaveBeenCalledWith(201);
+        select: { id: true },
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
-        message: 'Connection created successfully',
-        connection: mockConnection,
+        isConnected: true,
+        connectionId: 'conn-1',
       });
     });
 
-    it('should return 400 if connectedUserId missing', async () => {
+    it('should return connected false when no connection exists', async () => {
       mockReq.user = { id: 'user-123' } as any;
-      mockReq.body = {};
+      mockReq.params = { userId: 'user-456' };
 
-      await ConnectionController.createByUserId(
-        mockReq as Request,
-        mockRes as Response,
-        mockNext
-      );
+      prismaMock.connection.findFirst.mockResolvedValue(null);
 
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: expect.objectContaining({ code: 'INVALID_REQUEST' }),
-        })
-      );
+      await ConnectionController.checkConnection(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        isConnected: false,
+        connectionId: null,
+      });
     });
 
-    it('should return 401 if not authenticated', async () => {
+    it('should return 401 when not authenticated', async () => {
       mockReq.user = undefined;
 
-      await ConnectionController.createByUserId(
-        mockReq as Request,
-        mockRes as Response,
-        mockNext
-      );
+      await ConnectionController.checkConnection(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: { code: 'UNAUTHORIZED', message: 'Not authenticated' },
+      });
     });
   });
 

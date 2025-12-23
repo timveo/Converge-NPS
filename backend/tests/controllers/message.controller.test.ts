@@ -32,6 +32,7 @@ jest.mock('../../src/config/database', () => ({
     },
     profile: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
     $on: jest.fn(),
     $disconnect: jest.fn(),
@@ -44,6 +45,10 @@ jest.mock('../../src/services/message.service');
 import { Request, Response } from 'express';
 import * as messageController from '../../src/controllers/message.controller';
 import * as messageService from '../../src/services/message.service';
+import prisma from '../../src/config/database';
+
+// Cast prisma to any for mock methods
+const prismaMock = prisma as any;
 
 describe('Message Controller', () => {
   let mockReq: Partial<Request>;
@@ -476,6 +481,113 @@ describe('Message Controller', () => {
       await messageController.getUnreadCount(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('searchUsersForMessaging', () => {
+    beforeEach(() => {
+      mockReq.user = { id: 'current-user' } as any;
+      mockReq.query = {};
+      (prismaMock.profile.findMany as jest.Mock).mockReset();
+    });
+
+    it('should return empty array when query shorter than 2 chars', async () => {
+      mockReq.query = { q: 'a' };
+
+      await messageController.searchUsersForMessaging(mockReq as Request, mockRes as Response);
+
+      expect(prismaMock.profile.findMany).not.toHaveBeenCalled();
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        data: [],
+      });
+    });
+
+    it('should search users with sanitized query and limit', async () => {
+      mockReq.query = { q: '  Jane  ', limit: '10' };
+      const mockUsers = [{ id: 'user-1', fullName: 'Jane Doe' }];
+      (prismaMock.profile.findMany as jest.Mock).mockResolvedValue(mockUsers);
+
+      await messageController.searchUsersForMessaging(mockReq as Request, mockRes as Response);
+
+      expect(prismaMock.profile.findMany).toHaveBeenCalledWith({
+        where: {
+          AND: [
+            { id: { not: 'current-user' } },
+            {
+              OR: [
+                { fullName: { contains: 'Jane', mode: 'insensitive' } },
+                { email: { contains: 'Jane', mode: 'insensitive' } },
+                { organization: { contains: 'Jane', mode: 'insensitive' } },
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          organization: true,
+          avatarUrl: true,
+        },
+        take: 10,
+        orderBy: { fullName: 'asc' },
+      });
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        data: mockUsers,
+      });
+    });
+
+    it('should cap limit at 50', async () => {
+      mockReq.query = { q: 'Jane', limit: '500' };
+      (prismaMock.profile.findMany as jest.Mock).mockResolvedValue([]);
+
+      await messageController.searchUsersForMessaging(mockReq as Request, mockRes as Response);
+
+      expect(prismaMock.profile.findMany).toHaveBeenCalledWith({
+        where: {
+          AND: [
+            { id: { not: 'current-user' } },
+            {
+              OR: [
+                { fullName: { contains: 'Jane', mode: 'insensitive' } },
+                { email: { contains: 'Jane', mode: 'insensitive' } },
+                { organization: { contains: 'Jane', mode: 'insensitive' } },
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          organization: true,
+          avatarUrl: true,
+        },
+        take: 50,
+        orderBy: { fullName: 'asc' },
+      });
+    });
+
+    it('should handle errors gracefully', async () => {
+      mockReq.query = { q: 'Jane' };
+      
+      // Mock console.error to prevent it from appearing in test output
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      
+      (prismaMock.profile.findMany as jest.Mock).mockRejectedValue(new Error('DB failure'));
+
+      await messageController.searchUsersForMessaging(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to search users',
+      });
+      
+      // Restore console.error
+      consoleSpy.mockRestore();
     });
   });
 });

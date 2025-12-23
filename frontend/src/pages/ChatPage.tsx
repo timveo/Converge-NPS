@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, ChevronLeft } from 'lucide-react';
+import { Send, ChevronLeft, UserPlus, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,9 +45,14 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isConnectedToUser, setIsConnectedToUser] = useState<boolean | null>(null);
+  const [isAddingConnection, setIsAddingConnection] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoadRef = useRef(true);
+  const prevMessageCountRef = useRef(0);
 
   const getInitials = (name: string) => {
     return name
@@ -69,6 +74,8 @@ export default function ChatPage() {
         setMessages(messagesRes.data || []);
         if (messagesRes.conversation) {
           setConversation(messagesRes.conversation);
+          // Check connection status with the other user
+          checkConnectionStatus(messagesRes.conversation.otherUser?.id);
         }
 
         void offlineDataCache.setThread(cid, {
@@ -92,6 +99,32 @@ export default function ChatPage() {
 
     fetchData();
   }, [conversationId]);
+
+  // Check connection status with the other user
+  const checkConnectionStatus = async (otherUserId?: string) => {
+    if (!otherUserId) return;
+    try {
+      const response = await api.get<{ isConnected: boolean }>(`/connections/check/${otherUserId}`);
+      setIsConnectedToUser(response.isConnected);
+    } catch (error) {
+      console.error('Failed to check connection status', error);
+      setIsConnectedToUser(false);
+    }
+  };
+
+  // Handle adding connection
+  const handleAddConnection = async () => {
+    if (!conversation?.otherUser?.id) return;
+    setIsAddingConnection(true);
+    try {
+      await api.post('/connections', { connectedUserId: conversation.otherUser.id });
+      setIsConnectedToUser(true);
+    } catch (error) {
+      console.error('Failed to add connection', error);
+    } finally {
+      setIsAddingConnection(false);
+    }
+  };
 
   // Polling fallback when Socket.IO is not connected
   useEffect(() => {
@@ -191,8 +224,33 @@ export default function ChatPage() {
 
   // Scroll to bottom on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messages.length === 0 || isLoading) return;
+    
+    const container = messagesContainerRef.current;
+    const hasNewMessages = messages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+    
+    // Always scroll on initial load - use requestAnimationFrame to ensure DOM is rendered
+    if (isInitialLoadRef.current) {
+      requestAnimationFrame(() => {
+        // Use scrollTop instead of scrollIntoView for instant positioning without any animation
+        const container = messagesContainerRef.current;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      });
+      isInitialLoadRef.current = false;
+      return;
+    }
+    
+    // Only auto-scroll if there are new messages AND user is near the bottom
+    if (hasNewMessages && container) {
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+      if (isNearBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [messages, isLoading]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,11 +374,28 @@ export default function ChatPage() {
               {conversation?.otherUser?.organization || ''}
             </p>
           </div>
+
+          {/* Add Connection button if not connected */}
+          {isConnectedToUser === false && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleAddConnection}
+              disabled={isAddingConnection}
+              className="text-primary-foreground hover:bg-primary/20"
+            >
+              {isAddingConnection ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <UserPlus className="h-5 w-5" />
+              )}
+            </Button>
+          )}
         </div>
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <p>No messages yet. Start the conversation!</p>

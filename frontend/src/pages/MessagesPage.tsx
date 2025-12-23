@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { MessageCircle, Search, ChevronLeft, Loader2 } from 'lucide-react';
+import { MessageCircle, Search, ChevronLeft, Loader2, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
 import { useDevice } from '@/hooks/useDeviceType';
@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { offlineDataCache } from '@/lib/offlineDataCache';
 import { OfflineDataBanner } from '@/components/OfflineDataBanner';
+import { NewConversationDialog } from '@/components/messages/NewConversationDialog';
 
 // Lazy load desktop version
 const MessagesDesktopPage = lazy(() => import('./MessagesPage.desktop'));
@@ -66,7 +67,9 @@ function MessagesMobilePage() {
   const { socket, isConnected } = useSocket();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
 
   // Fast path: if we navigated here with a target user id, start/open the conversation and redirect.
   useEffect(() => {
@@ -97,9 +100,9 @@ function MessagesMobilePage() {
     };
   }, [location.state, navigate]);
 
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (showLoading = false) => {
     try {
-      if (conversations.length === 0) {
+      if (showLoading) {
         setIsLoading(true);
       }
       const response = await api.get<{ success: boolean; data: Conversation[] }>('/messages/conversations');
@@ -113,13 +116,16 @@ function MessagesMobilePage() {
       setConversations(cached?.data ?? []);
     } finally {
       setIsLoading(false);
+      setHasFetchedOnce(true);
     }
   }, []);
 
   // Initial fetch
   useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
+    if (!hasFetchedOnce) {
+      fetchConversations(true);
+    }
+  }, [fetchConversations, hasFetchedOnce]);
 
   // Listen for new message notifications via Socket.IO
   useEffect(() => {
@@ -144,7 +150,7 @@ function MessagesMobilePage() {
     if (isConnected) return;
 
     // Poll every 5 seconds when socket is disconnected
-    const pollInterval = setInterval(fetchConversations, 5000);
+    const pollInterval = setInterval(() => fetchConversations(false), 5000);
 
     return () => clearInterval(pollInterval);
   }, [isConnected, fetchConversations]);
@@ -188,10 +194,24 @@ function MessagesMobilePage() {
                   {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
                 </p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-primary-foreground hover:bg-primary/20"
+                onClick={() => setIsNewConversationOpen(true)}
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </header>
       </div>
+
+      {/* New Conversation Dialog */}
+      <NewConversationDialog
+        open={isNewConversationOpen}
+        onOpenChange={setIsNewConversationOpen}
+      />
 
       {/* Offline Banner */}
       <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4">

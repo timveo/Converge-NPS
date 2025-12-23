@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,6 +13,8 @@ import {
   Clock,
   Inbox,
   Filter,
+  Plus,
+  UserPlus,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { api } from '@/lib/api';
@@ -29,6 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { NewConversationDialog } from '@/components/messages/NewConversationDialog';
 
 interface Conversation {
   id: string;
@@ -81,9 +84,15 @@ export default function MessagesDesktopPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'unread'>('recent');
+  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
+  const [isConnectedToSelected, setIsConnectedToSelected] = useState<boolean | null>(null);
+  const [isAddingConnection, setIsAddingConnection] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isInitialScrollRef = useRef(true);
+  const prevMessageCountRef = useRef(0);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectionStatusCache = useRef<Map<string, boolean>>(new Map());
 
   // Helpers
   const getInitials = (name: string) => {
@@ -122,22 +131,35 @@ export default function MessagesDesktopPage() {
     fetchConversations();
   }, [fetchConversations]);
 
-  // Handle URL-based conversation selection
+  // Handle URL-based conversation selection (only on initial load or URL change)
   useEffect(() => {
     const conversationId = searchParams.get('id');
-    if (conversationId && conversations.length > 0) {
+    // Only select from URL if we don't already have a selection
+    if (conversationId && conversations.length > 0 && !selectedConversation) {
       const conv = conversations.find((c) => c.id === conversationId);
       if (conv) {
         setSelectedConversation(conv);
       }
     }
-  }, [searchParams, conversations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, conversations.length]);
 
   // Fetch messages when conversation selected
   useEffect(() => {
     if (!selectedConversation) {
       setMessages([]);
+      setIsConnectedToSelected(null);
+      isInitialScrollRef.current = true;
+      prevMessageCountRef.current = 0;
       return;
+    }
+
+    // Check cache first for instant update, then verify with API
+    const otherUserId = selectedConversation.otherUser?.id;
+    if (otherUserId && connectionStatusCache.current.has(otherUserId)) {
+      setIsConnectedToSelected(connectionStatusCache.current.get(otherUserId)!);
+    } else {
+      setIsConnectedToSelected(null);
     }
 
     const fetchMessages = async () => {
@@ -162,9 +184,60 @@ export default function MessagesDesktopPage() {
       }
     };
 
+    const checkConnectionStatus = async () => {
+      const otherUserId = selectedConversation.otherUser?.id;
+      if (!otherUserId) return;
+      try {
+        const response = await api.get<{ isConnected: boolean }>(
+          `/connections/check/${otherUserId}`
+        );
+        connectionStatusCache.current.set(otherUserId, response.isConnected);
+        setIsConnectedToSelected(response.isConnected);
+      } catch (error) {
+        console.error('Failed to check connection status', error);
+        connectionStatusCache.current.set(otherUserId, false);
+        setIsConnectedToSelected(false);
+      }
+    };
+
     fetchMessages();
+    checkConnectionStatus();
     setSearchParams({ id: selectedConversation.id });
-  }, [selectedConversation, setSearchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConversation?.id]);
+
+  const getScrollContainer = () =>
+    (messagesEndRef.current?.closest('[data-radix-scroll-area-viewport]') as HTMLElement | null) ?? null;
+
+  // Scroll to bottom immediately when a conversation finishes loading
+  useLayoutEffect(() => {
+    if (!selectedConversation || isLoadingMessages || messages.length === 0) return;
+    if (!isInitialScrollRef.current) return;
+
+    const container = getScrollContainer();
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+      isInitialScrollRef.current = false;
+      prevMessageCountRef.current = messages.length;
+    }
+  }, [selectedConversation?.id, isLoadingMessages, messages.length]);
+
+  // Scroll on new incoming messages similar to mobile behavior
+  useEffect(() => {
+    if (!selectedConversation || messages.length === 0) return;
+
+    const container = getScrollContainer();
+    const hasNewMessages = messages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+
+    if (isInitialScrollRef.current) return;
+    if (hasNewMessages && container) {
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+      if (isNearBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [messages, selectedConversation?.id]);
 
   // Socket.IO event listeners
   useEffect(() => {
@@ -226,10 +299,6 @@ export default function MessagesDesktopPage() {
     };
   }, [socket, selectedConversation]);
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   // Handle send message
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -284,6 +353,22 @@ export default function MessagesDesktopPage() {
     typingTimeoutRef.current = setTimeout(() => {
       socket.emit('typing_stop', { conversationId: selectedConversation.id });
     }, 2000);
+  };
+
+  // Handle adding connection
+  const handleAddConnection = async () => {
+    const otherUserId = selectedConversation?.otherUser?.id;
+    if (!otherUserId) return;
+    setIsAddingConnection(true);
+    try {
+      await api.post('/connections', { connectedUserId: otherUserId });
+      connectionStatusCache.current.set(otherUserId, true);
+      setIsConnectedToSelected(true);
+    } catch (error) {
+      console.error('Failed to add connection', error);
+    } finally {
+      setIsAddingConnection(false);
+    }
   };
 
   // Filter and sort conversations
@@ -416,6 +501,14 @@ export default function MessagesDesktopPage() {
             <p className="text-sm text-muted-foreground">Your messages</p>
           </div>
         </div>
+        <Button
+          size="sm"
+          className="h-8"
+          onClick={() => setIsNewConversationOpen(true)}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          New
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -559,17 +652,33 @@ export default function MessagesDesktopPage() {
             </p>
           </div>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 text-xs"
-          onClick={() =>
-            navigate(`/connections?id=${selectedConversation.otherUser?.id}`)
-          }
-        >
-          <User className="h-3 w-3 mr-1" />
-          View Profile
-        </Button>
+        {isConnectedToSelected === null ? (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        ) : isConnectedToSelected ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={() => navigate(`/connections`)}
+          >
+            <User className="h-3 w-3 mr-1" />
+            View Profile
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            className="h-8 text-xs"
+            onClick={handleAddConnection}
+            disabled={isAddingConnection}
+          >
+            {isAddingConnection ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <UserPlus className="h-3 w-3 mr-1" />
+            )}
+            Add Connection
+          </Button>
+        )}
       </div>
 
       {/* Contact Info Bar */}
@@ -764,6 +873,22 @@ export default function MessagesDesktopPage() {
           />
         </div>
       </div>
+
+      {/* New Conversation Dialog */}
+      <NewConversationDialog
+        open={isNewConversationOpen}
+        onOpenChange={setIsNewConversationOpen}
+        onConversationCreated={(conversation) => {
+          // Add to conversations list if not already there
+          setConversations((prev) => {
+            const exists = prev.some((c) => c.id === conversation.id);
+            if (exists) return prev;
+            return [{ ...conversation, unreadCount: 0, lastMessageAt: new Date().toISOString() } as Conversation, ...prev];
+          });
+          // Select the conversation
+          setSelectedConversation(conversation as Conversation);
+        }}
+      />
     </DesktopShell>
   );
 }

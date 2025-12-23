@@ -538,4 +538,37 @@ export class ConnectionController {
       next(error);
     }
   }
+
+  /**
+   * GET /connections/check/:userId
+   * Check if current user is connected with another user
+   */
+  static async checkConnection(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Not authenticated' },
+        });
+      }
+
+      const { userId } = req.params;
+
+      const connection = await prisma.connection.findFirst({
+        where: {
+          OR: [
+            { userId: req.user.id, connectedUserId: userId },
+            { userId: userId, connectedUserId: req.user.id },
+          ],
+        },
+        select: { id: true },
+      });
+
+      res.status(200).json({
+        isConnected: !!connection,
+        connectionId: connection?.id || null,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
