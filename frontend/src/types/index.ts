@@ -1,5 +1,7 @@
 // User & Auth Types
-export type UserRole = 'student' | 'faculty' | 'industry' | 'staff' | 'admin';
+// Note: 'participant' is the new default role for self-registration
+// Legacy roles (student, faculty, industry) kept for backward compatibility with existing data
+export type UserRole = 'participant' | 'student' | 'faculty' | 'industry' | 'staff' | 'admin';
 
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 

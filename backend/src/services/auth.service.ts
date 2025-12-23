@@ -98,11 +98,13 @@ export class AuthService {
       },
     });
 
-    // Assign default role (student)
+    // Assign default permission role (participant) for all self-registrations
+    // Note: staff and admin roles can only be assigned by an admin
+    // The participant type (data.role) is stored in Profile.role for display purposes only
     await prisma.userRole.create({
       data: {
         userId,
-        role: 'student',
+        role: 'participant',
       },
     });
 

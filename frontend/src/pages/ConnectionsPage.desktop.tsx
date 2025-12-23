@@ -747,13 +747,13 @@ export default function ConnectionsDesktopPage() {
 
           <Separator />
 
-          {/* Acceleration Interests */}
+          {/* Technology Interests */}
           {selectedConnection.profile?.acceleration_interests &&
             selectedConnection.profile.acceleration_interests.length > 0 && (
               <div>
                 <Label className="text-sm font-medium flex items-center gap-2 mb-3">
                   <BookOpen className="h-4 w-4 text-primary" />
-                  Acceleration Interests
+                  Technology Interests
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   {selectedConnection.profile.acceleration_interests.map((interest) => (

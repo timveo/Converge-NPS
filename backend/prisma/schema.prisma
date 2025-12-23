@@ -538,6 +538,7 @@ model AuditLog {
 }
 
 enum AppRole {
+  participant
   student
   faculty
   industry

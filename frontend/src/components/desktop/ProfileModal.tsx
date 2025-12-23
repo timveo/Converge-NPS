@@ -149,12 +149,12 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
                   </div>
                 )}
 
-                {/* Acceleration Interests */}
+                {/* Technology Interests */}
                 {user.accelerationInterests && user.accelerationInterests.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Tag className="h-4 w-4 text-primary" />
-                      <h4 className="font-medium text-sm text-foreground">Acceleration Interests</h4>
+                      <h4 className="font-medium text-sm text-foreground">Technology Interests</h4>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {user.accelerationInterests.map((interest) => (

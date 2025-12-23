@@ -177,10 +177,10 @@ export const requireAdmin = requireRole(AppRole.admin);
 export const requireStaffOrAdmin = requireRole(AppRole.staff, AppRole.admin);
 
 // =============================================================================
-// FACULTY OR ADMIN MIDDLEWARE
+// PARTICIPANT OR ADMIN MIDDLEWARE
 // =============================================================================
 
-export const requireFacultyOrAdmin = requireRole(AppRole.faculty, AppRole.admin);
+export const requireParticipantOrAdmin = requireRole(AppRole.participant, AppRole.admin);
 
 // =============================================================================
 // ALIAS FOR BACKWARD COMPATIBILITY

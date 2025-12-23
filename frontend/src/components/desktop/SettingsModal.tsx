@@ -398,11 +398,11 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                   </div>
                 </Collapsible>
 
-                {/* Acceleration Interests */}
+                {/* Technology Interests */}
                 <Collapsible open={interestsOpen} onOpenChange={setInterestsOpen}>
                   <div className="border border-border rounded-lg">
                     <CollapsibleTrigger type="button" className="flex items-center justify-between w-full p-4 hover:bg-secondary/30 transition-colors rounded-lg">
-                      <h3 className="font-medium text-sm text-foreground">Acceleration Interests</h3>
+                      <h3 className="font-medium text-sm text-foreground">Technology Interests</h3>
                       <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${interestsOpen ? 'rotate-180' : ''}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent className="px-4 pb-4">

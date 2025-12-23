@@ -25,7 +25,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-type AppRole = 'admin' | 'faculty' | 'student' | 'industry' | 'staff';
+type AppRole = 'admin' | 'staff' | 'participant' | 'faculty' | 'student' | 'industry';
 
 interface UserWithRoles {
   id: string;
@@ -402,9 +402,6 @@ export default function UserManagement() {
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
-                <SelectItem value="faculty">Faculty</SelectItem>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="industry">Industry</SelectItem>
               </SelectContent>
             </Select>
 
@@ -418,15 +415,6 @@ export default function UserManagement() {
                 </li>
                 <li>
                   <strong>Staff:</strong> Event check-in access
-                </li>
-                <li>
-                  <strong>Faculty:</strong> Research projects
-                </li>
-                <li>
-                  <strong>Student:</strong> Standard access
-                </li>
-                <li>
-                  <strong>Industry:</strong> Collaboration invites
                 </li>
               </ul>
             </div>
