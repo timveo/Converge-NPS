@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronLeft, Save } from 'lucide-react';
+import { ChevronLeft, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 
 export default function ProfileEditPage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     email: user?.email || '',
@@ -33,9 +35,55 @@ export default function ProfileEditPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement API call
-    toast.success('Profile updated successfully!');
-    navigate('/profile');
+    setSaving(true);
+
+    try {
+      // Normalize URLs
+      let linkedinUrl = formData.linkedinUrl?.trim() || '';
+      let websiteUrl = formData.websiteUrl?.trim() || '';
+
+      if (linkedinUrl && !linkedinUrl.match(/^https?:\/\//i)) {
+        linkedinUrl = `https://${linkedinUrl}`;
+      }
+      if (websiteUrl && !websiteUrl.match(/^https?:\/\//i)) {
+        websiteUrl = `https://${websiteUrl}`;
+      }
+
+      const profilePayload = {
+        fullName: formData.fullName.trim(),
+        phone: formData.phone?.trim() || null,
+        organization: formData.organization?.trim() || null,
+        department: formData.department?.trim() || null,
+        role: formData.role?.trim() || null,
+        bio: formData.bio?.trim() || null,
+        linkedinUrl: linkedinUrl || null,
+        websiteUrl: websiteUrl || null,
+      };
+
+      const response = await api.patch<{ message: string; profile: any }>('/users/me', profilePayload);
+
+      // Update local user state
+      if (updateUser && response.profile) {
+        updateUser({
+          fullName: profilePayload.fullName,
+          phone: profilePayload.phone,
+          organization: profilePayload.organization || user?.organization || '',
+          department: profilePayload.department,
+          role: profilePayload.role || user?.role || '',
+          bio: profilePayload.bio,
+          linkedinUrl: profilePayload.linkedinUrl,
+          websiteUrl: profilePayload.websiteUrl,
+        });
+      }
+
+      toast.success('Profile updated successfully!');
+      navigate('/profile');
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      toast.error('Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -169,12 +217,16 @@ export default function ProfileEditPage() {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/profile')}>
+                <Button type="button" variant="outline" onClick={() => navigate('/profile')} disabled={saving}>
                   Cancel
                 </Button>
-                <Button type="submit">
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Changes
+                <Button type="submit" disabled={saving}>
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </div>
