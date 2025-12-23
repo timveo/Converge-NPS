@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ScheduleFiltersPanel, ScheduleFilters, TIME_SLOTS } from "@/components/schedule/ScheduleFilters";
+import { ScheduleFiltersPanel, ScheduleFilters } from "@/components/schedule/ScheduleFilters";
 import { SessionCard } from "@/components/schedule/SessionCard";
 import { ConflictDialog } from "@/components/schedule/ConflictDialog";
 import { TimelineView } from "@/components/schedule/TimelineView";
@@ -269,16 +269,6 @@ function ScheduleMobilePage() {
       result = result.filter(s => {
         const sessionType = s.session_type?.toLowerCase() || '';
         return filters.types.some(t => t.toLowerCase() === sessionType);
-      });
-    }
-
-    if (filters.timeSlots.length) {
-      result = result.filter(s => {
-        const h = new Date(s.start_time).getHours();
-        return filters.timeSlots.some(slot => {
-          const ts = TIME_SLOTS.find(t => t.value === slot);
-          return ts && h >= ts.start && h < ts.end;
-        });
       });
     }
 
