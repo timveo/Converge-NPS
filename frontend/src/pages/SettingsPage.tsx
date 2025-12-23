@@ -528,11 +528,11 @@ export default function SettingsPage() {
             </Card>
           </Collapsible>
 
-          {/* Acceleration Interests */}
+          {/* Technology Interests */}
           <Collapsible open={interestsOpen} onOpenChange={setInterestsOpen}>
             <Card className="p-4 md:p-6 shadow-md border-border/50">
               <CollapsibleTrigger type="button" className="flex items-center justify-between w-full">
-                <h3 className="font-semibold text-sm md:text-lg text-foreground">Acceleration Interests</h3>
+                <h3 className="font-semibold text-sm md:text-lg text-foreground">Technology Interests</h3>
                 <ChevronDown className={`h-4 w-4 md:h-5 md:w-5 text-muted-foreground transition-transform duration-200 ${interestsOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-3 md:pt-4">

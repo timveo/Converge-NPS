@@ -916,10 +916,10 @@ function ConnectionsMobilePage() {
                       )}
                     </div>
 
-                    {/* Acceleration Interests */}
+                    {/* Technology Interests */}
                     {profile?.acceleration_interests && profile.acceleration_interests.length > 0 && (
                       <div>
-                        <p className="text-xs font-semibold text-muted-foreground mb-2">Acceleration Interests</p>
+                        <p className="text-xs font-semibold text-muted-foreground mb-2">Technology Interests</p>
                         <div className="flex flex-wrap gap-2">
                           {profile.acceleration_interests.map((interest) => (
                             <Badge key={interest} variant="secondary" className="text-xs">

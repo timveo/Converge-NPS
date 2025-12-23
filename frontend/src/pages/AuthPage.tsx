@@ -482,7 +482,8 @@ export default function AuthPage() {
                       <SelectItem value="student">Student</SelectItem>
                       <SelectItem value="faculty">Faculty/Staff</SelectItem>
                       <SelectItem value="industry">Industry</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="alumni">Alumni</SelectItem>
+                      <SelectItem value="guest">Guest</SelectItem>
                     </SelectContent>
                   </Select>
                   {signupErrors.role && (

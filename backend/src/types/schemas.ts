@@ -221,7 +221,7 @@ export const UpdateMessageSchema = z.object({
 // ===========================
 
 export const UpdateUserRolesSchema = z.object({
-  roles: z.array(z.enum(['student', 'faculty', 'industry', 'staff', 'admin'])),
+  roles: z.array(z.enum(['staff', 'admin'])),
 });
 
 export const SmartsheetSyncSchema = z.object({

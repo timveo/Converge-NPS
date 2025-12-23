@@ -17,11 +17,11 @@ export const createSessionSchema = z.object({
 export const updateSessionSchema = createSessionSchema.partial();
 
 export const updateUserRoleSchema = z.object({
-  role: z.enum(['student', 'faculty', 'industry', 'staff', 'admin']),
+  role: z.enum(['staff', 'admin']),
 });
 
 export const addUserRoleSchema = z.object({
-  role: z.enum(['student', 'faculty', 'industry', 'staff', 'admin']),
+  role: z.enum(['staff', 'admin']),
 });
 
 // Admin Session Management
@@ -625,7 +625,7 @@ export async function getEventAnalytics() {
 
   // Connection graph - use simpler approach to avoid slow raw query
   const connectionGraph: Record<string, Record<string, number>> = {};
-  const roles = ['student', 'faculty', 'industry', 'staff', 'admin'];
+  const roles = ['participant', 'staff', 'admin'];
   roles.forEach(r1 => {
     connectionGraph[r1] = {};
     roles.forEach(r2 => {

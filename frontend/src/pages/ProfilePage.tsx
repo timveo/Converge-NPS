@@ -165,12 +165,12 @@ export default function ProfilePage() {
           )}
         </Card>
 
-        {/* Acceleration Interests - Compact on mobile */}
+        {/* Technology Interests - Compact on mobile */}
         {user.accelerationInterests && user.accelerationInterests.length > 0 && (
           <Card className="p-4 md:p-6 shadow-md border-border/50">
             <div className="flex items-center gap-2 md:gap-2 mb-3 md:mb-4">
               <Tag className="h-5 w-5 md:h-5 md:w-5 text-accent" />
-              <h3 className="font-semibold text-base md:text-lg text-foreground">Acceleration Interests</h3>
+              <h3 className="font-semibold text-base md:text-lg text-foreground">Technology Interests</h3>
             </div>
             <div className="flex flex-wrap gap-2 md:gap-2">
               {user.accelerationInterests.map((interest) => (

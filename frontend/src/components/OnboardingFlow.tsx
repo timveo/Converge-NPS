@@ -39,8 +39,8 @@ const OnboardingFlow = ({ open, onComplete }: OnboardingFlowProps) => {
       description: "Converge brings together researchers, industry partners, and innovators. Explore what's available:",
       tips: [
         "Browse research projects and find collaborators",
-        "Connect with 45+ industry partners",
-        "Discover funding and partnership opportunities"
+        "Connect with industry partners",
+        "Discover sponsorship and partnership opportunities"
       ],
       color: "text-accent"
     },
@@ -50,7 +50,7 @@ const OnboardingFlow = ({ open, onComplete }: OnboardingFlowProps) => {
       description: "For the best experience, complete your profile so others can find and connect with you. You can also install this app on your device for quick access.",
       tips: [
         "Add your role, organization, and interests",
-        "Install the app from your Profile page",
+        "Install the app from your Settings page",
         "Access the help icon anytime to revisit this guide"
       ],
       color: "text-tech-cyan",
