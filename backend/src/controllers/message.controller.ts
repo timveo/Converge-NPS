@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as messageService from '../services/message.service';
+import prisma from '../config/database';
 
 /**
  * POST /v1/messages
@@ -260,6 +261,62 @@ export async function getUnreadCount(req: Request, res: Response) {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch unread count',
+    });
+  }
+}
+
+/**
+ * GET /v1/messages/users/search
+ * Search users to start a conversation with
+ */
+export async function searchUsersForMessaging(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const { q, limit = '20' } = req.query;
+
+    if (!q || typeof q !== 'string' || q.trim().length < 2) {
+      return res.json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const searchTerm = q.trim();
+    const limitNum = Math.min(parseInt(limit as string) || 20, 50);
+
+    const users = await prisma.profile.findMany({
+      where: {
+        AND: [
+          { id: { not: userId } },
+          {
+            OR: [
+              { fullName: { contains: searchTerm, mode: 'insensitive' } },
+              { email: { contains: searchTerm, mode: 'insensitive' } },
+              { organization: { contains: searchTerm, mode: 'insensitive' } },
+            ],
+          },
+        ],
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        organization: true,
+        avatarUrl: true,
+      },
+      take: limitNum,
+      orderBy: { fullName: 'asc' },
+    });
+
+    res.json({
+      success: true,
+      data: users,
+    });
+  } catch (error: any) {
+    console.error('Error searching users:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search users',
     });
   }
 }
