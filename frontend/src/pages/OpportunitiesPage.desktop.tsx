@@ -52,14 +52,6 @@ const SEEKING_TYPES = [
   'Test & Evaluation',
 ];
 
-// Military/Government filters
-const ORGANIZATION_TYPES = [
-  'Department of War Command',
-  'Military Branch',
-  'Defense Agency',
-  'Federal Agency',
-];
-
 interface Project {
   id: string;
   title: string;
@@ -104,7 +96,8 @@ interface Opportunity {
 
 type CombinedItem =
   | (Project & { sourceType: 'NPS' })
-  | (Opportunity & { sourceType: 'Military/Gov' });
+  | (Opportunity & { sourceType: 'Military/Gov' })
+  | (Opportunity & { sourceType: 'Industry' });
 
 export default function OpportunitiesDesktopPage() {
   const navigate = useNavigate();
@@ -116,15 +109,12 @@ export default function OpportunitiesDesktopPage() {
   const [selectedItem, setSelectedItem] = useState<CombinedItem | null>(null);
 
   // Source type filter
-  const [activeTab, setActiveTab] = useState<'all' | 'nps' | 'military'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'nps' | 'military' | 'industry'>('all');
 
   // NPS filters
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedFunding, setSelectedFunding] = useState<string[]>([]);
   const [selectedSeeking, setSelectedSeeking] = useState<string[]>([]);
-
-  // Military/Gov filters
-  const [selectedOrgTypes, setSelectedOrgTypes] = useState<string[]>([]);
 
   const [sortBy, setSortBy] = useState('recent');
 
@@ -173,13 +163,8 @@ export default function OpportunitiesDesktopPage() {
 
   // Get active filter count
   const activeFilterCount = useMemo(() => {
-    return (
-      selectedStages.length +
-      selectedFunding.length +
-      selectedSeeking.length +
-      selectedOrgTypes.length
-    );
-  }, [selectedStages, selectedFunding, selectedSeeking, selectedOrgTypes]);
+    return selectedStages.length + selectedFunding.length + selectedSeeking.length;
+  }, [selectedStages, selectedFunding, selectedSeeking]);
 
   // Filter NPS projects
   const filteredProjects = useMemo(() => {
@@ -234,19 +219,14 @@ export default function OpportunitiesDesktopPage() {
       );
     }
 
-    if (selectedOrgTypes.length > 0) {
-      filtered = filtered.filter((o) => selectedOrgTypes.includes(o.type));
-    }
-
     return filtered;
-  }, [opportunities, searchQuery, selectedOrgTypes]);
+  }, [opportunities, searchQuery]);
 
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedStages([]);
     setSelectedFunding([]);
     setSelectedSeeking([]);
-    setSelectedOrgTypes([]);
   };
 
   // Combined and filtered items
@@ -255,19 +235,29 @@ export default function OpportunitiesDesktopPage() {
       ...p,
       sourceType: 'NPS' as const,
     }));
-    const milItems: CombinedItem[] = filteredOpportunities.map((o) => ({
-      ...o,
-      sourceType: 'Military/Gov' as const,
-    }));
+    const milItems: CombinedItem[] = filteredOpportunities
+      .filter((o) => o.type !== 'Industry')
+      .map((o) => ({
+        ...o,
+        sourceType: 'Military/Gov' as const,
+      }));
+    const industryItems: CombinedItem[] = filteredOpportunities
+      .filter((o) => o.type === 'Industry')
+      .map((o) => ({
+        ...o,
+        sourceType: 'Industry' as const,
+      }));
 
     let combined: CombinedItem[] = [];
 
     if (activeTab === 'all') {
-      combined = [...npsItems, ...milItems];
+      combined = [...npsItems, ...milItems, ...industryItems];
     } else if (activeTab === 'nps') {
       combined = npsItems;
-    } else {
+    } else if (activeTab === 'military') {
       combined = milItems;
+    } else {
+      combined = industryItems;
     }
 
     // Sort
@@ -294,7 +284,8 @@ export default function OpportunitiesDesktopPage() {
   };
 
   const npsCount = filteredProjects.length;
-  const milCount = filteredOpportunities.length;
+  const milCount = filteredOpportunities.filter((o) => o.type !== 'Industry').length;
+  const industryCount = filteredOpportunities.filter((o) => o.type === 'Industry').length;
 
   // Left Panel - Filters
   const FiltersPanel = (
@@ -427,28 +418,6 @@ export default function OpportunitiesDesktopPage() {
             </div>
           </div>
 
-          <Separator />
-
-          {/* Organization Type Filters (Military/Gov) */}
-          <div>
-            <Label className="text-sm font-medium mb-3 block">Organization Type</Label>
-            <div className="space-y-2">
-              {ORGANIZATION_TYPES.map((type) => (
-                <div key={type} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id={`org-${type}`}
-                    checked={selectedOrgTypes.includes(type)}
-                    onChange={() => toggleArrayFilter(setSelectedOrgTypes, type)}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label htmlFor={`org-${type}`} className="cursor-pointer text-sm">
-                    {type}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </ScrollArea>
     </div>
@@ -476,12 +445,12 @@ export default function OpportunitiesDesktopPage() {
 
       {/* Tabs */}
       <div className="px-4 py-3 border-b border-gray-200 bg-white">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'all' | 'nps' | 'military')}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'all' | 'nps' | 'military' | 'industry')}>
           <TabsList className="w-full">
             <TabsTrigger value="all" className="flex-1 text-sm">
               All
               <Badge variant="secondary" className="ml-2 text-xs">
-                {npsCount + milCount}
+                {npsCount + milCount + industryCount}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="nps" className="flex-1 text-sm">
@@ -496,6 +465,13 @@ export default function OpportunitiesDesktopPage() {
               Gov
               <Badge variant="secondary" className="ml-2 text-xs">
                 {milCount}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="industry" className="flex-1 text-sm">
+              <Briefcase className="h-3 w-3 mr-1" />
+              Industry
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {industryCount}
               </Badge>
             </TabsTrigger>
           </TabsList>
@@ -552,11 +528,13 @@ export default function OpportunitiesDesktopPage() {
                         <div
                           className={cn(
                             'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                            isNPS ? 'bg-blue-100' : 'bg-green-100'
+                            isNPS ? 'bg-blue-100' : item.sourceType === 'Industry' ? 'bg-orange-100' : 'bg-green-100'
                           )}
                         >
                           {isNPS ? (
                             <GraduationCap className="h-4 w-4 text-blue-600" />
+                          ) : item.sourceType === 'Industry' ? (
+                            <Briefcase className="h-4 w-4 text-orange-600" />
                           ) : (
                             <Building2 className="h-4 w-4 text-green-700" />
                           )}
@@ -578,7 +556,7 @@ export default function OpportunitiesDesktopPage() {
                               variant="outline"
                               className={cn(
                                 'text-[10px] py-0 px-1.5',
-                                isNPS ? 'border-blue-200 text-blue-700' : 'border-green-200 text-green-700'
+                                isNPS ? 'border-blue-200 text-blue-700' : item.sourceType === 'Industry' ? 'border-orange-200 text-orange-700' : 'border-green-200 text-green-700'
                               )}
                             >
                               {isNPS ? (item as Project).stage : (item as Opportunity).type}
@@ -652,6 +630,8 @@ export default function OpportunitiesDesktopPage() {
               'text-xs',
               isNPSItem(selectedItem)
                 ? 'bg-blue-600 text-white'
+                : selectedItem.sourceType === 'Industry'
+                ? 'bg-orange-600 text-white'
                 : 'bg-green-700 text-white'
             )}
           >
@@ -659,6 +639,11 @@ export default function OpportunitiesDesktopPage() {
               <>
                 <GraduationCap className="h-3 w-3 mr-1" />
                 NPS Project
+              </>
+            ) : selectedItem.sourceType === 'Industry' ? (
+              <>
+                <Briefcase className="h-3 w-3 mr-1" />
+                Industry
               </>
             ) : (
               <>

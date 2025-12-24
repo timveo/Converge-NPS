@@ -20,15 +20,12 @@ import { OfflineDataBanner } from '@/components/OfflineDataBanner';
 import { toast } from "sonner";
 
 // Source types
-const SOURCE_TYPES = ["NPS", "Military/Gov"];
+const SOURCE_TYPES = ["NPS", "Military/Gov", "Industry"];
 
 // NPS Projects filters
 const PROJECT_STAGES = ["Concept", "Prototype", "Pilot Ready", "Deployed"];
 const FUNDING_STATUSES = ["Funded", "Seeking Funding", "Partially Funded"];
 const SEEKING_TYPES = ["Industry Partnership", "Government Sponsor", "Research Collaboration", "Funding", "Test & Evaluation"];
-
-// Military/Government filters
-const ORGANIZATION_TYPES = ["Department of War Command", "Military Branch", "Defense Agency", "Federal Agency"];
 
 interface Project {
   id: string;
@@ -139,9 +136,6 @@ function OpportunitiesMobilePage() {
   const [selectedFunding, setSelectedFunding] = useState<string[]>([]);
   const [selectedSeeking, setSelectedSeeking] = useState<string[]>([]);
 
-  // Military/Gov filters
-  const [selectedOrgTypes, setSelectedOrgTypes] = useState<string[]>([]);
-
   const [sortBy, setSortBy] = useState("recent");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
@@ -232,8 +226,8 @@ function OpportunitiesMobilePage() {
 
   // Get active filter count
   const activeFilterCount = useMemo(() => {
-    return selectedSourceTypes.length + selectedStages.length + selectedFunding.length + selectedSeeking.length + selectedOrgTypes.length;
-  }, [selectedSourceTypes, selectedStages, selectedFunding, selectedSeeking, selectedOrgTypes]);
+    return selectedSourceTypes.length + selectedStages.length + selectedFunding.length + selectedSeeking.length;
+  }, [selectedSourceTypes, selectedStages, selectedFunding, selectedSeeking]);
 
   // Filter NPS projects
   const filteredProjects = useMemo(() => {
@@ -286,12 +280,8 @@ function OpportunitiesMobilePage() {
       );
     }
 
-    if (selectedOrgTypes.length > 0) {
-      filtered = filtered.filter(o => selectedOrgTypes.includes(o.type));
-    }
-
     return filtered;
-  }, [opportunities, searchQuery, selectedOrgTypes]);
+  }, [opportunities, searchQuery]);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -299,7 +289,6 @@ function OpportunitiesMobilePage() {
     setSelectedStages([]);
     setSelectedFunding([]);
     setSelectedSeeking([]);
-    setSelectedOrgTypes([]);
   };
 
   // Combined and filtered items
@@ -347,7 +336,7 @@ function OpportunitiesMobilePage() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* NPS Filters */}
           <div>
             <Label className="text-xs font-semibold">Project Stage</Label>
@@ -409,27 +398,6 @@ function OpportunitiesMobilePage() {
               ))}
             </div>
           </div>
-          {/* Military/Gov Filters */}
-          <div>
-            <Label className="text-xs font-semibold">Organization Type</Label>
-            <div className="space-y-1.5 mt-2">
-              {ORGANIZATION_TYPES.map(type => (
-                <div key={type} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`org-${type}`}
-                    checked={selectedOrgTypes.includes(type)}
-                    onCheckedChange={(checked) => {
-                      setSelectedOrgTypes(prev =>
-                        checked ? [...prev, type] : prev.filter(s => s !== type)
-                      );
-                    }}
-                    className="h-4 w-4"
-                  />
-                  <Label htmlFor={`org-${type}`} className="text-xs cursor-pointer font-normal">{type}</Label>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -442,7 +410,6 @@ function OpportunitiesMobilePage() {
     selectedStages.forEach(s => filters.push({ label: s, onRemove: () => setSelectedStages(prev => prev.filter(x => x !== s)) }));
     selectedFunding.forEach(s => filters.push({ label: s, onRemove: () => setSelectedFunding(prev => prev.filter(x => x !== s)) }));
     selectedSeeking.forEach(s => filters.push({ label: s, onRemove: () => setSelectedSeeking(prev => prev.filter(x => x !== s)) }));
-    selectedOrgTypes.forEach(s => filters.push({ label: s, onRemove: () => setSelectedOrgTypes(prev => prev.filter(x => x !== s)) }));
 
     if (filters.length === 0) return null;
 
