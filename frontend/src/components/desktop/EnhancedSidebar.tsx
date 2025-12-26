@@ -9,7 +9,6 @@ import {
   Building2,
   User,
   Settings,
-  LogOut,
   ChevronLeft,
   ChevronRight,
   Shield,
@@ -42,7 +41,7 @@ const mainNavItems: NavItem[] = [
 
 export function EnhancedSidebar() {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { sidebarCollapsed, toggleSidebar, openCommandPalette, openProfileModal, openSettingsModal } = useDesktop();
 
   const isAdmin = user?.roles?.includes('admin') || false;
@@ -262,7 +261,7 @@ export function EnhancedSidebar() {
             )}
           </div>
 
-          {/* User Info & Logout */}
+          {/* User Info */}
           <div className={cn(
             'px-3 py-3 border-t border-gray-300',
             sidebarCollapsed && 'px-2'
@@ -278,29 +277,20 @@ export function EnhancedSidebar() {
                   <p className="text-sm font-medium truncate text-gray-900">{user?.fullName || 'User'}</p>
                   <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={logout}
-                  className="flex-shrink-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
               </div>
             ) : (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={logout}
-                    className="w-full text-gray-500 hover:text-red-600 hover:bg-red-50"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
+                  <div className="flex justify-center">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                        {user?.fullName ? getInitials(user.fullName) : 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={10}>
-                  Sign Out
+                  {user?.fullName || 'User'}
                 </TooltipContent>
               </Tooltip>
             )}

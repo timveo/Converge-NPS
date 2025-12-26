@@ -238,4 +238,76 @@ export class ProfileService {
       totalPages: Math.ceil(total / limit),
     };
   }
+
+  /**
+   * Get checked-in participants (public profiles only)
+   */
+  static async getCheckedInParticipants(query: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ participants: Partial<Profile>[]; total: number; page: number; totalPages: number }> {
+    const { search, page = 1, limit = 20 } = query;
+
+    const where: any = {
+      isCheckedIn: true,
+      profileVisibility: 'public',
+    };
+
+    if (search) {
+      where.OR = [
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { organization: { contains: search, mode: 'insensitive' } },
+      ];
+      // Keep other conditions when searching
+      where.AND = [
+        { isCheckedIn: true },
+        { profileVisibility: 'public' },
+      ];
+      delete where.isCheckedIn;
+      delete where.profileVisibility;
+    }
+
+    const [profiles, total] = await Promise.all([
+      prisma.profile.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { updatedAt: 'desc' }, // Most recently checked in first
+        select: {
+          id: true,
+          fullName: true,
+          organization: true,
+          department: true,
+          role: true,
+          avatarUrl: true,
+          bio: true,
+          accelerationInterests: true,
+          hideContactInfo: true,
+          linkedinUrl: true,
+          websiteUrl: true,
+        },
+      }),
+      prisma.profile.count({ where }),
+    ]);
+
+    // Respect hideContactInfo setting
+    const participants = profiles.map((p) => {
+      if (p.hideContactInfo) {
+        return {
+          ...p,
+          linkedinUrl: null,
+          websiteUrl: null,
+        };
+      }
+      return p;
+    });
+
+    return {
+      participants,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 }

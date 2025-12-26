@@ -7,7 +7,6 @@ import {
   MapPin,
   ExternalLink,
   Filter,
-  Loader2,
   X,
   Star,
   MessageSquare,
@@ -34,6 +33,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { useDismissedRecommendations } from '@/hooks/useDismissedRecommendations';
@@ -526,8 +526,17 @@ export default function IndustryDesktopPage() {
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <div className="space-y-2 px-1">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50">
+                  <Skeleton className="h-12 w-12 rounded-lg" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-40 mb-2" />
+                    <Skeleton className="h-3 w-24 mb-1" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredPartners.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4">

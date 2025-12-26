@@ -11,7 +11,6 @@ import {
   Search,
   X,
   MessageSquare,
-  Loader2,
   Filter,
   Briefcase,
   Clock,
@@ -35,6 +34,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
 import { ThreePanelLayout } from '@/components/desktop/layouts/ThreePanelLayout';
@@ -482,8 +482,18 @@ export default function OpportunitiesDesktopPage() {
       <ScrollArea className="flex-1">
         <div className="p-3">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <div className="space-y-2 px-1">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-3 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                  <Skeleton className="h-4 w-3/4 mb-2" />
+                  <Skeleton className="h-3 w-full mb-1" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+              ))}
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4">

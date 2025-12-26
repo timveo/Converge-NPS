@@ -12,7 +12,6 @@ import {
   CalendarDays,
   ChevronRight,
   CheckCircle2,
-  Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -623,8 +623,20 @@ export default function ScheduleDesktopPage() {
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <div className="space-y-2 px-1">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-3 rounded-lg border border-border/50">
+                  <Skeleton className="h-4 w-3/4 mb-2" />
+                  <div className="flex items-center gap-3 mb-2">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : error ? (
             <Alert variant="destructive" className="m-2">

@@ -239,4 +239,36 @@ export class ProfileController {
       next(error);
     }
   }
+
+  /**
+   * GET /users/participants
+   * Get checked-in event participants (public profiles only)
+   */
+  static async getParticipants(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Not authenticated' },
+        });
+      }
+
+      const { search, page, limit } = req.query;
+
+      const result = await ProfileService.getCheckedInParticipants({
+        search: search as string | undefined,
+        page: page ? parseInt(page as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result.participants,
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

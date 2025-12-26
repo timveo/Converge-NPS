@@ -62,6 +62,12 @@ router.post('/me/avatar', ProfileController.uploadAvatar);
 router.get('/search', requireRole('admin', 'staff'), ProfileController.searchProfiles);
 
 /**
+ * GET /users/participants
+ * Get checked-in event participants (public profiles)
+ */
+router.get('/participants', ProfileController.getParticipants);
+
+/**
  * GET /users/:userId
  * Get another user's profile (respects privacy)
  */

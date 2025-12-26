@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, ChevronRight, Loader2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 interface Session {
@@ -101,8 +102,17 @@ export function TodayScheduleWidget() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="p-3 rounded-xl border border-border/50">
+            <Skeleton className="h-4 w-3/4 mb-2" />
+            <Skeleton className="h-3 w-1/2 mb-2" />
+            <div className="flex gap-2">
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-6 w-20" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

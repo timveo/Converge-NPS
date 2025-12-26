@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MessageCircle, ChevronRight, Loader2 } from 'lucide-react';
+import { MessageCircle, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { api } from '@/lib/api';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 interface Conversation {
@@ -59,8 +60,16 @@ export function RecentMessagesWidget() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border/50">
+            <Skeleton className="h-11 w-11 rounded-full" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-32 mb-2" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

@@ -7,7 +7,6 @@ import {
   UserCog,
   Download,
   Database,
-  BarChart3,
   RefreshCw,
   UserCheck,
   UserX,
@@ -15,6 +14,8 @@ import {
   MessageSquare,
   Link2,
   ChevronRight,
+  TrendingUp,
+  Briefcase,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -42,6 +43,12 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import {
+  UserManagementModal,
+  SessionManagementModal,
+  SmartsheetModal,
+  RaisersEdgeExportModal,
+} from '@/components/admin/modals';
 
 interface RecentUser {
   id: string;
@@ -81,6 +88,13 @@ interface EventAnalyticsData {
     connectionsLast24h: number;
     totalMessages: number;
     totalConversations: number;
+    connectionGraph: Record<string, Record<string, number>>;
+    projectInterest: Array<{
+      id: string;
+      title: string;
+      interested: number;
+      stage: string;
+    }>;
   };
 }
 
@@ -102,6 +116,12 @@ export default function AdminDashboardDesktop() {
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [analytics, setAnalytics] = useState<EventAnalyticsData | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  // Modal states
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [sessionModalOpen, setSessionModalOpen] = useState(false);
+  const [smartsheetModalOpen, setSmartsheetModalOpen] = useState(false);
+  const [reExportModalOpen, setReExportModalOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -189,13 +209,12 @@ export default function AdminDashboardDesktop() {
     fill: TRACK_COLORS[i % TRACK_COLORS.length],
   })) || [];
 
-  // Quick action items
+  // Quick action items with onClick handlers for modals
   const quickActions = [
-    { title: 'Manage Users', icon: UserCog, href: '/admin/users', color: 'bg-rose-600' },
-    { title: 'Sessions', icon: Calendar, href: '/admin/sessions', color: 'bg-blue-900' },
-    { title: 'Analytics', icon: BarChart3, href: '/admin/event-analytics', color: 'bg-purple-600' },
-    { title: 'Data Sync', icon: Database, href: '/admin/smartsheet', color: 'bg-emerald-600' },
-    { title: 'RE Export', icon: Download, href: '/admin/raisers-edge-export', color: 'bg-red-600' },
+    { title: 'Manage Users', icon: UserCog, color: 'bg-rose-600', onClick: () => setUserModalOpen(true) },
+    { title: 'Sessions', icon: Calendar, color: 'bg-blue-900', onClick: () => setSessionModalOpen(true) },
+    { title: 'Data Sync', icon: Database, color: 'bg-emerald-600', onClick: () => setSmartsheetModalOpen(true) },
+    { title: 'RE Export', icon: Download, color: 'bg-red-600', onClick: () => setReExportModalOpen(true) },
   ];
 
   return (
@@ -228,24 +247,25 @@ export default function AdminDashboardDesktop() {
           </div>
 
           {/* Quick Actions - directly below header */}
-          <div className="grid grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-4 gap-4 mb-6">
             {quickActions.map((action, index) => (
               <motion.div
-                key={action.href}
+                key={action.title}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Link to={action.href}>
-                  <Card className="p-4 hover:shadow-md transition-all hover:scale-105 cursor-pointer h-full">
-                    <div className="flex items-center gap-3">
-                      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', action.color)}>
-                        <action.icon className="h-5 w-5 text-white" />
-                      </div>
-                      <p className="font-medium text-sm">{action.title}</p>
+                <Card
+                  className="p-4 hover:shadow-md transition-all hover:scale-105 cursor-pointer h-full"
+                  onClick={action.onClick}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', action.color)}>
+                      <action.icon className="h-5 w-5 text-white" />
                     </div>
-                  </Card>
-                </Link>
+                    <p className="font-medium text-sm">{action.title}</p>
+                  </div>
+                </Card>
               </motion.div>
             ))}
           </div>
@@ -346,15 +366,27 @@ export default function AdminDashboardDesktop() {
                 </div>
               )}
               {!loading && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Check-in Progress</span>
-                    <span className="text-sm font-semibold">
-                      {analytics?.realTimeMetrics.checkInRate || 0}%
-                    </span>
+                <>
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Check-in Progress</span>
+                      <span className="text-sm font-semibold">
+                        {analytics?.realTimeMetrics.checkInRate || 0}%
+                      </span>
+                    </div>
+                    <Progress value={analytics?.realTimeMetrics.checkInRate || 0} className="h-3" />
                   </div>
-                  <Progress value={analytics?.realTimeMetrics.checkInRate || 0} className="h-3" />
-                </div>
+                  {/* Check-in Velocity */}
+                  <div className="mt-4 p-3 bg-muted/50 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <span className="text-sm font-medium">Check-ins in last hour</span>
+                    </div>
+                    <Badge variant="secondary" className="text-sm">
+                      {analytics?.realTimeMetrics.checkInsLastHour || 0} people
+                    </Badge>
+                  </div>
+                </>
               )}
             </DashboardWidget>
 
@@ -430,11 +462,9 @@ export default function AdminDashboardDesktop() {
               title="Session Fill Rates"
               subtitle="Capacity utilization"
               action={
-                <Link to="/admin/sessions">
-                  <Button variant="ghost" size="sm">
-                    Manage <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </Link>
+                <Button variant="ghost" size="sm" onClick={() => setSessionModalOpen(true)}>
+                  Manage <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
               }
             >
               {loading ? (
@@ -471,6 +501,115 @@ export default function AdminDashboardDesktop() {
                 </div>
               )}
             </DashboardWidget>
+
+            {/* Networking Engagement Row */}
+            <div className="grid grid-cols-2 gap-6">
+              {/* Connection Patterns */}
+              <DashboardWidget title="Connection Patterns" subtitle="Cross-role networking">
+                {loading ? (
+                  <Skeleton className="h-48 w-full" />
+                ) : analytics?.networkingEngagement.connectionGraph && Object.keys(analytics.networkingEngagement.connectionGraph).length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr>
+                          <th className="p-2 text-left text-muted-foreground font-medium">From / To</th>
+                          {Object.keys(analytics.networkingEngagement.connectionGraph).map((role) => (
+                            <th
+                              key={role}
+                              className="p-2 text-center font-medium"
+                              style={{ color: ROLE_COLORS[role] || '#6b7280' }}
+                            >
+                              {role.charAt(0).toUpperCase()}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(analytics.networkingEngagement.connectionGraph).map(([fromRole, toRoles]) => (
+                          <tr key={fromRole}>
+                            <td
+                              className="p-2 font-medium"
+                              style={{ color: ROLE_COLORS[fromRole] || '#6b7280' }}
+                            >
+                              {fromRole.charAt(0).toUpperCase() + fromRole.slice(1)}
+                            </td>
+                            {Object.entries(toRoles).map(([toRole, count]) => {
+                              const maxVal = Math.max(
+                                ...Object.values(analytics.networkingEngagement.connectionGraph).flatMap((r) =>
+                                  Object.values(r)
+                                )
+                              );
+                              const intensity = maxVal > 0 ? (count / maxVal) * 100 : 0;
+                              return (
+                                <td
+                                  key={toRole}
+                                  className="p-2 text-center rounded"
+                                  style={{
+                                    backgroundColor: `rgba(59, 130, 246, ${intensity / 100})`,
+                                    color: intensity > 50 ? 'white' : 'inherit',
+                                  }}
+                                >
+                                  {count}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      S=Student, F=Faculty, I=Industry, St=Staff, A=Admin
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Link2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No connection data yet</p>
+                  </div>
+                )}
+              </DashboardWidget>
+
+              {/* Top Research Projects */}
+              <DashboardWidget title="Top Research Projects" subtitle="By interest level">
+                {loading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : analytics?.networkingEngagement.projectInterest && analytics.networkingEngagement.projectInterest.length > 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                    {analytics.networkingEngagement.projectInterest.slice(0, 6).map((project, i) => (
+                      <div
+                        key={project.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Briefcase className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{project.title}</p>
+                            <Badge variant="outline" className="text-xs mt-0.5">
+                              {project.stage}
+                            </Badge>
+                          </div>
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-700 text-xs flex-shrink-0 ml-2">
+                          {project.interested} interested
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No project data yet</p>
+                  </div>
+                )}
+              </DashboardWidget>
+            </div>
           </div>
 
           {/* Right Column - Recent Activity */}
@@ -480,11 +619,9 @@ export default function AdminDashboardDesktop() {
               title="Recent Registrations"
               subtitle="New users"
               action={
-                <Link to="/admin/users">
-                  <Button variant="ghost" size="sm">
-                    View All
-                  </Button>
-                </Link>
+                <Button variant="ghost" size="sm" onClick={() => setUserModalOpen(true)}>
+                  View All
+                </Button>
               }
             >
               {loading ? (
@@ -586,6 +723,12 @@ export default function AdminDashboardDesktop() {
         </div>
         </div>
       </div>
+
+      {/* Admin Modals */}
+      <UserManagementModal open={userModalOpen} onOpenChange={setUserModalOpen} />
+      <SessionManagementModal open={sessionModalOpen} onOpenChange={setSessionModalOpen} />
+      <SmartsheetModal open={smartsheetModalOpen} onOpenChange={setSmartsheetModalOpen} />
+      <RaisersEdgeExportModal open={reExportModalOpen} onOpenChange={setReExportModalOpen} />
     </DesktopShell>
   );
 }
