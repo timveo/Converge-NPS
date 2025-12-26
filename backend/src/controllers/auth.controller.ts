@@ -53,38 +53,73 @@ export class AuthController {
 
   /**
    * POST /auth/login
-   * Login user - Step 1: Validate credentials and send 2FA code
+   * Login user - validates credentials and issues tokens directly
+   *
+   * NOTE: 2FA is currently disabled. To re-enable 2FA:
+   * 1. Set ENABLE_2FA = true below
+   * 2. The 2FA flow will send a code via email and require verification
    */
   static async login(req: Request, res: Response, next: NextFunction) {
+    // Set to true to re-enable 2FA
+    const ENABLE_2FA = false;
+
     try {
       // Validate input
       const { email, password } = LoginSchema.parse(req.body) as any;
 
-      // Validate credentials (but don't issue tokens yet)
+      // Validate credentials
       const { user } = await AuthService.validateCredentials(email, password);
 
-      // Send 2FA code
-      const result = await TwoFactorService.sendCode(user.id, user.email, user.fullName);
+      // === 2FA DISABLED ===
+      // To re-enable: set ENABLE_2FA = true above
+      if (ENABLE_2FA) {
+        // Send 2FA code
+        const result = await TwoFactorService.sendCode(user.id, user.email, user.fullName);
 
-      if (!result.success) {
-        logger.warn('Failed to send 2FA code', { userId: user.id, message: result.message });
-        res.status(429).json({
-          error: {
-            code: 'TWO_FACTOR_RATE_LIMIT',
-            message: result.message,
-            cooldownRemaining: result.cooldownRemaining,
-          },
+        if (!result.success) {
+          logger.warn('Failed to send 2FA code', { userId: user.id, message: result.message });
+          res.status(429).json({
+            error: {
+              code: 'TWO_FACTOR_RATE_LIMIT',
+              message: result.message,
+              cooldownRemaining: result.cooldownRemaining,
+            },
+          });
+          return;
+        }
+
+        logger.info('2FA code sent', { userId: user.id, email: user.email });
+
+        res.status(200).json({
+          message: 'Verification code sent to your email',
+          requires2FA: true,
+          userId: user.id,
+          email: user.email,
         });
         return;
       }
+      // === END 2FA DISABLED ===
 
-      logger.info('2FA code sent', { userId: user.id, email: user.email });
+      // Direct login without 2FA - issue tokens immediately
+      const { user: loggedInUser, accessToken, refreshToken } = await AuthService.completeLogin(user.id);
+
+      // Set refresh token in httpOnly cookie
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: '/auth/refresh',
+      });
+
+      logger.info('User logged in', { userId: loggedInUser.id, email: loggedInUser.email });
 
       res.status(200).json({
-        message: 'Verification code sent to your email',
-        requires2FA: true,
-        userId: user.id,
-        email: user.email,
+        message: 'Login successful',
+        user: loggedInUser,
+        accessToken,
+        refreshToken,
+        expiresIn: getAccessTokenExpiry(),
       });
     } catch (error) {
       next(error);

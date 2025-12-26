@@ -384,15 +384,12 @@ export default function AuthPage() {
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Sending code...
+                      Logging in...
                     </>
                   ) : (
-                    'Continue'
+                    'Login'
                   )}
                 </Button>
-                <p className="text-xs text-center text-muted-foreground">
-                  We'll send a verification code to your email
-                </p>
               </form>
             </TabsContent>
 
