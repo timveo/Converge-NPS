@@ -85,7 +85,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return response;
     }
 
-    // If no 2FA (shouldn't happen with new flow, but keeping for backwards compatibility)
+    // Direct login (2FA is currently disabled)
     if (response.accessToken && response.user) {
       localStorage.setItem('accessToken', response.accessToken);
       if ((response as any).refreshToken) {
