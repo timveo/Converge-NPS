@@ -115,7 +115,10 @@ describe('AuthController', () => {
   });
 
   describe('login', () => {
-    it('should validate credentials and send 2FA code', async () => {
+    // NOTE: 2FA is currently disabled. These tests reflect the direct login flow.
+    // To test 2FA flow, set ENABLE_2FA = true in auth.controller.ts
+
+    it('should validate credentials and return tokens directly (2FA disabled)', async () => {
       mockReq.body = {
         email: 'test@nps.edu',
         password: 'SecurePass123!',
@@ -125,9 +128,10 @@ describe('AuthController', () => {
         user: { id: 'user-123', email: 'test@nps.edu', fullName: 'Test User' },
       });
 
-      (TwoFactorService.sendCode as jest.Mock).mockResolvedValue({
-        success: true,
-        message: 'Verification code sent to your email',
+      (AuthService.completeLogin as jest.Mock).mockResolvedValue({
+        user: { id: 'user-123', email: 'test@nps.edu', fullName: 'Test User' },
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
       });
 
       await AuthController.login(
@@ -137,19 +141,20 @@ describe('AuthController', () => {
       );
 
       expect(AuthService.validateCredentials).toHaveBeenCalledWith('test@nps.edu', 'SecurePass123!');
-      expect(TwoFactorService.sendCode).toHaveBeenCalledWith('user-123', 'test@nps.edu', 'Test User');
+      expect(AuthService.completeLogin).toHaveBeenCalledWith('user-123');
+      expect(TwoFactorService.sendCode).not.toHaveBeenCalled();
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: 'Verification code sent to your email',
-          requires2FA: true,
-          userId: 'user-123',
-          email: 'test@nps.edu',
+          message: 'Login successful',
+          user: expect.objectContaining({ id: 'user-123' }),
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
         })
       );
     });
 
-    it('should return rate limit error when 2FA code sending fails', async () => {
+    it('should set refresh token cookie on successful login', async () => {
       mockReq.body = {
         email: 'test@nps.edu',
         password: 'SecurePass123!',
@@ -159,10 +164,10 @@ describe('AuthController', () => {
         user: { id: 'user-123', email: 'test@nps.edu', fullName: 'Test User' },
       });
 
-      (TwoFactorService.sendCode as jest.Mock).mockResolvedValue({
-        success: false,
-        message: 'Please wait 30 seconds before requesting a new code',
-        cooldownRemaining: 30,
+      (AuthService.completeLogin as jest.Mock).mockResolvedValue({
+        user: { id: 'user-123', email: 'test@nps.edu', fullName: 'Test User' },
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
       });
 
       await AuthController.login(
@@ -171,12 +176,12 @@ describe('AuthController', () => {
         mockNext
       );
 
-      expect(mockRes.status).toHaveBeenCalledWith(429);
-      expect(mockRes.json).toHaveBeenCalledWith(
+      expect(mockRes.cookie).toHaveBeenCalledWith(
+        'refreshToken',
+        'refresh-token',
         expect.objectContaining({
-          error: expect.objectContaining({
-            code: 'TWO_FACTOR_RATE_LIMIT',
-          }),
+          httpOnly: true,
+          path: '/auth/refresh',
         })
       );
     });

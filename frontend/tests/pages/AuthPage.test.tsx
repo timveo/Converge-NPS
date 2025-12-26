@@ -33,17 +33,22 @@ vi.mock('@/hooks/useAuth', () => ({
 }));
 
 describe('AuthPage - login toasts', () => {
+  // NOTE: 2FA is currently disabled. These tests reflect the direct login flow.
+  // To test 2FA flow, re-enable 2FA in the backend and update these tests.
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('shows a success toast when login requires 2FA (code sent)', async () => {
+  it('shows a success toast and navigates on successful login (2FA disabled)', async () => {
     const { toast } = await import('sonner');
 
+    // With 2FA disabled, login returns tokens directly
     mockLogin.mockResolvedValue({
-      requires2FA: true,
-      userId: 'user-1',
-      email: 'alice@nps.edu',
+      message: 'Login successful',
+      user: { id: 'user-1', email: 'alice@nps.edu' },
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
     });
 
     render(<AuthPage />);
@@ -53,25 +58,30 @@ describe('AuthPage - login toasts', () => {
     });
 
     fireEvent.change(screen.getByLabelText(/password/i), {
-      target: { value: 'wrongpass' },
+      target: { value: 'correctpass' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    // Button is now "Login" instead of "Continue"
+    fireEvent.click(screen.getByRole('button', { name: /^login$/i }));
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
         email: 'alice@nps.edu',
-        password: 'wrongpass',
+        password: 'correctpass',
       });
     });
 
     await waitFor(() => {
       expect((toast as any).success).toHaveBeenCalledWith(
-        'Verification code sent!',
+        'Welcome back!',
         expect.objectContaining({
-          description: expect.stringContaining('6-digit code'),
+          description: expect.stringContaining('logged in'),
         })
       );
+    });
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/');
     });
   });
 
@@ -95,7 +105,8 @@ describe('AuthPage - login toasts', () => {
       target: { value: 'badpass' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    // Button is now "Login" instead of "Continue"
+    fireEvent.click(screen.getByRole('button', { name: /^login$/i }));
 
     await waitFor(() => {
       expect((toast as any).error).toHaveBeenCalledWith(
