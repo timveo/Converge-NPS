@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Users, Building2, Mail, Linkedin, Loader2 } from 'lucide-react';
+import { Users, Building2, Mail, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
