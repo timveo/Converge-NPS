@@ -619,14 +619,36 @@ export async function getEventAnalytics() {
     }),
   ]);
 
-  // Connection graph - use simpler approach to avoid slow raw query
+  // Connection graph - based on participant types
+  const participantTypes = ['student', 'faculty', 'industry', 'alumni', 'guest'];
   const connectionGraph: Record<string, Record<string, number>> = {};
-  const roles = ['participant', 'staff', 'admin'];
-  roles.forEach(r1 => {
-    connectionGraph[r1] = {};
-    roles.forEach(r2 => {
-      connectionGraph[r1][r2] = 0;
+  participantTypes.forEach(pt1 => {
+    connectionGraph[pt1] = {};
+    participantTypes.forEach(pt2 => {
+      connectionGraph[pt1][pt2] = 0;
     });
+  });
+
+  // Fetch connections with participant types to build the graph
+  const connections = await prisma.connection.findMany({
+    select: {
+      user: {
+        select: { participantType: true },
+      },
+      connectedUser: {
+        select: { participantType: true },
+      },
+    },
+    take: 500, // Limit for performance
+  });
+
+  // Populate the connection graph
+  connections.forEach(conn => {
+    const fromType = conn.user.participantType || 'guest';
+    const toType = conn.connectedUser.participantType || 'guest';
+    if (connectionGraph[fromType] && connectionGraph[fromType][toType] !== undefined) {
+      connectionGraph[fromType][toType]++;
+    }
   });
 
   // Calculate derived metrics
@@ -717,14 +739,10 @@ export async function exportRaisersEdge() {
       department: true,
       organization: true,
       role: true,
+      participantType: true,
       linkedinUrl: true,
       websiteUrl: true,
       createdAt: true,
-      userRoles: {
-        select: {
-          role: true,
-        },
-      },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -739,11 +757,21 @@ export async function exportRaisersEdge() {
     return { firstName, lastName };
   };
 
+  // Map participantType enum to display labels
+  const participantTypeLabels: Record<string, string> = {
+    student: 'Student',
+    faculty: 'Faculty/Staff',
+    industry: 'Industry',
+    alumni: 'Alumni',
+    guest: 'Guest',
+  };
+
   // Build export data with RE-compatible fields
   const exportData = profiles.map(profile => {
     const { firstName, lastName } = splitName(profile.fullName);
-    const roles = profile.userRoles.map(r => r.role);
-    const participantType = roles.length > 0 ? roles.join('; ') : 'Attendee';
+    const participantType = profile.participantType
+      ? participantTypeLabels[profile.participantType] || profile.participantType
+      : 'Attendee';
 
     return {
       UUID: profile.id,
@@ -805,6 +833,107 @@ export async function exportRaisersEdge() {
     csv,
     filename,
     recordCount: exportData.length,
+  };
+}
+
+/**
+ * Get interests for a project (admin only - bypasses PI restriction)
+ */
+export async function getProjectInterestsAdmin(projectId: string) {
+  // Check if project exists
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      title: true,
+      stage: true,
+      interestedCount: true,
+    },
+  });
+
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  const interests = await prisma.projectInterest.findMany({
+    where: { projectId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          organization: true,
+          department: true,
+          role: true,
+          linkedinUrl: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  return {
+    project,
+    interests,
+    count: interests.length,
+  };
+}
+
+/**
+ * Get RSVPs for a session (admin only)
+ */
+export async function getSessionRsvpsAdmin(sessionId: string) {
+  // Check if session exists
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    select: {
+      id: true,
+      title: true,
+      startTime: true,
+      endTime: true,
+      location: true,
+      capacity: true,
+      sessionType: true,
+    },
+  });
+
+  if (!session) {
+    throw new Error('Session not found');
+  }
+
+  const rsvps = await prisma.rsvp.findMany({
+    where: { sessionId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          organization: true,
+          department: true,
+          role: true,
+          linkedinUrl: true,
+        },
+      },
+    },
+    orderBy: [
+      { status: 'asc' }, // confirmed first, then waitlisted
+      { createdAt: 'asc' },
+    ],
+  });
+
+  const confirmedCount = rsvps.filter(r => r.status === 'confirmed').length;
+  const waitlistedCount = rsvps.filter(r => r.status === 'waitlisted').length;
+
+  return {
+    session,
+    rsvps,
+    confirmedCount,
+    waitlistedCount,
+    totalCount: rsvps.length,
   };
 }
 

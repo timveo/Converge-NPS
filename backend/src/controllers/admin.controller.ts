@@ -466,6 +466,62 @@ export async function exportRaisersEdge(req: Request, res: Response) {
 }
 
 /**
+ * GET /v1/admin/projects/:id/interests
+ * Get interests for a project (admin only - bypasses PI restriction)
+ */
+export async function getProjectInterests(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const result = await adminService.getProjectInterestsAdmin(id);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    if (error.message === 'Project not found') {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch project interests',
+    });
+  }
+}
+
+/**
+ * GET /v1/admin/sessions/:id/rsvps
+ * Get RSVPs for a session (admin only)
+ */
+export async function getSessionRsvps(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const result = await adminService.getSessionRsvpsAdmin(id);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    if (error.message === 'Session not found') {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch session RSVPs',
+    });
+  }
+}
+
+/**
  * GET /v1/admin/audit-logs
  * Get audit logs
  */

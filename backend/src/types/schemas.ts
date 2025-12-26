@@ -22,6 +22,7 @@ export const RegisterSchema = z.object({
   organization: z.string().max(100).optional(),
   department: z.string().max(100).optional(),
   role: z.string().max(100).optional(),
+  participantType: z.enum(['student', 'faculty', 'industry', 'alumni', 'guest']).optional(),
 });
 
 export const LoginSchema = z.object({

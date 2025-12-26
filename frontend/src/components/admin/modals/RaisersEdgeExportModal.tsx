@@ -26,7 +26,7 @@ import {
 
 const FIELD_MAPPINGS = [
   { reField: 'Import ID', appField: 'UUID', description: 'Unique identifier for matching' },
-  { reField: 'Constituent Type', appField: 'ParticipantType', description: 'User role(s) in the system' },
+  { reField: 'Constituent Type', appField: 'ParticipantType', description: 'Student, Faculty/Staff, Industry, Alumni, or Guest' },
   { reField: 'First Name', appField: 'FirstName', description: 'First name' },
   { reField: 'Last Name', appField: 'LastName', description: 'Last name' },
   { reField: 'Email', appField: 'Email', description: 'Primary email address' },

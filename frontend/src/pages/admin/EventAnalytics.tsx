@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
+  ChevronRight,
   Users,
   UserCheck,
   UserX,
@@ -36,12 +37,15 @@ import {
   CartesianGrid,
 } from 'recharts';
 
-// Color palette
+// Color palette for participant types
 const COLORS = {
-  admin: '#ef4444',
-  faculty: '#3b82f6',
   student: '#10b981',
+  faculty: '#3b82f6',
   industry: '#f59e0b',
+  alumni: '#8b5cf6',
+  guest: '#6b7280',
+  // Legacy role colors for demographics
+  admin: '#ef4444',
   staff: '#8b5cf6',
   none: '#6b7280',
 };
@@ -575,17 +579,27 @@ export default function EventAnalytics() {
             <Card className="p-3 md:p-4">
               <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Session Fill Rates
+                <span className="text-[10px] font-normal text-muted-foreground ml-2">
+                  Tap to view participants
+                </span>
               </h3>
               <div className="space-y-2 max-h-56 overflow-y-auto">
                 {sessionAnalytics.sessions.slice(0, 8).map((session) => (
-                  <div key={session.id}>
+                  <div
+                    key={session.id}
+                    className="cursor-pointer active:bg-muted/50 p-1.5 -mx-1.5 rounded-lg transition-colors"
+                    onClick={() => navigate(`/admin/sessions/${session.id}/rsvps`)}
+                  >
                     <div className="flex justify-between items-center mb-0.5">
-                      <span className="text-xs md:text-sm font-medium text-foreground truncate max-w-[200px]">
+                      <span className="text-xs md:text-sm font-medium text-foreground truncate max-w-[180px]">
                         {session.title}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {session.confirmed}/{session.capacity || '?'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground">
+                          {session.confirmed}/{session.capacity || '?'}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
                     </div>
                     <Progress
                       value={session.fillRate}
@@ -740,7 +754,7 @@ export default function EventAnalytics() {
                 </table>
               </div>
               <p className="text-[10px] text-muted-foreground mt-2">
-                S=Student, F=Faculty, I=Industry, St=Staff, A=Admin
+                S=Student, F=Faculty, I=Industry, Al=Alumni, G=Guest
               </p>
             </Card>
 
@@ -748,13 +762,17 @@ export default function EventAnalytics() {
             <Card className="p-3 md:p-4">
               <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Top Research Projects
+                <span className="text-[10px] font-normal text-muted-foreground ml-2">
+                  Tap to view participants
+                </span>
               </h3>
               <div className="space-y-2 max-h-56 overflow-y-auto">
                 {networkingEngagement.projectInterest.length > 0 ? (
                   networkingEngagement.projectInterest.map((project, i) => (
                     <div
                       key={project.id}
-                      className="flex items-center justify-between p-2 rounded-lg bg-muted"
+                      className="flex items-center justify-between p-2 rounded-lg bg-muted cursor-pointer active:bg-muted/80"
+                      onClick={() => navigate(`/admin/projects/${project.id}/interests`)}
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <span className="text-xs font-bold text-muted-foreground w-4">{i + 1}</span>
@@ -767,9 +785,12 @@ export default function EventAnalytics() {
                           </Badge>
                         </div>
                       </div>
-                      <Badge className="bg-blue-100 text-blue-700 text-xs">
-                        {project.interested} interested
-                      </Badge>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <Badge className="bg-blue-100 text-blue-700 text-xs">
+                          {project.interested} interested
+                        </Badge>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
                     </div>
                   ))
                 ) : (

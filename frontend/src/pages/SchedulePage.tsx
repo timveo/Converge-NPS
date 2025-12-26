@@ -13,7 +13,7 @@ import { SessionCard } from "@/components/schedule/SessionCard";
 import { ConflictDialog } from "@/components/schedule/ConflictDialog";
 import { TimelineView } from "@/components/schedule/TimelineView";
 import { api } from "@/lib/api";
-import { format } from "date-fns";
+import { getDateStringPT, formatTimePT } from "@/lib/utils";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { OfflineDataBanner } from "@/components/OfflineDataBanner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -198,7 +198,7 @@ function ScheduleMobilePage() {
   };
 
   const uniqueDays = useMemo(() =>
-    Array.from(new Set(sessions.map(s => format(new Date(s.start_time), 'yyyy-MM-dd')))).sort(),
+    Array.from(new Set(sessions.map(s => getDateStringPT(s.start_time)))).sort(),
     [sessions]
   );
 
@@ -273,7 +273,7 @@ function ScheduleMobilePage() {
     }
 
     if (filters.days.length) {
-      result = result.filter(s => filters.days.includes(format(new Date(s.start_time), 'yyyy-MM-dd')));
+      result = result.filter(s => filters.days.includes(getDateStringPT(s.start_time)));
     }
 
     if (filters.sortBy === 'time') {
@@ -583,7 +583,7 @@ END:VCALENDAR`;
                             {session && (
                               <span className="text-[9px] md:text-xs text-muted-foreground flex items-center gap-0.5">
                                 <Clock className="h-2 w-2 md:h-3 md:w-3" />
-                                {format(new Date(session.start_time), "h:mm a")}
+                                {formatTimePT(session.start_time)}
                               </span>
                             )}
                             {session?.location && (

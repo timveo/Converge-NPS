@@ -48,6 +48,8 @@ import {
   SessionManagementModal,
   SmartsheetModal,
   RaisersEdgeExportModal,
+  ProjectInterestsModal,
+  SessionRsvpsModal,
 } from '@/components/admin/modals';
 
 interface RecentUser {
@@ -99,10 +101,13 @@ interface EventAnalyticsData {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  admin: '#ef4444',
-  faculty: '#3b82f6',
   student: '#10b981',
+  faculty: '#3b82f6',
   industry: '#f59e0b',
+  alumni: '#8b5cf6',
+  guest: '#6b7280',
+  // Legacy role colors for demographics
+  admin: '#ef4444',
   staff: '#8b5cf6',
 };
 
@@ -122,6 +127,12 @@ export default function AdminDashboardDesktop() {
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const [smartsheetModalOpen, setSmartsheetModalOpen] = useState(false);
   const [reExportModalOpen, setReExportModalOpen] = useState(false);
+  const [projectInterestsModalOpen, setProjectInterestsModalOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedProjectTitle, setSelectedProjectTitle] = useState<string>('');
+  const [sessionRsvpsModalOpen, setSessionRsvpsModalOpen] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [selectedSessionTitle, setSelectedSessionTitle] = useState<string>('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -460,7 +471,7 @@ export default function AdminDashboardDesktop() {
             {/* Session Fill Rates */}
             <DashboardWidget
               title="Session Fill Rates"
-              subtitle="Capacity utilization"
+              subtitle="Capacity utilization - Click to view participants"
               action={
                 <Button variant="ghost" size="sm" onClick={() => setSessionModalOpen(true)}>
                   Manage <ChevronRight className="h-4 w-4 ml-1" />
@@ -476,14 +487,25 @@ export default function AdminDashboardDesktop() {
               ) : (
                 <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
                   {analytics?.sessionAnalytics.sessions.slice(0, 8).map((session) => (
-                    <div key={session.id}>
+                    <div
+                      key={session.id}
+                      className="cursor-pointer hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors"
+                      onClick={() => {
+                        setSelectedSessionId(session.id);
+                        setSelectedSessionTitle(session.title);
+                        setSessionRsvpsModalOpen(true);
+                      }}
+                    >
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-sm font-medium truncate max-w-[300px]">
                           {session.title}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {session.confirmed}/{session.capacity}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {session.confirmed}/{session.capacity}
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
                       </div>
                       <Progress
                         value={session.fillRate}
@@ -505,7 +527,7 @@ export default function AdminDashboardDesktop() {
             {/* Networking Engagement Row */}
             <div className="grid grid-cols-2 gap-6">
               {/* Connection Patterns */}
-              <DashboardWidget title="Connection Patterns" subtitle="Cross-role networking">
+              <DashboardWidget title="Connection Patterns" subtitle="Connections by participant type">
                 {loading ? (
                   <Skeleton className="h-48 w-full" />
                 ) : analytics?.networkingEngagement.connectionGraph && Object.keys(analytics.networkingEngagement.connectionGraph).length > 0 ? (
@@ -559,7 +581,7 @@ export default function AdminDashboardDesktop() {
                       </tbody>
                     </table>
                     <p className="text-xs text-muted-foreground mt-2">
-                      S=Student, F=Faculty, I=Industry, St=Staff, A=Admin
+                      S=Student, F=Faculty, I=Industry, Al=Alumni, G=Guest
                     </p>
                   </div>
                 ) : (
@@ -571,7 +593,7 @@ export default function AdminDashboardDesktop() {
               </DashboardWidget>
 
               {/* Top Research Projects */}
-              <DashboardWidget title="Top Research Projects" subtitle="By interest level">
+              <DashboardWidget title="Top Research Projects" subtitle="By interest level - Click to view participants">
                 {loading ? (
                   <div className="space-y-3">
                     {Array.from({ length: 4 }).map((_, i) => (
@@ -583,7 +605,12 @@ export default function AdminDashboardDesktop() {
                     {analytics.networkingEngagement.projectInterest.slice(0, 6).map((project) => (
                       <div
                         key={project.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                        onClick={() => {
+                          setSelectedProjectId(project.id);
+                          setSelectedProjectTitle(project.title);
+                          setProjectInterestsModalOpen(true);
+                        }}
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -596,9 +623,12 @@ export default function AdminDashboardDesktop() {
                             </Badge>
                           </div>
                         </div>
-                        <Badge className="bg-blue-100 text-blue-700 text-xs flex-shrink-0 ml-2">
-                          {project.interested} interested
-                        </Badge>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <Badge className="bg-blue-100 text-blue-700 text-xs">
+                            {project.interested} interested
+                          </Badge>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -729,6 +759,18 @@ export default function AdminDashboardDesktop() {
       <SessionManagementModal open={sessionModalOpen} onOpenChange={setSessionModalOpen} />
       <SmartsheetModal open={smartsheetModalOpen} onOpenChange={setSmartsheetModalOpen} />
       <RaisersEdgeExportModal open={reExportModalOpen} onOpenChange={setReExportModalOpen} />
+      <ProjectInterestsModal
+        open={projectInterestsModalOpen}
+        onOpenChange={setProjectInterestsModalOpen}
+        projectId={selectedProjectId}
+        projectTitle={selectedProjectTitle}
+      />
+      <SessionRsvpsModal
+        open={sessionRsvpsModalOpen}
+        onOpenChange={setSessionRsvpsModalOpen}
+        sessionId={selectedSessionId}
+        sessionTitle={selectedSessionTitle}
+      />
     </DesktopShell>
   );
 }

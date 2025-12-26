@@ -34,6 +34,8 @@ import EventAnalytics from '@/pages/admin/EventAnalytics';
 import SmartsheetPage from '@/pages/admin/SmartsheetPage';
 import AuditLogsPage from '@/pages/admin/AuditLogsPage';
 import RaisersEdgeExport from '@/pages/admin/RaisersEdgeExport';
+import ProjectInterestsPage from '@/pages/admin/ProjectInterestsPage';
+import SessionRsvpsPage from '@/pages/admin/SessionRsvpsPage';
 
 // Staff Pages
 import StaffCheckinPage from '@/pages/staff/StaffCheckinPage';
@@ -147,6 +149,22 @@ function App() {
           element={
             <ProtectedRoute requireAdmin>
               <RaisersEdgeExport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/projects/:id/interests"
+          element={
+            <ProtectedRoute requireAdmin>
+              <ProjectInterestsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/sessions/:id/rsvps"
+          element={
+            <ProtectedRoute requireAdmin>
+              <SessionRsvpsPage />
             </ProtectedRoute>
           }
         />
