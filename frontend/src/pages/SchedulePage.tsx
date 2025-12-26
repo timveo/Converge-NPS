@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { Calendar, ChevronLeft, Search, X, List, CalendarDays, AlertTriangle, Sparkles, Clock, Loader2 } from "lucide-react";
+import { Calendar, Search, X, List, CalendarDays, AlertTriangle, Sparkles, Clock, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -439,28 +440,13 @@ END:VCALENDAR`;
 
   return (
     <div className="min-h-screen bg-gradient-subtle pb-24">
-      <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4">
-        <header className="bg-gradient-navy text-primary-foreground shadow-lg sticky top-0 z-20 rounded-lg">
-          <div className="px-3 md:px-4 py-2 md:py-4 flex items-center justify-between gap-2 md:gap-4">
-            <div className="flex items-center gap-3 md:gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-primary-foreground hover:bg-primary/20 h-11 w-11 md:h-10 md:w-10"
-                onClick={() => navigate(fromAdmin ? '/admin' : '/')}
-              >
-                <ChevronLeft className="h-5 w-5 md:h-5 md:w-5" />
-              </Button>
-              <div>
-                <h1 className="text-lg md:text-xl font-bold">Event Schedule</h1>
-                <p className="text-sm md:text-sm text-tech-cyan-light">Browse Sessions</p>
-              </div>
-            </div>
-          </div>
-        </header>
-      </div>
+      <PageHeader
+        title="Event Schedule"
+        subtitle="Browse Sessions"
+        onBack={() => navigate(fromAdmin ? '/admin' : '/')}
+      />
 
-      <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
+      <main className="px-3 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
         <OfflineDataBanner />
 
         {/* Error Banner */}
@@ -692,7 +678,7 @@ END:VCALENDAR`;
             )}
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
 
       <ConflictDialog
         open={conflictDialog.show}

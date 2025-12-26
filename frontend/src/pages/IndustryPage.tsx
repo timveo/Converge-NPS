@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { ChevronLeft, Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone, Users } from "lucide-react";
+import { Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone, Users } from "lucide-react";
 import { useDevice } from "@/hooks/useDeviceType";
+import { PageHeader } from "@/components/PageHeader";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { offlineDataCache } from "@/lib/offlineDataCache";
 import { OfflineDataBanner } from "@/components/OfflineDataBanner";
@@ -300,38 +301,24 @@ function IndustryMobilePage() {
   const activeFilterCount = selectedTechAreas.length + selectedSeeking.length + (selectedDodSponsor ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-gradient-subtle pb-24">
-      <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4">
-        <header className="bg-gradient-navy text-primary-foreground shadow-lg sticky top-0 z-10 rounded-lg">
-          <div className="px-4 md:px-4 py-3 md:py-4">
-            <div className="flex items-center gap-3 md:gap-4">
-              <Link to="/">
-                <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/20 h-11 w-11 md:h-10 md:w-10">
-                  <ChevronLeft className="h-5 w-5 md:h-5 md:w-5" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-lg md:text-xl font-bold">Meet Industry</h1>
-                <p className="text-sm md:text-sm text-tech-cyan-light">{partners.length} Partners Present</p>
-              </div>
-            </div>
-          </div>
-        </header>
-      </div>
+    <div className="min-h-screen bg-gradient-subtle pb-20 md:pb-24">
+      <PageHeader
+        title="Meet Industry"
+        subtitle={`${partners.length} Partners Present`}
+      />
 
-      <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4">
+      {/* Main Content */}
+      <main className="px-3 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
         <OfflineDataBanner />
-      </div>
 
-      <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 md:h-4 md:w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search companies, technologies..."
-            className="pl-10 md:pl-10 h-11 md:h-10 text-base"
+            className="pl-10 h-11 md:h-10 text-base"
           />
           {searchQuery && (
             <Button
@@ -344,11 +331,8 @@ function IndustryMobilePage() {
             </Button>
           )}
         </div>
-      </div>
-
-      <div className="container mx-auto px-4 md:px-4 py-3 md:py-4 space-y-3">
         {/* Filter buttons */}
-        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -368,12 +352,12 @@ function IndustryMobilePage() {
             variant={showFavoritesOnly ? "default" : "outline"}
             size="sm"
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-            className="gap-2 text-sm md:text-sm h-11 md:h-10"
+            className="gap-2 text-sm h-11 md:h-10"
           >
-            <Star className={cn("w-4 h-4 md:w-4 md:h-4", showFavoritesOnly && "fill-current")} />
+            <Star className={cn("w-4 h-4", showFavoritesOnly && "fill-current")} />
             <span className="hidden sm:inline">Favorites</span>
             {favorites.size > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs md:text-xs">{favorites.size}</Badge>
+              <Badge variant="secondary" className="ml-1 text-xs">{favorites.size}</Badge>
             )}
           </Button>
 
@@ -390,10 +374,10 @@ function IndustryMobilePage() {
 
         {/* Expandable Inline Filter Panel */}
         {showFilters && (
-          <Card className="mt-3">
+          <Card className="shadow-md border-border/50">
             <CardContent className="pt-4 pb-4 space-y-4">
               <div>
-                <Label className="text-xs font-semibold">Filter by DoD Sponsor</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Filter by DoD Sponsor</Label>
                 <Select value={selectedDodSponsor || "all"} onValueChange={(val) => setSelectedDodSponsor(val === "all" ? "" : val)}>
                   <SelectTrigger className="mt-2 h-11 md:h-10">
                     <SelectValue placeholder="All Sponsors" />
@@ -405,33 +389,33 @@ function IndustryMobilePage() {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Filter by Technology</Label>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2">
+                <Label className="text-xs font-semibold text-muted-foreground">Filter by Technology</Label>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
                   {TECHNOLOGY_AREAS.map(area => (
                     <div key={area} className="flex items-center space-x-2">
                       <Checkbox
                         id={`tech-${area}`}
                         checked={selectedTechAreas.includes(area)}
                         onCheckedChange={() => toggleTechArea(area)}
-                        className="h-4 w-4"
+                        className="h-5 w-5"
                       />
-                      <Label htmlFor={`tech-${area}`} className="text-xs cursor-pointer font-normal">{area}</Label>
+                      <Label htmlFor={`tech-${area}`} className="text-sm cursor-pointer font-normal">{area}</Label>
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Filter by Seeking</Label>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2">
+                <Label className="text-xs font-semibold text-muted-foreground">Filter by Seeking</Label>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
                   {SEEKING_OPTIONS.map(s => (
                     <div key={s} className="flex items-center space-x-2">
                       <Checkbox
                         id={`seek-${s}`}
                         checked={selectedSeeking.includes(s)}
                         onCheckedChange={() => toggleSeeking(s)}
-                        className="h-4 w-4"
+                        className="h-5 w-5"
                       />
-                      <Label htmlFor={`seek-${s}`} className="text-xs cursor-pointer font-normal">{s}</Label>
+                      <Label htmlFor={`seek-${s}`} className="text-sm cursor-pointer font-normal">{s}</Label>
                     </div>
                   ))}
                 </div>
@@ -442,30 +426,30 @@ function IndustryMobilePage() {
 
         {/* Active filter badges */}
         {hasActiveFilters && (
-          <div className="flex flex-wrap gap-2 md:gap-2 mt-3 md:mt-3">
+          <div className="flex flex-wrap gap-2">
             {showFavoritesOnly && (
-              <Badge variant="default" className="gap-1 bg-yellow-500 text-xs md:text-xs py-1.5">
-                <Star className="w-3 h-3 md:w-3 md:h-3 fill-current" />
+              <Badge variant="default" className="gap-1 bg-yellow-500 text-xs py-1.5">
+                <Star className="w-3 h-3 fill-current" />
                 Favorites
-                <X className="h-3 w-3 md:h-3 md:w-3 cursor-pointer ml-1" onClick={() => setShowFavoritesOnly(false)} />
+                <X className="h-3 w-3 cursor-pointer ml-1" onClick={() => setShowFavoritesOnly(false)} />
               </Badge>
             )}
             {selectedDodSponsor && (
-              <Badge variant="secondary" className="gap-1 text-xs md:text-xs py-1.5">
+              <Badge variant="secondary" className="gap-1 text-xs py-1.5">
                 DoD: {selectedDodSponsor}
-                <X className="h-3 w-3 md:h-3 md:w-3 cursor-pointer ml-1" onClick={() => setSelectedDodSponsor("")} />
+                <X className="h-3 w-3 cursor-pointer ml-1" onClick={() => setSelectedDodSponsor("")} />
               </Badge>
             )}
             {selectedTechAreas.map(area => (
-              <Badge key={area} variant="secondary" className="gap-1 text-xs md:text-xs py-1.5">
+              <Badge key={area} variant="secondary" className="gap-1 text-xs py-1.5">
                 {area}
-                <X className="h-3 w-3 md:h-3 md:w-3 cursor-pointer" onClick={() => toggleTechArea(area)} />
+                <X className="h-3 w-3 cursor-pointer" onClick={() => toggleTechArea(area)} />
               </Badge>
             ))}
             {selectedSeeking.map(s => (
-              <Badge key={s} variant="outline" className="gap-1 text-xs md:text-xs py-1.5">
+              <Badge key={s} variant="outline" className="gap-1 text-xs py-1.5">
                 {s}
-                <X className="h-3 w-3 md:h-3 md:w-3 cursor-pointer" onClick={() => toggleSeeking(s)} />
+                <X className="h-3 w-3 cursor-pointer" onClick={() => toggleSeeking(s)} />
               </Badge>
             ))}
             <Button variant="ghost" size="sm" onClick={clearFilters} className="h-6 text-xs px-2">
@@ -473,31 +457,27 @@ function IndustryMobilePage() {
             </Button>
           </div>
         )}
-      </div>
 
-      {/* Submit Industry Partner CTA */}
-      <div className="container mx-auto px-4 md:px-4 mb-3 md:mb-4">
-        <Card className="p-3 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20">
+        {/* Submit Industry Partner CTA */}
+        <Card className="p-3 md:p-4 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 shadow-md">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-medium">Share your project or opportunity</p>
             <Button
               onClick={() => navigate('/opportunities/submit', { state: { from: "industry" } })}
               size="sm"
-              className="gap-2 shrink-0"
+              className="gap-2 shrink-0 h-11 md:h-10"
             >
               <Plus className="h-4 w-4" />
               Submit
             </Button>
           </div>
         </Card>
-      </div>
 
-      {/* AI Recommendations */}
-      {visibleRecommendations.length > 0 && !showFavoritesOnly && (
-        <div className="container mx-auto px-4 md:px-4 mb-3 md:mb-4">
-          <Card className="p-4 md:p-6 bg-gradient-to-br from-accent/5 to-primary/5 border-accent/30">
-            <div className="flex items-center gap-2 md:gap-2 mb-3 md:mb-4">
-              <Sparkles className="h-5 w-5 md:h-5 md:w-5 text-accent" />
+        {/* AI Recommendations */}
+        {visibleRecommendations.length > 0 && !showFavoritesOnly && (
+          <Card className="p-4 md:p-6 bg-gradient-to-br from-accent/5 to-primary/5 border-accent/30 shadow-md">
+            <div className="flex items-center gap-2 mb-3 md:mb-4">
+              <Sparkles className="h-5 w-5 text-accent" />
               <h2 className="text-base md:text-lg font-semibold">Recommended Partners</h2>
             </div>
             <div className="space-y-2 md:space-y-3">
@@ -521,27 +501,24 @@ function IndustryMobilePage() {
               })}
             </div>
           </Card>
-        </div>
-      )}
+        )}
 
-      {/* Results count */}
-      <div className="container mx-auto px-4 md:px-4 mb-3 md:mb-4">
-        <p className="text-sm md:text-sm text-muted-foreground">
+        {/* Results count */}
+        <p className="text-sm text-muted-foreground">
           Showing {filteredPartners.length} of {partners.length} partners
         </p>
-      </div>
 
-      {/* Partner list */}
-      <main className="container mx-auto px-4 md:px-4 space-y-3 md:space-y-4">
+        {/* Partner list */}
+        <div className="space-y-3 md:space-y-4">
         {loading ? (
-          <div className="space-y-3">
+          <div className="space-y-3 md:space-y-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="p-4 md:p-6">
+              <Card key={i} className="p-4 md:p-6 shadow-md border-border/50">
                 <div className="flex items-start gap-3 md:gap-4">
-                  <Skeleton className="w-12 h-12 md:w-16 md:h-16 rounded-lg" />
+                  <Skeleton className="w-14 h-14 md:w-16 md:h-16 rounded-lg flex-shrink-0" />
                   <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-48" />
-                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
                     <div className="flex gap-2">
                       <Skeleton className="h-5 w-16 rounded-full" />
                       <Skeleton className="h-5 w-20 rounded-full" />
@@ -552,26 +529,26 @@ function IndustryMobilePage() {
             ))}
           </div>
         ) : filteredPartners.length === 0 ? (
-          <Card className="p-8 md:p-12 text-center">
+          <Card className="p-8 md:p-12 text-center shadow-md border-border/50">
             {showFavoritesOnly ? (
               <>
-                <Star className="h-8 w-8 md:h-12 md:w-12 mx-auto mb-2 md:mb-4 text-muted-foreground" />
-                <h3 className="text-sm md:text-lg font-semibold mb-2">No Favorites Yet</h3>
-                <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
+                <Star className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
+                <h3 className="text-base md:text-lg font-semibold mb-2">No Favorites Yet</h3>
+                <p className="text-sm text-muted-foreground mb-4">
                   Mark industry partners as favorites to easily find them later
                 </p>
-                <Button onClick={() => setShowFavoritesOnly(false)} variant="outline" size="sm">
+                <Button onClick={() => setShowFavoritesOnly(false)} variant="outline" size="sm" className="h-11 md:h-10">
                   Browse All Partners
                 </Button>
               </>
             ) : (
               <>
-                <Building2 className="h-8 w-8 md:h-12 md:w-12 mx-auto mb-2 md:mb-4 text-muted-foreground" />
-                <h3 className="text-sm md:text-lg font-semibold mb-2">No partners found</h3>
-                <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
+                <Building2 className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-muted-foreground" />
+                <h3 className="text-base md:text-lg font-semibold mb-2">No partners found</h3>
+                <p className="text-sm text-muted-foreground mb-4">
                   Try adjusting your filters or search query
                 </p>
-                <Button onClick={clearFilters} variant="outline" size="sm">
+                <Button onClick={clearFilters} variant="outline" size="sm" className="h-11 md:h-10">
                   Clear Filters
                 </Button>
               </>
@@ -626,13 +603,13 @@ function IndustryMobilePage() {
 
                     {/* POC Info */}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-3">
-                      <Users className="h-4 w-4 shrink-0" />
+                      <Users className="h-4 w-4 shrink-0 text-accent" />
                       <span className="truncate">
                         {(partner.poc_rank || partner.pocRank) && <span className="font-medium">{partner.poc_rank || partner.pocRank}</span>}
                         {(partner.poc_rank || partner.pocRank) && (partner.poc_first_name || partner.pocFirstName || partner.poc_last_name || partner.pocLastName) && ' '}
                         {(partner.poc_first_name || partner.pocFirstName || partner.poc_last_name || partner.pocLastName)
                           ? `${partner.poc_first_name || partner.pocFirstName || ''} ${partner.poc_last_name || partner.pocLastName || ''}`.trim()
-                          : 'Unknown'}
+                          : 'Contact available'}
                       </span>
                     </div>
 
@@ -776,6 +753,7 @@ function IndustryMobilePage() {
             );
           })
         )}
+        </div>
       </main>
     </div>
   );

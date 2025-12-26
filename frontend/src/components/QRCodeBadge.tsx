@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { QrCode, Maximize2, WifiOff, X } from "lucide-react";
+import { QrCode, Maximize2, WifiOff } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -88,46 +88,37 @@ const QRCodeBadge = ({ user, isOffline = false }: QRCodeBadgeProps) => {
 
       {/* Full Screen QR Modal */}
       <Dialog open={showFullScreen} onOpenChange={setShowFullScreen}>
-        <DialogContent className="max-w-md p-0 bg-white dark:bg-card">
-          <div className="relative p-6">
-            <button
-              onClick={() => setShowFullScreen(false)}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="text-center mb-6">
-              <h3 className="text-xl font-bold">{user.name}</h3>
-              {user.org && user.show_organization !== false && (
-                <p className="text-sm text-muted-foreground">{user.org}</p>
-              )}
-            </div>
-
-            <div className="flex justify-center mb-6">
-              <div className="bg-white p-4 rounded-xl shadow-lg">
-                <QRCode
-                  value={qrData}
-                  size={250}
-                  level="H"
-                />
-              </div>
-            </div>
-
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">Manual Code</p>
-              <p className="text-2xl font-mono font-bold text-primary tracking-wider">{manualCode}</p>
-            </div>
-
-            {isOffline && (
-              <div className="mt-4 flex justify-center">
-                <Badge variant="secondary" className="gap-1">
-                  <WifiOff className="w-3 h-3" />
-                  Offline Mode
-                </Badge>
-              </div>
+        <DialogContent className="max-w-md p-6 bg-white dark:bg-card">
+          <div className="text-center mb-6">
+            <h3 className="text-xl font-bold">{user.name}</h3>
+            {user.org && user.show_organization !== false && (
+              <p className="text-sm text-muted-foreground">{user.org}</p>
             )}
           </div>
+
+          <div className="flex justify-center mb-6">
+            <div className="bg-white p-4 rounded-xl shadow-lg">
+              <QRCode
+                value={qrData}
+                size={250}
+                level="H"
+              />
+            </div>
+          </div>
+
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground mb-1">Manual Code</p>
+            <p className="text-2xl font-mono font-bold text-primary tracking-wider">{manualCode}</p>
+          </div>
+
+          {isOffline && (
+            <div className="mt-4 flex justify-center">
+              <Badge variant="secondary" className="gap-1">
+                <WifiOff className="w-3 h-3" />
+                Offline Mode
+              </Badge>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

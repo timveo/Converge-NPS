@@ -1,19 +1,18 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { MessageCircle, Search, ChevronLeft, Loader2, Plus } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { MessageCircle, Search, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
 import { useDevice } from '@/hooks/useDeviceType';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/PageHeader';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { offlineDataCache } from '@/lib/offlineDataCache';
 import { OfflineDataBanner } from '@/components/OfflineDataBanner';
-import { NewConversationDialog } from '@/components/messages/NewConversationDialog';
 
 // Lazy load desktop version
 const MessagesDesktopPage = lazy(() => import('./MessagesPage.desktop'));
@@ -69,8 +68,7 @@ function MessagesMobilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
-
+  
   // Fast path: if we navigated here with a target user id, start/open the conversation and redirect.
   useEffect(() => {
     const state = location.state as any;
@@ -174,65 +172,27 @@ function MessagesMobilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-subtle pb-24">
-      {/* Header */}
-      <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4">
-        <header className="bg-gradient-navy text-primary-foreground shadow-lg sticky top-0 z-10 rounded-lg">
-          <div className="px-4 md:px-4 py-3 md:py-4">
-            <div className="flex items-center gap-3 md:gap-4">
-              <Link to="/">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-primary-foreground hover:bg-primary/20"
-                >
-                  <ChevronLeft className="h-5 w-5 md:h-5 md:w-5" />
-                </Button>
-              </Link>
-              <div className="flex-1">
-                <h1 className="text-lg md:text-xl font-bold">Messages</h1>
-                <p className="text-sm md:text-sm text-tech-cyan-light">
-                  {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-primary-foreground hover:bg-primary/20"
-                onClick={() => setIsNewConversationOpen(true)}
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </header>
-      </div>
-
-      {/* New Conversation Dialog */}
-      <NewConversationDialog
-        open={isNewConversationOpen}
-        onOpenChange={setIsNewConversationOpen}
+      <PageHeader
+        title="Messages"
+        subtitle={`${conversations.length} conversation${conversations.length !== 1 ? 's' : ''}`}
       />
 
-      {/* Offline Banner */}
-      <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4">
+      <main className="px-3 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
         <OfflineDataBanner />
-      </div>
 
-      {/* Search Bar */}
-      <div className="container mx-auto px-4 md:px-4 py-3 md:py-4">
+        {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 md:h-4 md:w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 md:pl-10 h-11 md:h-10 text-base"
+            className="pl-10 h-11 md:h-10 text-base"
           />
         </div>
-      </div>
 
-      {/* Conversations List */}
-      <main className="container mx-auto px-4 md:px-4 space-y-2 md:space-y-2">
+        {/* Conversations List */}
+        <div className="space-y-2 md:space-y-2">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <Card key={i} className="p-2.5 md:p-4">
@@ -308,6 +268,7 @@ function MessagesMobilePage() {
             );
           })
         )}
+        </div>
       </main>
     </div>
   );

@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import Footer from "@/components/Footer";
 
 const MILITARY_RANKS = [
   // Navy Officer
@@ -711,6 +712,11 @@ export default function SettingsPage() {
               Sign Out
             </Button>
           </Card>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-6">
+          <Footer />
         </div>
       </main>
     </div>
