@@ -21,7 +21,6 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import Footer from '@/components/Footer';
 import { BottomNav } from '@/components/navigation/BottomNav';
 import QRCodeBadge from '@/components/QRCodeBadge';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -378,7 +377,7 @@ function DashboardMobilePage() {
               </Button>
             </Link>
             <p className="text-xs md:text-sm text-muted-foreground text-center">
-              Scan Attendee's Badge
+              Scan to connect with other Participants
             </p>
           </div>
         </Card>
@@ -415,8 +414,6 @@ function DashboardMobilePage() {
           </div>
         </div>
 
-        {/* Footer */}
-        <Footer />
       </main>
 
       {/* Bottom Navigation for Mobile */}

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { ChevronLeft, MessageSquare, CheckCircle2, Loader2, Trash2, Users, QrCode, Sparkles, Download, FileText, Bell, BellOff, Search, X, SlidersHorizontal, Lock, Edit, Save, BookOpen, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
+import { MessageSquare, CheckCircle2, Loader2, Trash2, Users, QrCode, Sparkles, FileText, Bell, BellOff, Search, X, SlidersHorizontal, Lock, Edit, Save, BookOpen, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -370,45 +371,6 @@ function ConnectionsMobilePage() {
     });
   };
 
-  const handleExportContacts = async (format: 'vcard' | 'csv') => {
-    if (connections.length === 0) {
-      toast.error("No connections to export");
-      return;
-    }
-
-    toast.info("Preparing export...");
-
-    try {
-      if (format === 'csv') {
-        const headers = ['Name', 'Organization', 'Role', 'Intents', 'Notes', 'Connected At'];
-        const rows = connections.map(c => [
-          c.profile?.full_name || '',
-          c.profile?.organization || '',
-          c.profile?.role || '',
-          c.collaborative_intents?.join(', ') || '',
-          c.notes || '',
-          new Date(c.created_at).toLocaleDateString()
-        ]);
-
-        const csvContent = [headers, ...rows]
-          .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-          .join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'nps_connections.csv';
-        link.click();
-        URL.revokeObjectURL(url);
-
-        toast.success(`Exported ${connections.length} contacts`);
-      }
-    } catch (error: any) {
-      toast.error('Failed to export contacts');
-    }
-  };
-
   const clearFilters = () => {
     setFilters({ intents: [], userTypes: [], sortBy: 'recent' });
     setSearchQuery('');
@@ -452,45 +414,16 @@ function ConnectionsMobilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-subtle pb-24">
-      {/* Header */}
-      <div className="container mx-auto px-4 md:px-4 pt-3 md:pt-4">
-        <Card className="bg-gradient-navy text-primary-foreground shadow-lg mb-3 md:mb-4">
-          <div className="px-4 md:px-4 py-3 md:py-4">
-            <div className="flex items-center justify-between gap-3 md:gap-4">
-              <div className="flex items-center gap-3 md:gap-4">
-                <Link to="/">
-                  <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 text-primary-foreground hover:bg-primary/20">
-                    <ChevronLeft className="h-5 w-5 md:h-5 md:w-5" />
-                  </Button>
-                </Link>
-                <div>
-                  <h1 className="text-lg md:text-xl font-bold">My Connections</h1>
-                  <p className="text-sm md:text-sm text-tech-cyan-light">{connections.length} connections made</p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                onClick={() => handleExportContacts('csv')}
-              >
-                <Download className="w-4 h-4 md:mr-2" />
-                <span className="hidden md:inline">Export</span>
-              </Button>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <PageHeader
+        title="My Connections"
+        subtitle={`${connections.length} connections made`}
+      />
 
-      {/* Offline Banner */}
-      <div className="container mx-auto px-4 md:px-4">
+      <main className="px-3 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
         <OfflineDataBanner />
-      </div>
 
-      {/* Search and Filters */}
-      <div className="container mx-auto px-4 md:px-4 space-y-3 md:space-y-3">
         {/* Search Bar */}
-        <Card className="p-4 md:p-4 shadow-md border-accent/20 bg-gradient-to-br from-background to-secondary/20">
+        <Card className="p-3 md:p-4 shadow-md border-accent/20 bg-gradient-to-br from-background to-secondary/20">
           <div className="flex flex-col sm:flex-row gap-3 md:gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 md:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-4 md:h-4 text-accent" />
@@ -668,10 +601,8 @@ function ConnectionsMobilePage() {
             </Button>
           </div>
         )}
-      </div>
 
-      {/* Summary Stats */}
-      <div className="container mx-auto px-3 md:px-4 my-3 md:my-4">
+        {/* Summary Stats */}
         <Card className="p-3 md:p-6 bg-gradient-tech text-primary-foreground shadow-md">
           <h3 className="font-semibold mb-2 md:mb-3 text-sm md:text-base">Your Networking Stats</h3>
           <div className="grid grid-cols-3 gap-2 md:gap-4">
@@ -691,11 +622,9 @@ function ConnectionsMobilePage() {
             </div>
           </div>
         </Card>
-      </div>
 
-      {/* Inline Recommendations */}
-      {recommendations.filter(r => !isRecommendationDismissed(r.id)).length > 0 && (
-        <div className="container mx-auto px-3 md:px-4 mb-2.5 md:mb-4">
+        {/* Inline Recommendations */}
+        {recommendations.filter(r => !isRecommendationDismissed(r.id)).length > 0 && (
           <Card className="p-3 md:p-4 bg-gradient-to-br from-accent/5 to-primary/5 border-accent/30">
             <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
               <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 text-accent" />
@@ -761,11 +690,9 @@ function ConnectionsMobilePage() {
               ))}
             </div>
           </Card>
-        </div>
-      )}
+        )}
 
-      {/* Tabs */}
-      <div className="container mx-auto px-3 md:px-4 mb-2.5 md:mb-4">
+        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2 h-8 md:h-10">
             <TabsTrigger value="all" className="text-xs md:text-sm">All ({connections.length})</TabsTrigger>
@@ -775,10 +702,9 @@ function ConnectionsMobilePage() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-      </div>
 
-      {/* Connections List */}
-      <main className="container mx-auto px-3 md:px-4 space-y-2.5 md:space-y-4">
+        {/* Connections List */}
+        <div className="space-y-2.5 md:space-y-4">
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -1044,6 +970,7 @@ function ConnectionsMobilePage() {
             );
           })
         )}
+        </div>
       </main>
     </div>
   );

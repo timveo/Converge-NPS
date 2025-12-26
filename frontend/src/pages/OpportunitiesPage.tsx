@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, ChevronLeft, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare, Loader2 } from "lucide-react";
+import { Plus, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare, Loader2 } from "lucide-react";
 import { useDevice } from "@/hooks/useDeviceType";
+import { PageHeader } from "@/components/PageHeader";
 
 // Lazy load desktop version
 const OpportunitiesDesktopPage = lazy(() => import('./OpportunitiesPage.desktop'));
@@ -441,35 +442,17 @@ function OpportunitiesMobilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-subtle pb-24">
-      <div className="container mx-auto px-3 md:px-4 pt-2 md:pt-4">
-        <header className="bg-gradient-navy text-primary-foreground shadow-lg sticky top-0 z-10 rounded-lg">
-          <div className="px-3 md:px-4 py-2 md:py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 md:gap-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 md:h-10 md:w-10 text-primary-foreground hover:bg-primary/20"
-                  onClick={() => navigate(fromAdmin ? '/admin' : '/')}
-                >
-                  <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
-                </Button>
-                <div>
-                  <h1 className="text-lg md:text-xl font-bold">Collaborative Opportunities</h1>
-                  <p className="text-sm md:text-base text-tech-cyan-light">Discover Collaboration Projects</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
+      <PageHeader
+        title="Collaborative Opportunities"
+        subtitle="Discover Collaboration Projects"
+        onBack={() => navigate(fromAdmin ? '/admin' : '/')}
+      />
 
-        <div className="pt-3 md:pt-4">
-          <OfflineDataBanner />
-        </div>
+      <main className="px-3 md:px-4 pt-3 md:pt-4 space-y-3 md:space-y-4">
+        <OfflineDataBanner />
 
-        <main className="py-3 md:py-6 space-y-4">
-          {/* Search Input */}
-          <div className="relative">
+        {/* Search Input */}
+        <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search opportunities..."
@@ -856,7 +839,6 @@ function OpportunitiesMobilePage() {
             )}
           </div>
         </main>
-      </div>
     </div>
   );
 }

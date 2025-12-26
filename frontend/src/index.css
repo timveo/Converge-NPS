@@ -122,6 +122,19 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 
+  /* Hide browser default password reveal icons */
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear {
+    display: none;
+  }
+
+  /* Safari and WebKit browsers */
+  input[type="password"]::-webkit-credentials-auto-fill-button,
+  input[type="password"]::-webkit-textfield-decoration-container {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   /* Mobile-specific optimizations */
   @supports (padding: env(safe-area-inset-top)) {
     body {
