@@ -2,7 +2,7 @@ import { Calendar, Clock, MapPin, Users, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { formatTimePT, formatTimeRangePT, formatDatePT } from "@/lib/utils";
 
 interface Session {
   id: string;
@@ -64,7 +64,7 @@ export const SessionCard = ({
             <div className="flex items-center gap-2 md:gap-3 text-[10px] md:text-xs text-muted-foreground">
               <span className="flex items-center gap-0.5 md:gap-1">
                 <Clock className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                {format(new Date(session.start_time), "h:mm a")}
+                {formatTimePT(session.start_time)}
               </span>
               {session.location && (
                 <span className="flex items-center gap-0.5 md:gap-1 truncate">
@@ -125,13 +125,13 @@ export const SessionCard = ({
         <div className="flex items-center gap-1 md:gap-2">
           <Calendar className="h-3 w-3 md:h-4 md:w-4 text-accent" />
           <span className="text-[11px] md:text-sm">
-            {format(new Date(session.start_time), "EEE, MMM d")}
+            {formatDatePT(session.start_time)}
           </span>
         </div>
         <div className="flex items-center gap-1 md:gap-2">
           <Clock className="h-3 w-3 md:h-4 md:w-4 text-accent" />
           <span className="text-[11px] md:text-sm">
-            {format(new Date(session.start_time), "h:mm a")} - {format(new Date(session.end_time), "h:mm a")}
+            {formatTimeRangePT(session.start_time, session.end_time)}
           </span>
         </div>
         {session.location && (

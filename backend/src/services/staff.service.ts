@@ -6,7 +6,7 @@
 
 import prisma from '../config/database';
 import { NotFoundError, ConflictError } from '../middleware/errorHandler';
-import { AppRole } from '@prisma/client';
+import { AppRole, ParticipantType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID, randomBytes } from 'crypto';
 
@@ -157,6 +157,7 @@ export async function registerWalkIn(
         email: data.email.toLowerCase(),
         fullName,
         organization: data.organization,
+        participantType: data.participantType as ParticipantType,
         isWalkIn: true,
         isCheckedIn: true,
         checkedInById: staffId,
@@ -176,8 +177,8 @@ export async function registerWalkIn(
       student: 'student' as AppRole,
       faculty: 'faculty' as AppRole,
       industry: 'industry' as AppRole,
-      alumni: 'participant' as AppRole,
-      guest: 'participant' as AppRole,
+      alumni: 'alumni' as AppRole,
+      guest: 'guest' as AppRole,
     };
     const appRole: AppRole = roleMap[data.participantType] || ('participant' as AppRole);
     

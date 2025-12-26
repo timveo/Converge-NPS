@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { cn, formatTimeRangePT } from '@/lib/utils';
 
 interface Session {
   id: string;
@@ -78,13 +78,7 @@ export function TodayScheduleWidget() {
     fetchTodaySessions();
   }, []);
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
+  // formatTime is no longer needed - using formatTimeRangePT from utils
 
   const isNow = (startTime: string, endTime: string) => {
     const now = new Date();
@@ -181,7 +175,7 @@ export function TodayScheduleWidget() {
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
                       <Clock className="h-3 w-3 text-primary/70" />
-                      {formatTime(session.startTime)} - {formatTime(session.endTime)}
+                      {formatTimeRangePT(session.startTime, session.endTime)}
                     </span>
                     {session.location && (
                       <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">

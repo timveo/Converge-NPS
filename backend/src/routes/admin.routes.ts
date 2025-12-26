@@ -67,6 +67,20 @@ router.get('/event-analytics', adminController.getEventAnalytics);
 router.get('/export/raisers-edge', adminController.exportRaisersEdge);
 
 /**
+ * Project Analytics
+ */
+
+// GET /v1/admin/projects/:id/interests - Get project interests (admin override)
+router.get('/projects/:id/interests', adminController.getProjectInterests);
+
+/**
+ * Session Analytics
+ */
+
+// GET /v1/admin/sessions/:id/rsvps - Get session RSVPs (admin override)
+router.get('/sessions/:id/rsvps', adminController.getSessionRsvps);
+
+/**
  * Audit Logs
  */
 

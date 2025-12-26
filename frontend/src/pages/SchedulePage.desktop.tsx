@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { format, parseISO } from 'date-fns';
 import {
   Calendar,
   Clock,
@@ -38,9 +39,8 @@ import { DesktopShell } from '@/components/desktop/DesktopShell';
 import { SESSION_TYPES, ScheduleFilters } from '@/components/schedule/ScheduleFilters';
 import { ConflictDialog } from '@/components/schedule/ConflictDialog';
 import { api } from '@/lib/api';
-import { format, parseISO } from 'date-fns';
 import { useDismissedRecommendations } from '@/hooks/useDismissedRecommendations';
-import { cn } from '@/lib/utils';
+import { cn, getDateStringPT, formatTimePT, formatTimeRangePT, formatDatePT, formatFullDatePT } from '@/lib/utils';
 
 interface Recommendation {
   id: string;
@@ -160,7 +160,7 @@ export default function ScheduleDesktopPage() {
 
   const uniqueDays = useMemo(
     () =>
-      Array.from(new Set(sessions.map((s) => format(new Date(s.start_time), 'yyyy-MM-dd')))).sort(),
+      Array.from(new Set(sessions.map((s) => getDateStringPT(s.start_time)))).sort(),
     [sessions]
   );
 
@@ -240,7 +240,7 @@ export default function ScheduleDesktopPage() {
 
     if (filters.days.length) {
       result = result.filter((s) =>
-        filters.days.includes(format(new Date(s.start_time), 'yyyy-MM-dd'))
+        filters.days.includes(getDateStringPT(s.start_time))
       );
     }
 
@@ -382,7 +382,7 @@ export default function ScheduleDesktopPage() {
   const sessionsByDay = useMemo(() => {
     const grouped: Record<string, Session[]> = {};
     displayed.forEach((session) => {
-      const day = format(new Date(session.start_time), 'yyyy-MM-dd');
+      const day = getDateStringPT(session.start_time);
       if (!grouped[day]) grouped[day] = [];
       grouped[day].push(session);
     });
@@ -684,8 +684,8 @@ export default function ScheduleDesktopPage() {
                           animate={{ opacity: 1, y: 0 }}
                         >
                           <div className="flex items-start gap-3">
-                            <div className="text-xs text-muted-foreground w-16 shrink-0 pt-0.5">
-                              {format(new Date(session.start_time), 'h:mm a')}
+                            <div className="text-xs text-muted-foreground w-20 shrink-0 pt-0.5">
+                              {formatTimePT(session.start_time)}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
@@ -754,7 +754,7 @@ export default function ScheduleDesktopPage() {
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {format(new Date(session.start_time), 'EEE, h:mm a')}
+                          {formatDatePT(session.start_time)}, {formatTimePT(session.start_time)}
                         </span>
                         {session.location && (
                           <span className="flex items-center gap-1 truncate">
@@ -871,11 +871,10 @@ export default function ScheduleDesktopPage() {
               </div>
               <div>
                 <p className="font-medium">
-                  {format(new Date(selectedSession.start_time), 'EEEE, MMMM d')}
+                  {formatFullDatePT(selectedSession.start_time)}
                 </p>
                 <p className="text-muted-foreground">
-                  {format(new Date(selectedSession.start_time), 'h:mm a')} -{' '}
-                  {format(new Date(selectedSession.end_time), 'h:mm a')}
+                  {formatTimeRangePT(selectedSession.start_time, selectedSession.end_time)}
                 </p>
               </div>
             </div>

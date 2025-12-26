@@ -300,22 +300,6 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                     </CollapsibleTrigger>
                     <CollapsibleContent className="px-4 pb-4">
                       <div className="space-y-3">
-                        {/* Email */}
-                        <div className="space-y-1.5">
-                          <Label htmlFor="email" className="flex items-center gap-1.5 text-xs">
-                            <Mail className="h-3 w-3" /> Email
-                          </Label>
-                          <Input id="email" type="email" value={user.email} disabled className="bg-muted cursor-not-allowed h-9 text-sm" />
-                        </div>
-
-                        {/* Phone */}
-                        <div className="space-y-1.5">
-                          <Label htmlFor="phone" className="flex items-center gap-1.5 text-xs">
-                            <Phone className="h-3 w-3" /> Phone
-                          </Label>
-                          <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter phone number" className="h-9 text-sm" />
-                        </div>
-
                         {/* Name Row */}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
@@ -355,6 +339,41 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                               ))}
                             </SelectContent>
                           </Select>
+                        </div>
+
+                        {/* Participant Type */}
+                        <div className="space-y-1.5">
+                          <Label htmlFor="participantType" className="text-xs">Participant Type</Label>
+                          <Input
+                            id="participantType"
+                            value={
+                              user.participantType === 'student' ? 'Student' :
+                              user.participantType === 'faculty' ? 'Faculty/Staff' :
+                              user.participantType === 'industry' ? 'Industry' :
+                              user.participantType === 'alumni' ? 'Alumni' :
+                              user.participantType === 'guest' ? 'Guest' :
+                              user.participantType || 'Not specified'
+                            }
+                            disabled
+                            className="bg-muted cursor-not-allowed h-9 text-sm"
+                          />
+                          <p className="text-[10px] text-muted-foreground">Your registration type cannot be changed</p>
+                        </div>
+
+                        {/* Email */}
+                        <div className="space-y-1.5">
+                          <Label htmlFor="email" className="flex items-center gap-1.5 text-xs">
+                            <Mail className="h-3 w-3" /> Email
+                          </Label>
+                          <Input id="email" type="email" value={user.email} disabled className="bg-muted cursor-not-allowed h-9 text-sm" />
+                        </div>
+
+                        {/* Phone */}
+                        <div className="space-y-1.5">
+                          <Label htmlFor="phone" className="flex items-center gap-1.5 text-xs">
+                            <Phone className="h-3 w-3" /> Phone
+                          </Label>
+                          <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter phone number" className="h-9 text-sm" />
                         </div>
 
                         {/* Role */}

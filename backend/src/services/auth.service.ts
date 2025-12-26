@@ -4,7 +4,7 @@
  * Database operations for authentication flow
  */
 
-import { Profile } from '@prisma/client';
+import { Profile, ParticipantType, AppRole } from '@prisma/client';
 import prisma from '../config/database';
 import {
   hashPassword,
@@ -24,6 +24,7 @@ export interface RegisterData {
   organization?: string;
   department?: string;
   role?: string;
+  participantType?: 'student' | 'faculty' | 'industry' | 'alumni' | 'guest';
 }
 
 export interface LoginResponse {
@@ -72,6 +73,7 @@ export class AuthService {
         organization: data.organization,
         department: data.department,
         role: data.role,
+        participantType: data.participantType as ParticipantType | undefined,
         profileVisibility: 'public',
         allowQrScanning: true,
         allowMessaging: true,
@@ -98,13 +100,23 @@ export class AuthService {
       },
     });
 
-    // Assign default permission role (participant) for all self-registrations
+    // Assign permission role based on participant type
     // Note: staff and admin roles can only be assigned by an admin
-    // The participant type (data.role) is stored in Profile.role for display purposes only
+    const roleMap: Record<string, AppRole> = {
+      student: 'student' as AppRole,
+      faculty: 'faculty' as AppRole,
+      industry: 'industry' as AppRole,
+      alumni: 'alumni' as AppRole,
+      guest: 'guest' as AppRole,
+    };
+    const appRole: AppRole = data.participantType
+      ? roleMap[data.participantType] || ('participant' as AppRole)
+      : ('participant' as AppRole);
+
     await prisma.userRole.create({
       data: {
         userId,
-        role: 'participant',
+        role: appRole,
       },
     });
 

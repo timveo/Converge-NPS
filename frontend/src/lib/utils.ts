@@ -5,12 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Pacific Time zone identifier
+const PACIFIC_TIMEZONE = 'America/Los_Angeles';
+
 export function formatDate(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    timeZone: PACIFIC_TIMEZONE,
   }).format(d);
 }
 
@@ -20,11 +24,70 @@ export function formatTime(date: string | Date): string {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone: PACIFIC_TIMEZONE,
   }).format(d);
 }
 
 export function formatDateTime(date: string | Date): string {
   return `${formatDate(date)} at ${formatTime(date)}`;
+}
+
+// Format time with PT label for session displays
+export function formatTimePT(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const time = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: PACIFIC_TIMEZONE,
+  }).format(d);
+  return `${time} PT`;
+}
+
+// Format time range with PT label (e.g., "9:00 AM - 10:30 AM PT")
+export function formatTimeRangePT(start: string | Date, end: string | Date): string {
+  const startDate = typeof start === 'string' ? new Date(start) : start;
+  const endDate = typeof end === 'string' ? new Date(end) : end;
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: PACIFIC_TIMEZONE,
+  });
+  return `${formatter.format(startDate)} - ${formatter.format(endDate)} PT`;
+}
+
+// Format date in Pacific timezone
+export function formatDatePT(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: PACIFIC_TIMEZONE,
+  }).format(d);
+}
+
+// Format full date in Pacific timezone (e.g., "Wednesday, January 28")
+export function formatFullDatePT(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    timeZone: PACIFIC_TIMEZONE,
+  }).format(d);
+}
+
+// Get ISO date string in Pacific timezone (e.g., "2026-01-28")
+export function getDateStringPT(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: PACIFIC_TIMEZONE,
+  }).format(d);
 }
 
 export function formatRelativeTime(date: string | Date): string {

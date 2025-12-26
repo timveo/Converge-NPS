@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { formatTimeRangePT } from "@/lib/utils";
 
 interface Session {
   id: string;
@@ -57,8 +57,7 @@ export const ConflictDialog = ({
                 <CardContent className="space-y-1 pb-4">
                   <p className="font-semibold text-foreground">{newSession?.title}</p>
                   <p className="text-sm text-muted-foreground">
-                    {newSession && format(new Date(newSession.start_time), 'h:mm a')} -
-                    {newSession && format(new Date(newSession.end_time), 'h:mm a')}
+                    {newSession && formatTimeRangePT(newSession.start_time, newSession.end_time)}
                   </p>
                   {newSession?.location && (
                     <p className="text-sm text-muted-foreground">{newSession.location}</p>
@@ -74,8 +73,7 @@ export const ConflictDialog = ({
                 <CardContent className="space-y-1 pb-4">
                   <p className="font-semibold text-foreground">{conflictingSession?.title}</p>
                   <p className="text-sm text-muted-foreground">
-                    {conflictingSession && format(new Date(conflictingSession.start_time), 'h:mm a')} -
-                    {conflictingSession && format(new Date(conflictingSession.end_time), 'h:mm a')}
+                    {conflictingSession && formatTimeRangePT(conflictingSession.start_time, conflictingSession.end_time)}
                   </p>
                   {conflictingSession?.location && (
                     <p className="text-sm text-muted-foreground">{conflictingSession.location}</p>

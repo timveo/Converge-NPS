@@ -80,6 +80,7 @@ model Profile {
   organization             String?
   department               String?
   role                     String?
+  participantType          ParticipantType?          @map("participant_type")
   bio                      String?
   avatarUrl                String?                   @map("avatar_url")
   accelerationInterests    String[]                  @map("acceleration_interests")
@@ -526,8 +527,18 @@ enum AppRole {
   student
   faculty
   industry
+  alumni
+  guest
   staff
   admin
+}
+
+enum ParticipantType {
+  student
+  faculty
+  industry
+  alumni
+  guest
 }
 
 enum ProfileVisibility {

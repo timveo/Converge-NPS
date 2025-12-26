@@ -1,7 +1,10 @@
 // User & Auth Types
-// Note: 'participant' is the new default role for self-registration
-// Legacy roles (student, faculty, industry) kept for backward compatibility with existing data
-export type UserRole = 'participant' | 'student' | 'faculty' | 'industry' | 'staff' | 'admin';
+// Note: 'participant' is the default role when no participantType is specified
+// Roles now include alumni and guest to match participant types
+export type UserRole = 'participant' | 'student' | 'faculty' | 'industry' | 'alumni' | 'guest' | 'staff' | 'admin';
+
+// Participant types for registration
+export type ParticipantType = 'student' | 'faculty' | 'industry' | 'alumni' | 'guest';
 
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 
@@ -14,6 +17,7 @@ export interface User {
   organization: string;
   department?: string | null;
   role: string;
+  participantType?: ParticipantType | null;
   bio?: string | null;
   avatarUrl?: string | null;
   accelerationInterests: string[];
@@ -51,6 +55,7 @@ export interface RegisterData {
   organization?: string;
   department?: string;
   role?: string;
+  participantType?: ParticipantType;
 }
 
 // Connection Types

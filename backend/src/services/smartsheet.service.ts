@@ -999,20 +999,50 @@ function parseDate(dateStr: any): Date | null {
   }
 }
 
+// Helper function to determine if a date is in Pacific Daylight Time (PDT)
+// PDT is observed from second Sunday of March to first Sunday of November
+function isPacificDaylightTime(year: number, month: number, day: number): boolean {
+  // Month is 0-indexed (0 = January, 2 = March, 10 = November)
+
+  // Before March or after November: definitely PST
+  if (month < 2 || month > 10) return false;
+
+  // April through October: definitely PDT
+  if (month > 2 && month < 10) return true;
+
+  // March: DST starts on second Sunday at 2am
+  if (month === 2) {
+    // Find second Sunday of March
+    const firstDayOfMonth = new Date(year, 2, 1).getDay(); // 0 = Sunday
+    const secondSunday = firstDayOfMonth === 0 ? 8 : (14 - firstDayOfMonth + 1);
+    return day >= secondSunday;
+  }
+
+  // November: DST ends on first Sunday at 2am
+  if (month === 10) {
+    // Find first Sunday of November
+    const firstDayOfMonth = new Date(year, 10, 1).getDay();
+    const firstSunday = firstDayOfMonth === 0 ? 1 : (7 - firstDayOfMonth + 1);
+    return day < firstSunday;
+  }
+
+  return false;
+}
+
 // Helper function to combine date and time strings into a Date object
 // Smartsheet times are in Pacific timezone, so we need to convert to UTC for storage
-// Pacific is UTC-8 (standard) or UTC-7 (daylight saving)
+// Pacific Standard Time (PST) is UTC-8, Pacific Daylight Time (PDT) is UTC-7
 function parseDateWithTime(dateStr: any, timeStr: any): Date | null {
   if (!dateStr) return null;
-  
+
   try {
     // Parse date components manually to avoid UTC interpretation
     // Smartsheet sends dates like "2026-01-28" which new Date() interprets as UTC
     const dateString = String(dateStr);
     const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    
+
     let year: number, month: number, day: number;
-    
+
     if (dateMatch) {
       // ISO format: YYYY-MM-DD
       year = parseInt(dateMatch[1], 10);
@@ -1026,19 +1056,20 @@ function parseDateWithTime(dateStr: any, timeStr: any): Date | null {
       month = baseDate.getMonth();
       day = baseDate.getDate();
     }
-    
+
     // Parse the time string
     const time = parseTimeString(String(timeStr || ''));
     const hours = time?.hours ?? 0;
     const minutes = time?.minutes ?? 0;
-    
-    // Create date in UTC, treating the input time as Pacific time
-    // Pacific Standard Time is UTC-8, Pacific Daylight Time is UTC-7
-    // For simplicity, we'll use UTC-8 (PST) - adjust if DST handling is needed
-    // Add 8 hours to convert from Pacific to UTC
-    const pacificOffsetHours = 8;
+
+    // Determine Pacific timezone offset based on DST
+    // PST = UTC-8, PDT = UTC-7
+    const isDST = isPacificDaylightTime(year, month, day);
+    const pacificOffsetHours = isDST ? 7 : 8;
+
+    // Create date in UTC by adding the offset to convert from Pacific to UTC
     const result = new Date(Date.UTC(year, month, day, hours + pacificOffsetHours, minutes, 0, 0));
-    
+
     if (isNaN(result.getTime())) return null;
     return result;
   } catch {

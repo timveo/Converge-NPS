@@ -2,12 +2,10 @@ import { ChevronLeft, Mail, Briefcase, Tag, Loader2, Linkedin, Globe, Shield, Lo
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function ProfilePage() {
-  const navigate = useNavigate();
   const { user, logout, isLoading } = useAuth();
 
   if (isLoading) {
@@ -26,29 +24,6 @@ export default function ProfilePage() {
     );
   }
 
-  const calculateProfileCompletion = () => {
-    const fields = [
-      user.fullName,
-      user.role,
-      user.department,
-      user.organization,
-      user.linkedinUrl,
-      user.websiteUrl,
-      user.bio,
-      user.accelerationInterests && user.accelerationInterests.length > 0 ? "filled" : ""
-    ];
-
-    const filledFields = fields.filter(field => field && (typeof field === 'string' ? field.trim() !== "" : true));
-    const percentage = Math.round((filledFields.length / fields.length) * 100);
-
-    return {
-      percentage,
-      filledCount: filledFields.length,
-      totalCount: fields.length
-    };
-  };
-
-  const completion = calculateProfileCompletion();
   const isAdmin = user.role?.toLowerCase().includes('admin') || user.role?.toLowerCase().includes('staff');
 
   // Get initials from full name
@@ -74,31 +49,6 @@ export default function ProfilePage() {
 
       {/* Main Content - Compact spacing on mobile */}
       <main className="container mx-auto px-3 md:px-4 max-w-2xl space-y-3 md:space-y-6">
-        {/* Profile Completion Banner */}
-        {completion.percentage < 100 && (
-          <Card className="p-4 md:p-4 shadow-md border-accent/30 bg-gradient-to-r from-accent/10 to-primary/10">
-            <div className="flex items-center justify-between gap-3 md:gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 md:gap-2 mb-2 md:mb-2">
-                  <span className="text-sm md:text-sm font-semibold text-foreground">
-                    Profile {completion.percentage}% Complete
-                  </span>
-                  <Badge variant="secondary" className="text-xs md:text-xs px-2 py-1">
-                    {completion.filledCount}/{completion.totalCount}
-                  </Badge>
-                </div>
-                <Progress value={completion.percentage} className="h-2 md:h-2 mb-2 md:mb-2" />
-                <p className="text-xs md:text-xs text-muted-foreground">
-                  Complete your profile to make better connections
-                </p>
-              </div>
-              <Button size="sm" variant="outline" className="text-sm md:text-sm px-3 md:px-3" onClick={() => navigate("/settings", { state: { openProfile: true } })}>
-                Complete
-              </Button>
-            </div>
-          </Card>
-        )}
-
         {/* Profile Header - Compact on mobile */}
         <Card className="p-4 md:p-6 shadow-md border-border/50">
           <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">

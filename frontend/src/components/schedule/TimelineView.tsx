@@ -1,5 +1,5 @@
-import { format, parseISO } from "date-fns";
 import { SessionCard } from "./SessionCard";
+import { getDateStringPT, formatFullDatePT } from "@/lib/utils";
 
 interface Session {
   id: string;
@@ -33,7 +33,7 @@ export const TimelineView = ({
 }: TimelineViewProps) => {
   // Group sessions by day
   const sessionsByDay = sessions.reduce((acc, session) => {
-    const day = format(new Date(session.start_time), 'yyyy-MM-dd');
+    const day = getDateStringPT(session.start_time);
     if (!acc[day]) acc[day] = [];
     acc[day].push(session);
     return acc;
@@ -52,7 +52,7 @@ export const TimelineView = ({
           return (
             <div key={day}>
               <h3 className="text-sm md:text-lg font-bold mb-2 md:mb-4 sticky top-0 bg-background py-1.5 md:py-2 border-b z-10">
-                {format(parseISO(day), 'EEEE, MMMM d, yyyy')}
+                {formatFullDatePT(day)}, {day.split('-')[0]}
               </h3>
 
               <div className="space-y-1.5 md:space-y-3">

@@ -358,39 +358,6 @@ export default function SettingsPage() {
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-3 md:pt-4">
                 <div className="space-y-3 md:space-y-4">
-                  {/* Email field */}
-                  <div className="space-y-1.5 md:space-y-2">
-                    <Label htmlFor="email" className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm">
-                      <Mail className="h-3 w-3 md:h-4 md:w-4" />
-                      Email Address
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      disabled
-                      className="bg-muted cursor-not-allowed h-9 md:h-10 text-sm"
-                    />
-                    <p className="text-[10px] md:text-xs text-muted-foreground">
-                      Contact support to change your email address
-                    </p>
-                  </div>
-
-                  {/* Phone Number */}
-                  <div className="space-y-1.5 md:space-y-2">
-                    <Label htmlFor="phone" className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm">
-                      <Phone className="h-3 w-3 md:h-4 md:w-4" />
-                      Phone Number
-                    </Label>
-                    <Input
-                      id="phone"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Enter phone number"
-                      className="h-9 md:h-10 text-sm"
-                    />
-                  </div>
-
                   {/* First Name and Last Name in a row */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     <div className="space-y-1.5 md:space-y-2">
@@ -444,6 +411,62 @@ export default function SettingsPage() {
                     <p className="text-[10px] md:text-xs text-muted-foreground">
                       Select your military rank or civilian title (Mr./Ms./Dr./Prof.)
                     </p>
+                  </div>
+
+                  {/* Participant Type field */}
+                  <div className="space-y-1.5 md:space-y-2">
+                    <Label htmlFor="participantType" className="text-xs md:text-sm">
+                      Participant Type
+                    </Label>
+                    <Input
+                      id="participantType"
+                      value={
+                        user.participantType === 'student' ? 'Student' :
+                        user.participantType === 'faculty' ? 'Faculty/Staff' :
+                        user.participantType === 'industry' ? 'Industry' :
+                        user.participantType === 'alumni' ? 'Alumni' :
+                        user.participantType === 'guest' ? 'Guest' :
+                        user.participantType || 'Not specified'
+                      }
+                      disabled
+                      className="bg-muted cursor-not-allowed h-9 md:h-10 text-sm"
+                    />
+                    <p className="text-[10px] md:text-xs text-muted-foreground">
+                      Your registration type cannot be changed
+                    </p>
+                  </div>
+
+                  {/* Email field */}
+                  <div className="space-y-1.5 md:space-y-2">
+                    <Label htmlFor="email" className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm">
+                      <Mail className="h-3 w-3 md:h-4 md:w-4" />
+                      Email Address
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      disabled
+                      className="bg-muted cursor-not-allowed h-9 md:h-10 text-sm"
+                    />
+                    <p className="text-[10px] md:text-xs text-muted-foreground">
+                      Contact support to change your email address
+                    </p>
+                  </div>
+
+                  {/* Phone Number */}
+                  <div className="space-y-1.5 md:space-y-2">
+                    <Label htmlFor="phone" className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm">
+                      <Phone className="h-3 w-3 md:h-4 md:w-4" />
+                      Phone Number
+                    </Label>
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Enter phone number"
+                      className="h-9 md:h-10 text-sm"
+                    />
                   </div>
 
                   <div className="space-y-1.5 md:space-y-2">
