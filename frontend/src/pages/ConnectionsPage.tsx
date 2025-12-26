@@ -371,45 +371,6 @@ function ConnectionsMobilePage() {
     });
   };
 
-  const handleExportContacts = async (format: 'vcard' | 'csv') => {
-    if (connections.length === 0) {
-      toast.error("No connections to export");
-      return;
-    }
-
-    toast.info("Preparing export...");
-
-    try {
-      if (format === 'csv') {
-        const headers = ['Name', 'Organization', 'Role', 'Intents', 'Notes', 'Connected At'];
-        const rows = connections.map(c => [
-          c.profile?.full_name || '',
-          c.profile?.organization || '',
-          c.profile?.role || '',
-          c.collaborative_intents?.join(', ') || '',
-          c.notes || '',
-          new Date(c.created_at).toLocaleDateString()
-        ]);
-
-        const csvContent = [headers, ...rows]
-          .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-          .join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'nps_connections.csv';
-        link.click();
-        URL.revokeObjectURL(url);
-
-        toast.success(`Exported ${connections.length} contacts`);
-      }
-    } catch (error: any) {
-      toast.error('Failed to export contacts');
-    }
-  };
-
   const clearFilters = () => {
     setFilters({ intents: [], userTypes: [], sortBy: 'recent' });
     setSearchQuery('');
