@@ -14,7 +14,7 @@ import {
 import {
   TodayScheduleWidget,
   RecentMessagesWidget,
-  ConnectionsWidget,
+  EventParticipantsWidget,
 } from '@/components/desktop/widgets';
 import OnboardingFlow from '@/components/OnboardingFlow';
 
@@ -137,13 +137,13 @@ export default function DashboardDesktopPage() {
               </DashboardWidget>
             </DashboardTwoColumnRow>
 
-            {/* Bottom Row - Connections (full width) */}
+            {/* Bottom Row - Event Participants (full width) */}
             <DashboardWidget
-              title="Recent Connections"
-              subtitle="Your network"
+              title="Event Participants"
+              subtitle="Checked-in attendees"
               icon={Users}
               action={
-                <Link to="/connections">
+                <Link to="/connections?tab=participants">
                   <Button variant="ghost" size="sm" className="gap-1">
                     View All
                     <ArrowRight className="h-3 w-3" />
@@ -151,7 +151,7 @@ export default function DashboardDesktopPage() {
                 </Link>
               }
             >
-              <ConnectionsWidget />
+              <EventParticipantsWidget />
             </DashboardWidget>
           </div>
         </div>

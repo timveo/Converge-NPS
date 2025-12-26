@@ -30,6 +30,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { NewConversationDialog } from '@/components/messages/NewConversationDialog';
 
@@ -466,22 +467,6 @@ export default function MessagesDesktopPage() {
             </div>
           </div>
 
-          <Separator />
-
-          {/* Stats */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium block">Overview</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-white border border-gray-200 rounded-lg text-center">
-                <p className="text-2xl font-bold text-primary">{conversations.length}</p>
-                <p className="text-xs text-muted-foreground">Conversations</p>
-              </div>
-              <div className="p-3 bg-white border border-gray-200 rounded-lg text-center">
-                <p className="text-2xl font-bold text-primary">{totalUnread}</p>
-                <p className="text-xs text-muted-foreground">Unread</p>
-              </div>
-            </div>
-          </div>
         </div>
       </ScrollArea>
     </div>
@@ -537,8 +522,16 @@ export default function MessagesDesktopPage() {
       <ScrollArea className="flex-1">
         <div className="p-3">
           {isLoadingConversations ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <div className="space-y-2 px-1">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredConversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4">
@@ -709,8 +702,13 @@ export default function MessagesDesktopPage() {
       <ScrollArea className="flex-1 bg-gray-50">
         <div className="p-4 space-y-4">
           {isLoadingMessages ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <div className="space-y-3 px-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className={cn("flex flex-col", i % 2 === 0 ? "items-start" : "items-end")}>
+                  <Skeleton className={cn("h-12 rounded-2xl", i % 2 === 0 ? "w-3/4" : "w-2/3")} />
+                  <Skeleton className="h-3 w-12 mt-1" />
+                </div>
+              ))}
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

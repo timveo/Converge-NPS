@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MessageSquare,
   CheckCircle2,
@@ -34,6 +34,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -89,6 +90,16 @@ interface RecommendedConnection {
   sameOrganization: boolean;
 }
 
+interface Participant {
+  id: string;
+  fullName: string;
+  organization?: string;
+  department?: string;
+  role?: string;
+  avatarUrl?: string;
+  accelerationInterests?: string[];
+}
+
 const COLLABORATION_TYPES = [
   { value: 'collaborative_research', label: 'Collaborative Research' },
   { value: 'brainstorming', label: 'Brainstorming' },
@@ -124,12 +135,16 @@ export default function ConnectionsDesktopPage() {
   const [savingNote, setSavingNote] = useState(false);
   const [recommendations, setRecommendations] = useState<RecommendedConnection[]>([]);
   const [connectingUser, setConnectingUser] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
   const {
     dismiss: dismissRecommendation,
     isDismissed: isRecommendationDismissed,
   } = useDismissedRecommendations('connections');
 
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     fetchConnections();
@@ -140,6 +155,66 @@ export default function ConnectionsDesktopPage() {
       fetchRecommendations();
     }
   }, [connections]);
+
+  // Fetch participants when tab is "participants"
+  useEffect(() => {
+    if (activeTab === 'participants') {
+      fetchParticipants();
+    }
+  }, [activeTab]);
+
+  // Handle query params (userId and tab)
+  useEffect(() => {
+    const userId = searchParams.get('userId');
+    const tab = searchParams.get('tab');
+
+    // Handle tab query param
+    if (tab === 'participants' && activeTab !== 'participants') {
+      setActiveTab('participants');
+    }
+
+    // Handle userId query param to auto-select participant
+    if (userId) {
+      // Switch to participants tab and fetch participants
+      setActiveTab('participants');
+      fetchParticipants().then((fetchedParticipants) => {
+        const participant = fetchedParticipants.find((p) => p.id === userId);
+        if (participant) {
+          setSelectedParticipant(participant);
+          setSelectedConnection(null);
+        }
+      });
+      // Clear the query param after processing
+      setSearchParams({}, { replace: true });
+    } else if (tab) {
+      // Clear tab param but keep the tab state
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
+
+  const fetchParticipants = async (): Promise<Participant[]> => {
+    setParticipantsLoading(true);
+    try {
+      const response = await api.get('/users/participants');
+      const data = (response as any).data || [];
+      const mapped: Participant[] = data.map((p: any) => ({
+        id: p.id,
+        fullName: p.fullName || p.full_name || 'Unknown',
+        organization: p.organization,
+        department: p.department,
+        role: p.role,
+        avatarUrl: p.avatarUrl,
+        accelerationInterests: p.accelerationInterests || p.acceleration_interests || [],
+      }));
+      setParticipants(mapped);
+      return mapped;
+    } catch (error) {
+      console.error('Error fetching participants:', error);
+      return [];
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
 
   const fetchRecommendations = async () => {
     try {
@@ -168,6 +243,24 @@ export default function ConnectionsDesktopPage() {
       await api.post('/connections', { connectedUserId: userId });
       toast.success('Connection added successfully');
       setRecommendations((prev) => prev.filter((rec) => rec.id !== userId));
+      fetchConnections();
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to add connection';
+      toast.error(message);
+    } finally {
+      setConnectingUser(null);
+    }
+  };
+
+  const handleConnectParticipant = async (participantId: string) => {
+    setConnectingUser(participantId);
+    try {
+      await api.post('/connections', { connectedUserId: participantId });
+      toast.success('Connection added successfully');
+      // Remove from participants list and refresh connections
+      setParticipants((prev) => prev.filter((p) => p.id !== participantId));
+      setSelectedParticipant(null);
+      setActiveTab('all');
       fetchConnections();
     } catch (error: any) {
       const message = error.response?.data?.error || 'Failed to add connection';
@@ -221,11 +314,12 @@ export default function ConnectionsDesktopPage() {
   };
 
   const filteredConnections = useMemo(() => {
-    let result = [...connections];
-
-    if (activeTab === 'reminders') {
-      result = result.filter((c) => c.follow_up_reminder && !c.reminder_sent);
+    // When on participants tab, return empty to hide connections
+    if (activeTab === 'participants') {
+      return [];
     }
+
+    let result = [...connections];
 
     if (searchQuery.trim()) {
       const searchLower = searchQuery.toLowerCase();
@@ -341,10 +435,6 @@ export default function ConnectionsDesktopPage() {
       });
     },
     []
-  );
-
-  const upcomingReminders = connections.filter(
-    (c) => c.follow_up_reminder && new Date(c.follow_up_reminder) > new Date() && !c.reminder_sent
   );
 
   const activeFilterCount = filters.intents.length + filters.userTypes.length;
@@ -486,7 +576,15 @@ export default function ConnectionsDesktopPage() {
 
       {/* Tabs */}
       <div className="px-4 py-3 border-b border-gray-200 bg-white">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(value) => {
+          setActiveTab(value);
+          // Clear selections when switching tabs
+          if (value === 'participants') {
+            setSelectedConnection(null);
+          } else {
+            setSelectedParticipant(null);
+          }
+        }}>
           <TabsList className="w-full">
             <TabsTrigger value="all" className="flex-1 text-sm">
               All Connections
@@ -494,11 +592,11 @@ export default function ConnectionsDesktopPage() {
                 {connections.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="reminders" className="flex-1 text-sm">
-              <Bell className="h-3 w-3 mr-1" />
-              Reminders
+            <TabsTrigger value="participants" className="flex-1 text-sm">
+              <Users className="h-3 w-3 mr-1" />
+              Participants
               <Badge variant="secondary" className="ml-2 text-xs">
-                {upcomingReminders.length}
+                {participants.length}
               </Badge>
             </TabsTrigger>
           </TabsList>
@@ -567,11 +665,115 @@ export default function ConnectionsDesktopPage() {
             </div>
           )}
 
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          {/* Participants Tab Content */}
+          {activeTab === 'participants' && (
+            <>
+              {participantsLoading ? (
+                <div className="space-y-2 px-1">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-32 mb-2" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : participants.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-8 w-8 text-primary/70" />
+                  </div>
+                  <p className="font-medium text-sm">No participants yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Participants will appear here as they check in
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1 pr-0">
+                  <AnimatePresence mode="popLayout">
+                    {participants.map((participant) => {
+                      const isSelected = selectedParticipant?.id === participant.id;
+
+                      return (
+                        <motion.button
+                          key={participant.id}
+                          className={cn(
+                            'w-full text-left p-3 transition-all',
+                            isSelected
+                              ? 'bg-gray-100 rounded-l-lg rounded-r-none -mr-3 pr-6 border-y border-l border-gray-200'
+                              : 'hover:bg-accent/5 rounded-lg border border-transparent'
+                          )}
+                          onClick={() => {
+                            setSelectedParticipant(participant);
+                            setSelectedConnection(null);
+                          }}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          layout
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-white text-sm">
+                                {participant.fullName
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <h4 className="font-medium text-sm truncate">
+                                  {participant.fullName}
+                                </h4>
+                                {participant.role && (
+                                  <Badge variant="outline" className="text-[10px] py-0 px-1.5 flex-shrink-0">
+                                    {participant.role}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                                {participant.organization && (
+                                  <>
+                                    <Building2 className="h-3 w-3 flex-shrink-0" />
+                                    {participant.organization}
+                                  </>
+                                )}
+                              </p>
+                            </div>
+                            <ChevronRight
+                              className={cn(
+                                'h-4 w-4 shrink-0',
+                                isSelected ? 'text-gray-400' : 'text-muted-foreground'
+                              )}
+                            />
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Connections Tab Content */}
+          {activeTab === 'all' && loading ? (
+            <div className="space-y-2 px-1">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/50">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : filteredConnections.length === 0 ? (
+          ) : activeTab === 'all' && filteredConnections.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Users className="h-8 w-8 text-primary/70" />
@@ -583,7 +785,7 @@ export default function ConnectionsDesktopPage() {
                   : 'Start networking to add connections'}
               </p>
             </div>
-          ) : (
+          ) : activeTab === 'all' && (
             <div className="space-y-1 pr-0">
               <AnimatePresence mode="popLayout">
                 {filteredConnections.map((connection) => {
@@ -921,6 +1123,175 @@ export default function ConnectionsDesktopPage() {
     </div>
   );
 
+  // Right Panel - Participant Detail (not yet connected)
+  const ParticipantDetailPanel = selectedParticipant ? (
+    <div className="h-full flex flex-col bg-gray-100 border-l border-gray-200">
+      {/* Header */}
+      <div className="h-[72px] px-4 flex items-center justify-between border-b border-gray-200 bg-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg">Participant Details</h2>
+            <p className="text-sm text-muted-foreground">Event attendee</p>
+          </div>
+        </div>
+        {/* Connect Button in header */}
+        <Button
+          size="sm"
+          className="h-8 text-xs"
+          onClick={() => handleConnectParticipant(selectedParticipant.id)}
+          disabled={connectingUser === selectedParticipant.id}
+        >
+          {connectingUser === selectedParticipant.id ? (
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          ) : (
+            <UserPlus className="h-3 w-3 mr-1" />
+          )}
+          Connect
+        </Button>
+      </div>
+
+      {/* Profile Info */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-start gap-4 mb-3">
+          <Avatar className="h-14 w-14">
+            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-white text-lg">
+              {selectedParticipant.fullName
+                .split(' ')
+                .map((n) => n[0])
+                .join('')
+                .slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h3 className="font-bold text-xl text-foreground">
+              {selectedParticipant.fullName}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {selectedParticipant.role}
+              {selectedParticipant.organization && ` at ${selectedParticipant.organization}`}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="outline" className="text-xs">
+            <Users className="h-3 w-3 mr-1" />
+            Event Participant
+          </Badge>
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-6">
+          {/* Participant Info */}
+          <div className="space-y-3">
+            {selectedParticipant.organization && (
+              <div className="flex items-center gap-3 text-sm">
+                <div className="p-2 rounded-md bg-white border border-gray-200">
+                  <Building2 className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Organization</p>
+                  <p className="font-medium">{selectedParticipant.organization}</p>
+                </div>
+              </div>
+            )}
+
+            {selectedParticipant.department && (
+              <div className="flex items-center gap-3 text-sm">
+                <div className="p-2 rounded-md bg-white border border-gray-200">
+                  <Tag className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Department</p>
+                  <p className="font-medium">{selectedParticipant.department}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Technology Interests */}
+          {selectedParticipant.accelerationInterests &&
+            selectedParticipant.accelerationInterests.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-2 mb-3">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    Technology Interests
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedParticipant.accelerationInterests.map((interest) => (
+                      <Badge key={interest} variant="secondary" className="text-xs">
+                        {interest}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+          <Separator />
+
+          {/* Call to Action */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <p className="text-sm text-center text-muted-foreground mb-3">
+              Connect with {selectedParticipant.fullName.split(' ')[0]} to start networking and collaborate
+            </p>
+            <Button
+              className="w-full"
+              onClick={() => handleConnectParticipant(selectedParticipant.id)}
+              disabled={connectingUser === selectedParticipant.id}
+            >
+              {connectingUser === selectedParticipant.id ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Adding Connection...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add to My Connections
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  ) : (
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Header */}
+      <div className="h-[72px] px-4 flex items-center border-b border-gray-200 bg-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg">Participant Details</h2>
+            <p className="text-sm text-muted-foreground">Event attendee</p>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Users className="h-8 w-8 text-primary/70" />
+          </div>
+          <p className="font-medium">Select a participant</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Click on a participant to view their details
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Determine which right panel to show
+  const RightPanel = activeTab === 'participants' ? ParticipantDetailPanel : ConnectionDetailPanel;
+
   return (
     <DesktopShell>
       <div className="h-full flex flex-col">
@@ -933,10 +1304,10 @@ export default function ConnectionsDesktopPage() {
           <ThreePanelLayout
             left={FiltersPanel}
             center={ConnectionListPanel}
-            right={ConnectionDetailPanel}
+            right={RightPanel}
             leftWidth="260px"
             equalCenterRight
-            connectedPanels={!!selectedConnection}
+            connectedPanels={activeTab === 'participants' ? !!selectedParticipant : !!selectedConnection}
           />
         </div>
       </div>

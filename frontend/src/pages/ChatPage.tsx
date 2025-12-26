@@ -4,6 +4,7 @@ import { Send, ChevronLeft, UserPlus, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDevice } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -39,6 +40,14 @@ export default function ChatPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { socket, isConnected } = useSocket();
+  const { isDesktop } = useDevice();
+
+  // Redirect desktop users to the messages page with the conversation selected
+  useEffect(() => {
+    if (isDesktop && conversationId) {
+      navigate(`/messages?id=${conversationId}`, { replace: true });
+    }
+  }, [isDesktop, conversationId, navigate]);
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
