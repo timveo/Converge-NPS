@@ -437,10 +437,6 @@ export default function ConnectionsDesktopPage() {
     []
   );
 
-  const upcomingReminders = connections.filter(
-    (c) => c.follow_up_reminder && new Date(c.follow_up_reminder) > new Date() && !c.reminder_sent
-  );
-
   const activeFilterCount = filters.intents.length + filters.userTypes.length;
 
   const visibleRecommendations = recommendations

@@ -7,8 +7,6 @@ import {
   Trash2,
   Users,
   Calendar,
-  MapPin,
-  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

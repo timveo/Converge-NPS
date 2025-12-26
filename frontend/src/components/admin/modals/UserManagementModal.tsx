@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, UserCog, Shield, X, Plus, Loader2 } from 'lucide-react';
+import { Search, UserCog, Shield, X, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

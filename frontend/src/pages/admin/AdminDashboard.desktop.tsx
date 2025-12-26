@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -580,7 +580,7 @@ export default function AdminDashboardDesktop() {
                   </div>
                 ) : analytics?.networkingEngagement.projectInterest && analytics.networkingEngagement.projectInterest.length > 0 ? (
                   <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                    {analytics.networkingEngagement.projectInterest.slice(0, 6).map((project, i) => (
+                    {analytics.networkingEngagement.projectInterest.slice(0, 6).map((project) => (
                       <div
                         key={project.id}
                         className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
