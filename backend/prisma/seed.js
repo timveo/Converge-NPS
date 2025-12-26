@@ -250,7 +250,9 @@ async function main() {
   // Create sessions
   console.log('Creating event sessions...');
 
-  const eventDate = new Date('2026-01-28T09:00:00Z');
+  // IMPORTANT: All times are stored in UTC. Since the event is in Pacific timezone (PST in January = UTC-8),
+  // we need to add 8 hours to Pacific times to get UTC times.
+  // Example: 9:00 AM PT = 17:00 UTC (9 + 8 = 17)
 
   const sessions = await Promise.all([
     prisma.session.create({
@@ -258,8 +260,8 @@ async function main() {
         title: 'Opening Keynote: The Future of Defense Technology',
         description: 'Join us for an inspiring keynote address on emerging defense technologies and their impact on national security.',
         speaker: 'Admiral James Rodriguez',
-        startTime: new Date('2026-01-28T09:00:00Z'),
-        endTime: new Date('2026-01-28T10:00:00Z'),
+        startTime: new Date('2026-01-28T17:00:00Z'), // 9:00 AM PT
+        endTime: new Date('2026-01-28T18:00:00Z'),   // 10:00 AM PT
         location: 'Main Auditorium',
         sessionType: 'Other',
         capacity: 500,
@@ -271,8 +273,8 @@ async function main() {
         title: 'AI/ML in Autonomous Systems',
         description: 'Exploring the latest advances in AI and machine learning for autonomous military systems.',
         speaker: 'Dr. Sarah Martinez',
-        startTime: new Date('2026-01-28T10:30:00Z'),
-        endTime: new Date('2026-01-28T11:30:00Z'),
+        startTime: new Date('2026-01-28T18:30:00Z'), // 10:30 AM PT
+        endTime: new Date('2026-01-28T19:30:00Z'),   // 11:30 AM PT
         location: 'Room 101',
         sessionType: 'AI/ML',
         capacity: 50,
@@ -284,8 +286,8 @@ async function main() {
         title: 'Cybersecurity Threats and Mitigation',
         description: 'A deep dive into current cybersecurity threats facing defense systems and mitigation strategies.',
         speaker: 'Colonel Mike Thompson',
-        startTime: new Date('2026-01-28T10:30:00Z'),
-        endTime: new Date('2026-01-28T11:30:00Z'),
+        startTime: new Date('2026-01-28T18:30:00Z'), // 10:30 AM PT
+        endTime: new Date('2026-01-28T19:30:00Z'),   // 11:30 AM PT
         location: 'Room 102',
         sessionType: 'Cybersecurity',
         capacity: 40,
@@ -297,8 +299,8 @@ async function main() {
         title: 'Data Science for Maritime Operations',
         description: 'Leveraging data science and analytics to enhance maritime operational effectiveness.',
         speaker: 'Dr. Lisa Wang',
-        startTime: new Date('2026-01-28T13:00:00Z'),
-        endTime: new Date('2026-01-28T14:00:00Z'),
+        startTime: new Date('2026-01-28T21:00:00Z'), // 1:00 PM PT
+        endTime: new Date('2026-01-28T22:00:00Z'),   // 2:00 PM PT
         location: 'Room 103',
         sessionType: 'Data Science',
         capacity: 45,
@@ -310,8 +312,8 @@ async function main() {
         title: 'Autonomous Underwater Vehicles',
         description: 'The latest developments in autonomous underwater vehicle technology and applications.',
         speaker: 'Dr. Robert Kim',
-        startTime: new Date('2026-01-28T14:30:00Z'),
-        endTime: new Date('2026-01-28T15:30:00Z'),
+        startTime: new Date('2026-01-28T22:30:00Z'), // 2:30 PM PT
+        endTime: new Date('2026-01-28T23:30:00Z'),   // 3:30 PM PT
         location: 'Room 101',
         sessionType: 'Autonomous Systems',
         capacity: 35,
@@ -323,8 +325,8 @@ async function main() {
         title: 'Networking Reception',
         description: 'Join fellow attendees, speakers, and industry partners for networking and refreshments.',
         speaker: 'Event Staff',
-        startTime: new Date('2026-01-28T17:00:00Z'),
-        endTime: new Date('2026-01-28T19:00:00Z'),
+        startTime: new Date('2026-01-29T01:00:00Z'), // 5:00 PM PT (next day UTC)
+        endTime: new Date('2026-01-29T03:00:00Z'),   // 7:00 PM PT (next day UTC)
         location: 'Terrace',
         sessionType: 'Other',
         capacity: 200,
