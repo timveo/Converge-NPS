@@ -86,11 +86,17 @@ interface IndustryPartner {
   primary_contact_phone: string | null;
   technology_focus_areas: string[];
   dod_sponsors: string | null;
-  seeking_collaboration: string[];
+  seeking: string[];
+  collaboration_pitch: string | null;
   booth_location: string | null;
   team_members: any;
   hide_contact_info: boolean | null;
   organization_type?: string | null;
+  poc_user_id?: string | null;
+  poc_first_name?: string | null;
+  poc_last_name?: string | null;
+  poc_email?: string | null;
+  poc_rank?: string | null;
 }
 
 export default function IndustryDesktopPage() {
@@ -123,23 +129,54 @@ export default function IndustryDesktopPage() {
 
   const isFavorite = (partnerId: string) => favorites.has(partnerId);
 
-  const handleContact = async (partner: IndustryPartner) => {
-    if (!partner.primary_contact_email || partner.hide_contact_info) {
-      console.info('Contact information not available');
+  const startConversation = async (participantId?: string, fallbackEmail?: string) => {
+    if (participantId) {
+      try {
+        const response = await api.post('/messages/conversations', { participantId });
+        const conversation = (response as any).data?.data || (response as any).data;
+        if (conversation?.id) {
+          navigate(`/messages/${conversation.id}`);
+        }
+        return;
+      } catch (error) {
+        console.error('Failed to start conversation with participant:', error);
+        console.error('Unable to start conversation, falling back to email.');
+      }
+    }
+
+    if (fallbackEmail) {
+      try {
+        window.location.href = `mailto:${fallbackEmail}`;
+      } catch (error) {
+        console.error('Failed to open email client:', error);
+      }
+    }
+  };
+
+  const handleContact = async (partner: IndustryPartner, usePoc?: boolean) => {
+    const fallbackEmail = partner.poc_email || partner.primary_contact_email || undefined;
+
+    if (usePoc) {
+      if (partner.poc_user_id) {
+        await startConversation(partner.poc_user_id, fallbackEmail);
+        return;
+      }
+
+      if (fallbackEmail) {
+        await startConversation(undefined, fallbackEmail);
+        return;
+      }
+
+      console.warn('POC contact unavailable: no profile or email provided.');
       return;
     }
 
-    try {
-      const response = await api.post('/conversations', {
-        email: partner.primary_contact_email,
-      });
-      const conversation = (response as any).data?.data || (response as any).data;
-      if (conversation?.id) {
-        navigate(`/messages/${conversation.id}`);
-      }
-    } catch (error) {
-      console.error('Failed to start conversation:', error);
+    if (!partner.primary_contact_email || partner.hide_contact_info) {
+      console.warn('Primary contact unavailable: hidden or missing email.');
+      return;
     }
+
+    await startConversation(undefined, partner.primary_contact_email);
   };
 
   // Extract unique DoD sponsors
@@ -192,13 +229,19 @@ export default function IndustryDesktopPage() {
         primary_contact_title: p.primaryContactTitle || p.primary_contact_title,
         primary_contact_email: p.primaryContactEmail || p.primary_contact_email,
         primary_contact_phone: p.primaryContactPhone || p.primary_contact_phone,
-        technology_focus_areas: p.technologyFocusAreas || p.technology_focus_areas || [],
+        technology_focus_areas: p.technologyFocusAreas || p.technology_focus_areas || p.researchAreas || p.research_areas || [],
         dod_sponsors: p.dodSponsors || p.dod_sponsors,
-        seeking_collaboration: p.seekingCollaboration || p.seeking_collaboration || [],
+        seeking: p.seeking || p.seeking_collaboration || p.seekingCollaboration || [],
+        collaboration_pitch: p.collaborationPitch || p.collaboration_pitch || null,
         booth_location: p.boothLocation || p.booth_location,
         team_members: p.teamMembers || p.team_members,
         hide_contact_info: p.hideContactInfo || p.hide_contact_info,
         organization_type: p.organizationType || p.organization_type,
+        poc_user_id: p.pocUserId || p.poc_user_id,
+        poc_first_name: p.pocFirstName || p.poc_first_name,
+        poc_last_name: p.pocLastName || p.poc_last_name,
+        poc_email: p.pocEmail || p.poc_email,
+        poc_rank: p.pocRank || p.poc_rank,
       }));
 
       setPartners(mappedPartners);
@@ -229,9 +272,10 @@ export default function IndustryDesktopPage() {
     }
 
     if (selectedSeeking.length > 0) {
-      filtered = filtered.filter((p) =>
-        selectedSeeking.some((s) => p.seeking_collaboration.includes(s))
-      );
+      filtered = filtered.filter((p) => {
+        const seeking = p.seeking ?? [];
+        return selectedSeeking.some((s) => seeking.includes(s));
+      });
     }
 
     if (selectedDodSponsor) {
@@ -613,12 +657,24 @@ export default function IndustryDesktopPage() {
                                 {partner.booth_location}
                               </Badge>
                             )}
-                            {partner.organization_type && (
-                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
-                                {partner.organization_type}
-                              </Badge>
-                            )}
+                            {/* Organization type badge removed per latest requirements */}
                           </div>
+                          {(partner.poc_first_name ||
+                            partner.poc_last_name ||
+                            partner.poc_rank) && (
+                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
+                              <Users className="h-3 w-3 text-primary/70" />
+                              <span className="truncate">
+                                {partner.poc_rank && (
+                                  <span className="font-medium">{partner.poc_rank} </span>
+                                )}
+                                {(partner.poc_first_name || partner.poc_last_name) &&
+                                  `${partner.poc_first_name || ''} ${
+                                    partner.poc_last_name || ''
+                                  }`.trim()}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <ChevronRight
                           className={cn(
@@ -639,7 +695,44 @@ export default function IndustryDesktopPage() {
   );
 
   // Right Panel - Partner Detail
-  const PartnerDetailPanel = selectedPartner ? (
+  const renderPartnerDetail = () => {
+    if (!selectedPartner) {
+      return (
+        <div className="h-full flex flex-col bg-gray-50">
+          {/* Header */}
+          <div className="h-[72px] px-4 flex items-center border-b border-gray-200 bg-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-lg">Partner Details</h2>
+                <p className="text-sm text-muted-foreground">View and connect</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Building2 className="h-8 w-8 text-primary/70" />
+              </div>
+              <p className="font-medium">Select a partner</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Click on a partner to view details
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const hasInfoSection =
+      !!selectedPartner.booth_location ||
+      !!selectedPartner.website_url ||
+      !!selectedPartner.dod_sponsors;
+    const hasTopSummary = !!selectedPartner.description || hasInfoSection;
+
+    return (
     <div className="h-full flex flex-col bg-gray-100 border-l border-gray-200">
       {/* Header */}
       <div className="h-[72px] px-4 flex items-center justify-between border-b border-gray-200 bg-gray-100">
@@ -671,8 +764,12 @@ export default function IndustryDesktopPage() {
           <Button
             size="sm"
             className="h-8 text-xs"
-            onClick={() => handleContact(selectedPartner)}
-            disabled={selectedPartner.hide_contact_info || !selectedPartner.primary_contact_email}
+            onClick={() => handleContact(selectedPartner, true)}
+            disabled={
+              !selectedPartner.poc_user_id &&
+              !selectedPartner.poc_email &&
+              (selectedPartner.hide_contact_info || !selectedPartner.primary_contact_email)
+            }
           >
             <MessageSquare className="h-3 w-3 mr-1" />
             Contact
@@ -696,11 +793,7 @@ export default function IndustryDesktopPage() {
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-xl text-foreground">{selectedPartner.company_name}</h3>
-            {selectedPartner.organization_type && (
-              <Badge variant="secondary" className="text-xs mt-1">
-                {selectedPartner.organization_type}
-              </Badge>
-            )}
+            {/* Organization type badge removed per latest requirements */}
           </div>
         </div>
       </div>
@@ -716,51 +809,88 @@ export default function IndustryDesktopPage() {
           )}
 
           {/* Info */}
-          <div className="space-y-3">
-            {selectedPartner.booth_location && (
-              <div className="flex items-center gap-3 text-sm">
-                <div className="p-2 rounded-md bg-white border border-gray-200">
-                  <MapPin className="h-4 w-4 text-primary" />
+          {hasInfoSection && (
+            <div className="space-y-3">
+              {selectedPartner.booth_location && (
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="p-2 rounded-md bg-white border border-gray-200">
+                    <MapPin className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Booth Location</p>
+                    <p className="font-medium">{selectedPartner.booth_location}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Booth Location</p>
-                  <p className="font-medium">{selectedPartner.booth_location}</p>
-                </div>
-              </div>
-            )}
+              )}
 
-            {selectedPartner.website_url && (
-              <div className="flex items-center gap-3 text-sm">
-                <div className="p-2 rounded-md bg-white border border-gray-200">
-                  <Globe className="h-4 w-4 text-primary" />
+              {selectedPartner.website_url && (
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="p-2 rounded-md bg-white border border-gray-200">
+                    <Globe className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Website</p>
+                    <a
+                      href={selectedPartner.website_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary hover:underline flex items-center gap-1"
+                    >
+                      Visit Website
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Website</p>
+              )}
+
+              {selectedPartner.dod_sponsors && (
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="p-2 rounded-md bg-white border border-gray-200">
+                    <Building2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">DoD Sponsors</p>
+                    <p className="font-medium">{selectedPartner.dod_sponsors}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Point of Contact */}
+          {(selectedPartner.poc_first_name ||
+            selectedPartner.poc_last_name ||
+            selectedPartner.poc_rank ||
+            selectedPartner.poc_email) && (
+            <div className={cn(hasTopSummary ? 'pt-2' : 'pt-0')}>
+              <Label className="text-sm font-medium mb-3 flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                Point of Contact
+              </Label>
+              <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                <p className="font-medium text-sm">
+                  {selectedPartner.poc_rank && (
+                    <span className="text-muted-foreground mr-1">
+                      {selectedPartner.poc_rank}
+                    </span>
+                  )}
+                  {(selectedPartner.poc_first_name || selectedPartner.poc_last_name) &&
+                    `${selectedPartner.poc_first_name || ''} ${
+                      selectedPartner.poc_last_name || ''
+                    }`.trim()}
+                </p>
+                {selectedPartner.poc_email && (
                   <a
-                    href={selectedPartner.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-primary hover:underline flex items-center gap-1"
+                    href={`mailto:${selectedPartner.poc_email}`}
+                    className="flex items-center gap-2 text-xs text-primary hover:underline mt-2"
                   >
-                    Visit Website
-                    <ExternalLink className="h-3 w-3" />
+                    <Mail className="h-3 w-3" />
+                    {selectedPartner.poc_email}
                   </a>
-                </div>
+                )}
               </div>
-            )}
-
-            {selectedPartner.dod_sponsors && (
-              <div className="flex items-center gap-3 text-sm">
-                <div className="p-2 rounded-md bg-white border border-gray-200">
-                  <Building2 className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">DoD Sponsors</p>
-                  <p className="font-medium">{selectedPartner.dod_sponsors}</p>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <Separator />
 
@@ -782,16 +912,26 @@ export default function IndustryDesktopPage() {
           )}
 
           {/* Seeking */}
-          {selectedPartner.seeking_collaboration.length > 0 && (
+          {Array.isArray(selectedPartner.seeking) && selectedPartner.seeking.length > 0 && (
             <div>
               <Label className="text-sm font-medium mb-3 block">Seeking Collaboration</Label>
               <div className="flex flex-wrap gap-2">
-                {selectedPartner.seeking_collaboration.map((item) => (
+                {selectedPartner.seeking.map((item) => (
                   <Badge key={item} variant="outline" className="text-xs">
                     {item}
                   </Badge>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Collaboration Pitch */}
+          {selectedPartner.collaboration_pitch && (
+            <div>
+              <Label className="text-sm font-medium mb-3 block">Collaboration Pitch</Label>
+              <p className="text-sm leading-relaxed whitespace-pre-line">
+                {selectedPartner.collaboration_pitch}
+              </p>
             </div>
           )}
 
@@ -856,33 +996,10 @@ export default function IndustryDesktopPage() {
         </div>
       </ScrollArea>
     </div>
-  ) : (
-    <div className="h-full flex flex-col bg-gray-50">
-      {/* Header */}
-      <div className="h-[72px] px-4 flex items-center border-b border-gray-200 bg-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Clock className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-lg">Partner Details</h2>
-            <p className="text-sm text-muted-foreground">View and connect</p>
-          </div>
-        </div>
-      </div>
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Building2 className="h-8 w-8 text-primary/70" />
-          </div>
-          <p className="font-medium">Select a partner</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Click on a partner to view details
-          </p>
-        </div>
-      </div>
-    </div>
   );
+  };
+
+  const PartnerDetailPanel = renderPartnerDetail();
 
   return (
     <DesktopShell>

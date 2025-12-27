@@ -134,22 +134,38 @@ function IndustryMobilePage() {
 
   const handleContact = async (partner: IndustryPartner) => {
     const pocUserId = partner.pocUserId || partner.poc_user_id;
-    
-    if (!pocUserId) {
-      toast.error("POC is not registered in app");
+    const fallbackEmail =
+      partner.poc_email ||
+      partner.primary_contact_email ||
+      partner.primaryContactEmail ||
+      undefined;
+
+    if (pocUserId) {
+      try {
+        const response = await api.post('/messages/conversations', { participantId: pocUserId });
+        const conversation = (response as any).data?.data || (response as any).data;
+        if (conversation?.id) {
+          navigate(`/messages/${conversation.id}`);
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to start conversation:', error);
+        if (fallbackEmail) {
+          window.location.href = `mailto:${fallbackEmail}`;
+          toast.info('Messaging unavailable—opening email instead.');
+          return;
+        }
+        toast.error("Failed to start conversation");
+        return;
+      }
+    }
+
+    if (fallbackEmail) {
+      window.location.href = `mailto:${fallbackEmail}`;
       return;
     }
 
-    try {
-      const response = await api.post('/messages/conversations', { participantId: pocUserId });
-      const conversation = (response as any).data?.data || (response as any).data;
-      if (conversation?.id) {
-        navigate(`/messages/${conversation.id}`);
-      }
-    } catch (error) {
-      console.error('Failed to start conversation:', error);
-      toast.error("Failed to start conversation");
-    }
+    toast.error("POC is not registered in app");
   };
 
   // Extract unique DoD sponsors
@@ -622,13 +638,6 @@ function IndustryMobilePage() {
                           <p className="text-sm text-muted-foreground mb-4">{partner.description}</p>
                         )}
 
-                        {partner.organization_type && (
-                          <div className="mb-4">
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Organization Type</p>
-                            <Badge variant="default" className="text-xs">{partner.organization_type}</Badge>
-                          </div>
-                        )}
-
                         {partner.technology_focus_areas.length > 0 && (
                           <div className="mb-4">
                             <p className="text-xs font-medium text-muted-foreground mb-2">Technology Focus</p>
@@ -645,8 +654,19 @@ function IndustryMobilePage() {
                             <p className="text-xs font-medium text-muted-foreground mb-2">Seeking</p>
                             <div className="flex flex-wrap gap-2">
                               {partner.seeking.map(i => (
-                                <Badge key={i} variant="outline" className="text-xs py-1">{i}</Badge>
+                                <Badge key={i} variant="outline" className="text-xs py-1 px-2">{i}</Badge>
                               ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {partner.collaboration_pitch && (
+                          <div className="mb-4">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Collaboration Pitch</p>
+                            <div className="p-3 rounded-lg bg-muted/40 border border-dashed border-border/60">
+                              <p className="text-sm leading-relaxed text-foreground whitespace-pre-line">
+                                {partner.collaboration_pitch}
+                              </p>
                             </div>
                           </div>
                         )}
