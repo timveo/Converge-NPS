@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare, Loader2 } from "lucide-react";
+import { Plus, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare, Loader2, Mail, Star } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useDevice } from "@/hooks/useDeviceType";
 import { PageHeader } from "@/components/PageHeader";
 
@@ -50,11 +51,13 @@ interface Project {
   poc_last_name?: string;
   poc_email?: string;
   poc_rank?: string;
+  poc_is_checked_in?: boolean;
   pocUserId?: string;
   pocFirstName?: string;
   pocLastName?: string;
   pocEmail?: string;
   pocRank?: string;
+  pocIsCheckedIn?: boolean;
   profiles?: {
     id: string;
     full_name: string;
@@ -84,11 +87,13 @@ interface Opportunity {
   poc_last_name?: string;
   poc_email?: string;
   poc_rank?: string;
+  poc_is_checked_in?: boolean;
   pocUserId?: string;
   pocFirstName?: string;
   pocLastName?: string;
   pocEmail?: string;
   pocRank?: string;
+  pocIsCheckedIn?: boolean;
   created_at: string;
 }
 
@@ -143,6 +148,11 @@ function OpportunitiesMobilePage() {
   const [sortBy, setSortBy] = useState("recent");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
+  // Favorites state
+  const [projectFavorites, setProjectFavorites] = useState<Set<string>>(new Set());
+  const [opportunityFavorites, setOpportunityFavorites] = useState<Set<string>>(new Set());
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
   const toggleCardExpanded = (id: string) => {
     setExpandedCards(prev => {
       const next = new Set(prev);
@@ -154,6 +164,52 @@ function OpportunitiesMobilePage() {
       return next;
     });
   };
+
+  const toggleFavorite = async (id: string, isProject: boolean) => {
+    const favorites = isProject ? projectFavorites : opportunityFavorites;
+    const setFavorites = isProject ? setProjectFavorites : setOpportunityFavorites;
+    const endpoint = isProject ? `/projects/${id}/bookmark` : `/opportunities/${id}/bookmark`;
+
+    const isFavorited = favorites.has(id);
+
+    // Optimistic update
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (isFavorited) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+
+    try {
+      if (isFavorited) {
+        await api.delete(endpoint);
+      } else {
+        await api.post(endpoint);
+      }
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      // Revert on error
+      setFavorites(prev => {
+        const next = new Set(prev);
+        if (isFavorited) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      });
+      toast.error('Failed to update favorite');
+    }
+  };
+
+  const isFavorite = (id: string, isProject: boolean) => {
+    return isProject ? projectFavorites.has(id) : opportunityFavorites.has(id);
+  };
+
+  const totalFavoritesCount = projectFavorites.size + opportunityFavorites.size;
 
   const handleContact = async (e: React.MouseEvent, pocUserId?: string | null) => {
     e.stopPropagation();
@@ -176,7 +232,25 @@ function OpportunitiesMobilePage() {
 
   useEffect(() => {
     loadData();
+    loadFavorites();
   }, []);
+
+  const loadFavorites = async () => {
+    try {
+      const [projectBookmarksRes, oppBookmarksRes] = await Promise.all([
+        api.get('/projects/bookmarks'),
+        api.get('/opportunities/bookmarks')
+      ]);
+
+      const projectBookmarks = (projectBookmarksRes as any).data?.data || (projectBookmarksRes as any).data || [];
+      const oppBookmarks = (oppBookmarksRes as any).data?.data || (oppBookmarksRes as any).data || [];
+
+      setProjectFavorites(new Set(projectBookmarks.map((b: any) => b.projectId || b.project_id)));
+      setOpportunityFavorites(new Set(oppBookmarks.map((b: any) => b.opportunityId || b.opportunity_id)));
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -296,6 +370,7 @@ function OpportunitiesMobilePage() {
     setSelectedStages([]);
     setSelectedFunding([]);
     setSelectedSeeking([]);
+    setShowFavoritesOnly(false);
   };
 
   // Combined and filtered items
@@ -352,13 +427,24 @@ function OpportunitiesMobilePage() {
       combined = combined.filter(item => selectedSourceTypes.includes(item.sourceType));
     }
 
+    // Filter by favorites
+    if (showFavoritesOnly) {
+      combined = combined.filter(item => {
+        if (item.sourceType === 'NPS') {
+          return projectFavorites.has(item.id);
+        } else {
+          return opportunityFavorites.has(item.id);
+        }
+      });
+    }
+
     // Sort
     if (sortBy === "recent") {
       combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
 
     return combined;
-  }, [filteredProjects, filteredOpportunities, selectedSourceTypes, sortBy]);
+  }, [filteredProjects, filteredOpportunities, selectedSourceTypes, sortBy, showFavoritesOnly, projectFavorites, opportunityFavorites]);
 
   const renderFilterPanel = () => {
     return (
@@ -462,10 +548,19 @@ function OpportunitiesMobilePage() {
     selectedFunding.forEach(s => filters.push({ label: s, onRemove: () => setSelectedFunding(prev => prev.filter(x => x !== s)) }));
     selectedSeeking.forEach(s => filters.push({ label: s, onRemove: () => setSelectedSeeking(prev => prev.filter(x => x !== s)) }));
 
-    if (filters.length === 0) return null;
+    if (filters.length === 0 && !showFavoritesOnly) return null;
 
     return (
       <div className="flex flex-wrap gap-1.5 items-center">
+        {showFavoritesOnly && (
+          <Badge variant="default" className="gap-1 text-xs py-1 px-2">
+            <Star className="w-3 h-3 fill-current" />
+            Favorites
+            <button onClick={() => setShowFavoritesOnly(false)}>
+              <X className="w-3 h-3 ml-1" />
+            </button>
+          </Badge>
+        )}
         {filters.map((filter, idx) => (
           <Badge key={idx} variant="secondary" className="gap-1 text-xs py-1 px-2">
             {filter.label}
@@ -527,16 +622,37 @@ function OpportunitiesMobilePage() {
             <div className="flex-1 min-w-0 space-y-3">
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
+                  variant={showFilters ? "default" : "outline"}
                   onClick={() => setShowFilters(!showFilters)}
-                  className="h-11 md:h-10 text-sm"
+                  className={cn(
+                    "h-11 md:h-10 text-sm",
+                    showFilters
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-white border-primary/30 text-foreground hover:bg-primary/10 hover:text-foreground active:bg-primary active:text-primary-foreground"
+                  )}
                 >
                   <SlidersHorizontal className="w-4 h-4 mr-2" />
                   Filters
                   {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
+                    <Badge variant="default" className={cn(
+                      "ml-2 text-xs",
+                      showFilters ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
+                    )}>
                       {activeFilterCount}
                     </Badge>
+                  )}
+                </Button>
+
+                <Button
+                  variant={showFavoritesOnly ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                  className="gap-2 text-sm h-11 md:h-10"
+                >
+                  <Star className={cn("w-4 h-4", showFavoritesOnly && "fill-current")} />
+                  <span className="hidden sm:inline">Favorites</span>
+                  {totalFavoritesCount > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-xs">{totalFavoritesCount}</Badge>
                   )}
                 </Button>
 
@@ -609,12 +725,25 @@ function OpportunitiesMobilePage() {
               </div>
             ) : filteredItems.length === 0 ? (
               <Card className="p-12 text-center">
-                <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Opportunities Found</h3>
-                <p className="text-muted-foreground mb-6">Try adjusting your filters or search</p>
-                <Button onClick={clearFilters} variant="outline">
-                  Clear Filters
-                </Button>
+                {showFavoritesOnly ? (
+                  <>
+                    <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Favorites Yet</h3>
+                    <p className="text-muted-foreground mb-6">Mark opportunities as favorites to easily find them later</p>
+                    <Button onClick={() => setShowFavoritesOnly(false)} variant="outline">
+                      Browse All Opportunities
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Opportunities Found</h3>
+                    <p className="text-muted-foreground mb-6">Try adjusting your filters or search</p>
+                    <Button onClick={clearFilters} variant="outline">
+                      Clear Filters
+                    </Button>
+                  </>
+                )}
               </Card>
             ) : (
               filteredItems.map((item) => (
@@ -626,12 +755,23 @@ function OpportunitiesMobilePage() {
                     onOpenChange={() => toggleCardExpanded(item.id)}
                   >
                     <Card className="p-4 md:p-6 hover:shadow-lg transition-shadow">
-                      {/* NPS Badge */}
-                      <div className="mb-3">
+                      {/* NPS Badge and Star */}
+                      <div className="flex items-center justify-between mb-3">
                         <Badge className="bg-blue-600 text-white text-xs">
                           <GraduationCap className="h-3 w-3 mr-1" />
                           NPS
                         </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 h-9 w-9"
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, true); }}
+                        >
+                          <Star className={cn(
+                            "w-5 h-5 transition-colors",
+                            isFavorite(item.id, true) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
+                          )} />
+                        </Button>
                       </div>
 
                       <div className="flex items-start justify-between mb-3">
@@ -666,25 +806,37 @@ function OpportunitiesMobilePage() {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Users className="h-4 w-4 shrink-0" />
-                          <span className="truncate">
-                            {(item.poc_rank || item.pocRank) && <span className="font-medium">{item.poc_rank || item.pocRank}</span>}
-                            {(item.poc_rank || item.pocRank) && (item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName) && ' '}
-                            {(item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName)
-                              ? `${item.poc_first_name || item.pocFirstName || ''} ${item.poc_last_name || item.pocLastName || ''}`.trim()
-                              : item.profiles?.full_name || 'Unknown'}
-                          </span>
-                          {item.department && (
-                            <span className="text-xs hidden md:inline">• {item.department}</span>
+                      <div className="flex flex-col gap-1 text-sm text-muted-foreground mb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Users className="h-4 w-4 shrink-0" />
+                            <span className="truncate">
+                              {(item.poc_rank || item.pocRank) && <span className="font-medium">{item.poc_rank || item.pocRank}</span>}
+                              {(item.poc_rank || item.pocRank) && (item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName) && ' '}
+                              {(item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName)
+                                ? `${item.poc_first_name || item.pocFirstName || ''} ${item.poc_last_name || item.pocLastName || ''}`.trim()
+                                : item.profiles?.full_name || 'Unknown'}
+                            </span>
+                            {item.department && (
+                              <span className="text-xs hidden md:inline">• {item.department}</span>
+                            )}
+                          </div>
+                          {(item.interested || 0) > 0 && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <TrendingUp className="h-4 w-4" />
+                              <span>{item.interested}</span>
+                            </div>
                           )}
                         </div>
-                        {(item.interested || 0) > 0 && (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <TrendingUp className="h-4 w-4" />
-                            <span>{item.interested}</span>
-                          </div>
+                        {(item.poc_email || item.pocEmail) && (
+                          <a
+                            href={`mailto:${item.poc_email || item.pocEmail}`}
+                            className="flex items-center gap-2 text-xs text-primary hover:underline ml-6"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Mail className="h-3 w-3" />
+                            {item.poc_email || item.pocEmail}
+                          </a>
                         )}
                       </div>
 
@@ -754,15 +906,26 @@ function OpportunitiesMobilePage() {
                         )}
                       </CollapsibleContent>
 
-                      {/* Footer with Contact button and expand arrow */}
+                      {/* Footer with Message button and expand arrow */}
                       <div className="flex items-center gap-2 mt-3">
-                        <Button
-                          className="flex-1 h-11 md:h-10 text-sm gap-2"
-                          onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.pi_id)}
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          Contact
-                        </Button>
+                        <div className="flex-1 flex flex-col items-center">
+                          <Button
+                            className={cn(
+                              "w-full h-11 md:h-10 text-sm gap-2",
+                              (item.poc_is_checked_in || item.pocIsCheckedIn)
+                                ? "bg-primary hover:bg-primary/90"
+                                : "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                            )}
+                            onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.pi_id)}
+                            disabled={!(item.poc_is_checked_in || item.pocIsCheckedIn)}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            Message
+                          </Button>
+                          {!(item.poc_is_checked_in || item.pocIsCheckedIn) && (
+                            <span className="text-[10px] text-muted-foreground mt-1">POC is not at the Event</span>
+                          )}
+                        </div>
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10">
                             <ChevronDown className={`h-4 w-4 transition-transform ${expandedCards.has(item.id) ? 'rotate-180' : ''}`} />
@@ -779,8 +942,8 @@ function OpportunitiesMobilePage() {
                     onOpenChange={() => toggleCardExpanded(item.id)}
                   >
                     <Card className="p-4 md:p-6 hover:shadow-lg transition-shadow">
-                      {/* Badge based on sourceType */}
-                      <div className="mb-3">
+                      {/* Badge and Star */}
+                      <div className="flex items-center justify-between mb-3">
                         {item.sourceType === 'Industry' ? (
                           <Badge className="bg-orange-600 text-white text-xs">
                             <Users className="h-3 w-3 mr-1" />
@@ -792,6 +955,17 @@ function OpportunitiesMobilePage() {
                             Military/Gov
                           </Badge>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 h-9 w-9"
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, false); }}
+                        >
+                          <Star className={cn(
+                            "w-5 h-5 transition-colors",
+                            isFavorite(item.id, false) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
+                          )} />
+                        </Button>
                       </div>
 
                       <div className="flex items-start justify-between mb-3">
@@ -830,15 +1004,27 @@ function OpportunitiesMobilePage() {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                        <Users className="h-4 w-4 shrink-0" />
-                        <span className="truncate">
-                          {(item.poc_rank || item.pocRank) && <span className="font-medium">{item.poc_rank || item.pocRank}</span>}
-                          {(item.poc_rank || item.pocRank) && (item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName) && ' '}
-                          {(item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName)
-                            ? `${item.poc_first_name || item.pocFirstName || ''} ${item.poc_last_name || item.pocLastName || ''}`.trim()
-                            : 'Unknown'}
-                        </span>
+                      <div className="flex flex-col gap-1 text-sm text-muted-foreground mb-3">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 shrink-0" />
+                          <span className="truncate">
+                            {(item.poc_rank || item.pocRank) && <span className="font-medium">{item.poc_rank || item.pocRank}</span>}
+                            {(item.poc_rank || item.pocRank) && (item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName) && ' '}
+                            {(item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName)
+                              ? `${item.poc_first_name || item.pocFirstName || ''} ${item.poc_last_name || item.pocLastName || ''}`.trim()
+                              : 'Unknown'}
+                          </span>
+                        </div>
+                        {(item.poc_email || item.pocEmail) && (
+                          <a
+                            href={`mailto:${item.poc_email || item.pocEmail}`}
+                            className="flex items-center gap-2 text-xs text-primary hover:underline ml-6"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Mail className="h-3 w-3" />
+                            {item.poc_email || item.pocEmail}
+                          </a>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
@@ -874,15 +1060,26 @@ function OpportunitiesMobilePage() {
                         )}
                       </CollapsibleContent>
 
-                      {/* Footer with Contact button and expand arrow */}
+                      {/* Footer with Message button and expand arrow */}
                       <div className="flex items-center gap-2 mt-3">
-                        <Button
-                          className="flex-1 h-11 md:h-10 text-sm gap-2"
-                          onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.sponsor_contact_id)}
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          Contact
-                        </Button>
+                        <div className="flex-1 flex flex-col items-center">
+                          <Button
+                            className={cn(
+                              "w-full h-11 md:h-10 text-sm gap-2",
+                              (item.poc_is_checked_in || item.pocIsCheckedIn)
+                                ? "bg-primary hover:bg-primary/90"
+                                : "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                            )}
+                            onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.sponsor_contact_id)}
+                            disabled={!(item.poc_is_checked_in || item.pocIsCheckedIn)}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            Message
+                          </Button>
+                          {!(item.poc_is_checked_in || item.pocIsCheckedIn) && (
+                            <span className="text-[10px] text-muted-foreground mt-1">POC is not at the Event</span>
+                          )}
+                        </div>
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10">
                             <ChevronDown className={`h-4 w-4 transition-transform ${expandedCards.has(item.id) ? 'rotate-180' : ''}`} />

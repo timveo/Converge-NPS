@@ -87,6 +87,11 @@ export async function listProjects(filters: {
           role: true,
         },
       },
+      poc: {
+        select: {
+          isCheckedIn: true,
+        },
+      },
       _count: {
         select: { interests: true },
       },
@@ -96,7 +101,14 @@ export async function listProjects(filters: {
     },
   });
 
-  return projects;
+  // Flatten the poc.isCheckedIn into pocIsCheckedIn
+  const projectsWithCheckedIn = projects.map((project) => ({
+    ...project,
+    pocIsCheckedIn: project.poc?.isCheckedIn ?? false,
+    poc: undefined,
+  }));
+
+  return projectsWithCheckedIn;
 }
 
 /**
@@ -466,6 +478,11 @@ export async function listOpportunities(filters: {
           role: true,
         },
       },
+      poc: {
+        select: {
+          isCheckedIn: true,
+        },
+      },
       _count: {
         select: { interests: true },
       },
@@ -475,7 +492,14 @@ export async function listOpportunities(filters: {
     },
   });
 
-  return opportunities;
+  // Flatten the poc.isCheckedIn into pocIsCheckedIn
+  const opportunitiesWithCheckedIn = opportunities.map((opportunity) => ({
+    ...opportunity,
+    pocIsCheckedIn: opportunity.poc?.isCheckedIn ?? false,
+    poc: undefined,
+  }));
+
+  return opportunitiesWithCheckedIn;
 }
 
 /**

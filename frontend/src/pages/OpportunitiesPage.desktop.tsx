@@ -19,6 +19,8 @@ import {
   MapPin,
   Tag,
   DollarSign,
+  Mail,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +38,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
 import { ThreePanelLayout } from '@/components/desktop/layouts/ThreePanelLayout';
 import { cn } from '@/lib/utils';
@@ -68,6 +71,18 @@ interface Project {
   interested?: number;
   pi_id?: string;
   created_at: string;
+  poc_user_id?: string;
+  poc_first_name?: string;
+  poc_last_name?: string;
+  poc_email?: string;
+  poc_rank?: string;
+  poc_is_checked_in?: boolean;
+  pocUserId?: string;
+  pocFirstName?: string;
+  pocLastName?: string;
+  pocEmail?: string;
+  pocRank?: string;
+  pocIsCheckedIn?: boolean;
   profiles?: {
     id: string;
     full_name: string;
@@ -91,6 +106,18 @@ interface Opportunity {
   requirements?: string;
   benefits?: string;
   sponsor_contact_id?: string;
+  poc_user_id?: string;
+  poc_first_name?: string;
+  poc_last_name?: string;
+  poc_email?: string;
+  poc_rank?: string;
+  poc_is_checked_in?: boolean;
+  pocUserId?: string;
+  pocFirstName?: string;
+  pocLastName?: string;
+  pocEmail?: string;
+  pocRank?: string;
+  pocIsCheckedIn?: boolean;
   created_at: string;
 }
 
@@ -118,6 +145,57 @@ export default function OpportunitiesDesktopPage() {
 
   const [sortBy, setSortBy] = useState('recent');
 
+  // Favorites state
+  const [projectFavorites, setProjectFavorites] = useState<Set<string>>(new Set());
+  const [opportunityFavorites, setOpportunityFavorites] = useState<Set<string>>(new Set());
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  const toggleFavorite = async (id: string, isProject: boolean) => {
+    const favorites = isProject ? projectFavorites : opportunityFavorites;
+    const setFavorites = isProject ? setProjectFavorites : setOpportunityFavorites;
+    const endpoint = isProject ? `/projects/${id}/bookmark` : `/opportunities/${id}/bookmark`;
+
+    const isFavorited = favorites.has(id);
+
+    // Optimistic update
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (isFavorited) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+
+    try {
+      if (isFavorited) {
+        await api.delete(endpoint);
+      } else {
+        await api.post(endpoint);
+      }
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      // Revert on error
+      setFavorites(prev => {
+        const next = new Set(prev);
+        if (isFavorited) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      });
+      toast.error('Failed to update favorite');
+    }
+  };
+
+  const isFavorite = (id: string, isProject: boolean) => {
+    return isProject ? projectFavorites.has(id) : opportunityFavorites.has(id);
+  };
+
+  const totalFavoritesCount = projectFavorites.size + opportunityFavorites.size;
+
   const handleContact = async (contactId?: string) => {
     if (!contactId) {
       console.info('Contact information not available');
@@ -137,7 +215,25 @@ export default function OpportunitiesDesktopPage() {
 
   useEffect(() => {
     loadData();
+    loadFavorites();
   }, []);
+
+  const loadFavorites = async () => {
+    try {
+      const [projectBookmarksRes, oppBookmarksRes] = await Promise.all([
+        api.get('/projects/bookmarks'),
+        api.get('/opportunities/bookmarks')
+      ]);
+
+      const projectBookmarks = (projectBookmarksRes as any).data?.data || (projectBookmarksRes as any).data || [];
+      const oppBookmarks = (oppBookmarksRes as any).data?.data || (oppBookmarksRes as any).data || [];
+
+      setProjectFavorites(new Set(projectBookmarks.map((b: any) => b.projectId || b.project_id)));
+      setOpportunityFavorites(new Set(oppBookmarks.map((b: any) => b.opportunityId || b.opportunity_id)));
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -230,6 +326,7 @@ export default function OpportunitiesDesktopPage() {
     setSelectedStages([]);
     setSelectedFunding([]);
     setSelectedSeeking([]);
+    setShowFavoritesOnly(false);
   };
 
   // Combined and filtered items with counts
@@ -292,6 +389,17 @@ export default function OpportunitiesDesktopPage() {
       combined = industryItems;
     }
 
+    // Filter by favorites
+    if (showFavoritesOnly) {
+      combined = combined.filter(item => {
+        if (item.sourceType === 'NPS') {
+          return projectFavorites.has(item.id);
+        } else {
+          return opportunityFavorites.has(item.id);
+        }
+      });
+    }
+
     // Sort
     if (sortBy === 'recent') {
       combined.sort(
@@ -307,7 +415,7 @@ export default function OpportunitiesDesktopPage() {
         industry: industryItems.length,
       },
     };
-  }, [filteredProjects, filteredOpportunities, activeTab, sortBy]);
+  }, [filteredProjects, filteredOpportunities, activeTab, sortBy, showFavoritesOnly, projectFavorites, opportunityFavorites]);
 
   const isNPSItem = (item: CombinedItem): item is Project & { sourceType: 'NPS' } => {
     return item.sourceType === 'NPS';
@@ -336,9 +444,9 @@ export default function OpportunitiesDesktopPage() {
             <p className="text-sm text-muted-foreground">Refine your search</p>
           </div>
         </div>
-        {activeFilterCount > 0 && (
+        {(activeFilterCount > 0 || showFavoritesOnly) && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-xs">
-            Clear ({activeFilterCount})
+            Clear ({activeFilterCount + (showFavoritesOnly ? 1 : 0)})
           </Button>
         )}
       </div>
@@ -382,6 +490,25 @@ export default function OpportunitiesDesktopPage() {
                 <SelectItem value="stage">By Stage</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Favorites Filter */}
+          <div>
+            <Button
+              variant={showFavoritesOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={cn(
+                "w-full gap-2 text-sm h-9 focus-visible:ring-0 focus-visible:ring-offset-0",
+                !showFavoritesOnly && "bg-white hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <Star className={cn("w-4 h-4", showFavoritesOnly && "fill-current")} />
+              Favorites
+              {totalFavoritesCount > 0 && (
+                <Badge variant="secondary" className="ml-auto text-xs">{totalFavoritesCount}</Badge>
+              )}
+            </Button>
           </div>
           <Separator />
 
@@ -459,7 +586,7 @@ export default function OpportunitiesDesktopPage() {
 
   // Center Panel - Opportunities List
   const OpportunitiesListPanel = (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50 min-w-0 overflow-hidden">
       {/* Header */}
       <div className="h-[72px] px-4 flex items-center justify-between border-b border-gray-200 bg-gray-100">
         <div className="flex items-center gap-3">
@@ -513,8 +640,8 @@ export default function OpportunitiesDesktopPage() {
       </div>
 
       {/* Opportunities List */}
-      <ScrollArea className="flex-1">
-        <div className="p-3">
+      <ScrollArea className="flex-1 min-w-0">
+        <div className="p-3 min-w-0 overflow-hidden">
           {loading ? (
             <div className="space-y-2 px-1">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -531,23 +658,40 @@ export default function OpportunitiesDesktopPage() {
             </div>
           ) : combinedItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Briefcase className="h-8 w-8 text-primary/70" />
-              </div>
-              <p className="font-medium text-sm">No opportunities found</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {searchQuery || activeFilterCount > 0
-                  ? 'Try adjusting your filters'
-                  : 'Check back later for new opportunities'}
-              </p>
-              {activeFilterCount > 0 && (
-                <Button variant="outline" size="sm" onClick={clearFilters} className="mt-4">
-                  Clear Filters
-                </Button>
+              {showFavoritesOnly ? (
+                <>
+                  <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center mx-auto mb-4">
+                    <Star className="h-8 w-8 text-yellow-500" />
+                  </div>
+                  <p className="font-medium text-sm">No favorites yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Mark opportunities as favorites to easily find them later
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => setShowFavoritesOnly(false)} className="mt-4">
+                    Browse All Opportunities
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Briefcase className="h-8 w-8 text-primary/70" />
+                  </div>
+                  <p className="font-medium text-sm">No opportunities found</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {searchQuery || activeFilterCount > 0
+                      ? 'Try adjusting your filters'
+                      : 'Check back later for new opportunities'}
+                  </p>
+                  {activeFilterCount > 0 && (
+                    <Button variant="outline" size="sm" onClick={clearFilters} className="mt-4">
+                      Clear Filters
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           ) : (
-            <div className="space-y-1 pr-0">
+            <div className="space-y-1 pr-0 overflow-hidden">
               <AnimatePresence mode="popLayout">
                 {combinedItems.map((item) => {
                   const isSelected = selectedItem?.id === item.id;
@@ -584,8 +728,11 @@ export default function OpportunitiesDesktopPage() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <h4 className="font-medium text-sm truncate">{item.title}</h4>
+                          <div className="flex items-start gap-2 mb-0.5">
+                            <h4 className="font-medium text-sm flex-1 break-words">{item.title}</h4>
+                            {isFavorite(item.id, isNPS) && (
+                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
+                            )}
                             {!isNPS && (item as Opportunity).featured && (
                               <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
                             )}
@@ -650,20 +797,45 @@ export default function OpportunitiesDesktopPage() {
             <p className="text-sm text-muted-foreground">View opportunity info</p>
           </div>
         </div>
-        <Button
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() =>
-            handleContact(
-              isNPSItem(selectedItem)
-                ? (selectedItem as Project).pi_id
-                : (selectedItem as Opportunity).sponsor_contact_id
-            )
-          }
-        >
-          <MessageSquare className="h-3 w-3 mr-1" />
-          Contact
-        </Button>
+        <div className="flex items-start gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => toggleFavorite(selectedItem.id, isNPSItem(selectedItem))}
+          >
+            <Star className={cn(
+              "w-5 h-5 transition-colors",
+              isFavorite(selectedItem.id, isNPSItem(selectedItem)) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
+            )} />
+          </Button>
+          <div className="flex flex-col items-end">
+            <Button
+              size="sm"
+              className={cn(
+                "h-8 text-xs",
+                (selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn)
+                  ? "bg-primary hover:bg-primary/90"
+                  : "bg-gray-400 hover:bg-gray-400"
+              )}
+              onClick={() =>
+                handleContact(
+                selectedItem.pocUserId || selectedItem.poc_user_id ||
+                (isNPSItem(selectedItem)
+                  ? (selectedItem as Project).pi_id
+                  : (selectedItem as Opportunity).sponsor_contact_id)
+              )
+            }
+            disabled={!(selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn)}
+          >
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Message
+          </Button>
+            {!(selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn) && (
+              <span className="text-[9px] text-muted-foreground mt-0.5">POC is not at the Event</span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Title and Source Badge */}
@@ -721,6 +893,39 @@ export default function OpportunitiesDesktopPage() {
           {isNPSItem(selectedItem) ? (
             // NPS Project Details
             <>
+              {/* POC Info */}
+              {(selectedItem.poc_first_name || selectedItem.pocFirstName ||
+                selectedItem.poc_last_name || selectedItem.pocLastName ||
+                selectedItem.poc_email || selectedItem.pocEmail) && (
+                <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                  <Label className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    Point of Contact
+                  </Label>
+                  <p className="font-medium text-sm">
+                    {(selectedItem.poc_rank || selectedItem.pocRank) && (
+                      <span className="text-muted-foreground mr-1">
+                        {selectedItem.poc_rank || selectedItem.pocRank}
+                      </span>
+                    )}
+                    {(selectedItem.poc_first_name || selectedItem.pocFirstName ||
+                      selectedItem.poc_last_name || selectedItem.pocLastName) &&
+                      `${selectedItem.poc_first_name || selectedItem.pocFirstName || ''} ${
+                        selectedItem.poc_last_name || selectedItem.pocLastName || ''
+                      }`.trim()}
+                  </p>
+                  {(selectedItem.poc_email || selectedItem.pocEmail) && (
+                    <a
+                      href={`mailto:${selectedItem.poc_email || selectedItem.pocEmail}`}
+                      className="flex items-center gap-2 text-xs text-primary hover:underline mt-2"
+                    >
+                      <Mail className="h-3 w-3" />
+                      {selectedItem.poc_email || selectedItem.pocEmail}
+                    </a>
+                  )}
+                </div>
+              )}
+
               {/* PI Info */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-sm">
@@ -832,6 +1037,39 @@ export default function OpportunitiesDesktopPage() {
           ) : (
             // Military/Gov Opportunity Details
             <>
+              {/* POC Info */}
+              {(selectedItem.poc_first_name || selectedItem.pocFirstName ||
+                selectedItem.poc_last_name || selectedItem.pocLastName ||
+                selectedItem.poc_email || selectedItem.pocEmail) && (
+                <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                  <Label className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    Point of Contact
+                  </Label>
+                  <p className="font-medium text-sm">
+                    {(selectedItem.poc_rank || selectedItem.pocRank) && (
+                      <span className="text-muted-foreground mr-1">
+                        {selectedItem.poc_rank || selectedItem.pocRank}
+                      </span>
+                    )}
+                    {(selectedItem.poc_first_name || selectedItem.pocFirstName ||
+                      selectedItem.poc_last_name || selectedItem.pocLastName) &&
+                      `${selectedItem.poc_first_name || selectedItem.pocFirstName || ''} ${
+                        selectedItem.poc_last_name || selectedItem.pocLastName || ''
+                      }`.trim()}
+                  </p>
+                  {(selectedItem.poc_email || selectedItem.pocEmail) && (
+                    <a
+                      href={`mailto:${selectedItem.poc_email || selectedItem.pocEmail}`}
+                      className="flex items-center gap-2 text-xs text-primary hover:underline mt-2"
+                    >
+                      <Mail className="h-3 w-3" />
+                      {selectedItem.poc_email || selectedItem.pocEmail}
+                    </a>
+                  )}
+                </div>
+              )}
+
               {/* Organization Info */}
               <div className="space-y-3">
                 {(selectedItem as Opportunity).sponsor_organization && (
