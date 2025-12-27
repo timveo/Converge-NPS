@@ -33,8 +33,40 @@ interface Recommendation {
   tags: string[];
 }
 
-const TECHNOLOGY_AREAS = ["AI/ML", "Autonomy", "Cybersecurity", "Quantum", "Space", "Biotechnology", "Energy", "Materials Science", "Communications", "Electronic Warfare", "Robotics", "Data Analytics"];
-const SEEKING_OPTIONS = ["Research partnerships", "Student interns", "Pilot programs", "Data access", "Funding opportunities", "Technology licensing"];
+const TECHNOLOGY_AREAS = [
+  "Additive Manufacturing",
+  "Advanced Materials",
+  "AI/ML",
+  "AR/VR/XR",
+  "Autonomous Systems",
+  "Communications",
+  "Contested Logistics",
+  "Cybersecurity",
+  "Data Analytics",
+  "Digital Twins",
+  "Directed Energy",
+  "Future Generation Wireless Technology",
+  "Electronic Warfare",
+  "Human-Machine Interface",
+  "Hypersonics",
+  "Integrated Networks",
+  "Modeling & Simulation",
+  "Quantum",
+  "Robotics",
+  "Space",
+  "Undersea Warfare",
+];
+const SEEKING_OPTIONS = [
+  "Data Access/Sharing",
+  "Funding Opportunities",
+  "Research Partnership",
+  "Tech Transfer",
+  "Pilot Programs",
+  "Prototyping & Experimentation",
+  "Education Partnership",
+  "Student Interns",
+  "Tech Licensing",
+];
 
 interface IndustryPartner {
   id: string;
@@ -286,11 +318,19 @@ function IndustryMobilePage() {
     }
 
     if (selectedTechAreas.length > 0) {
-      filtered = filtered.filter(p => selectedTechAreas.some(t => p.technology_focus_areas.includes(t)));
+      filtered = filtered.filter(p => 
+        selectedTechAreas.some(t => 
+          p.technology_focus_areas.some(area => area.toLowerCase() === t.toLowerCase())
+        )
+      );
     }
 
     if (selectedSeeking.length > 0) {
-      filtered = filtered.filter(p => selectedSeeking.some(s => p.seeking.includes(s)));
+      filtered = filtered.filter(p => 
+        selectedSeeking.some(s => 
+          p.seeking.some(item => item.toLowerCase() === s.toLowerCase())
+        )
+      );
     }
 
     if (selectedDodSponsor) {
