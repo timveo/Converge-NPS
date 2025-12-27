@@ -3,8 +3,6 @@
  * Runs before all tests
  */
 
-/// <reference types="jest" />
-
 // Mock environment variables
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-only';
