@@ -46,8 +46,12 @@ import { format } from 'date-fns';
 
 // NPS Projects filters - match backend enum values
 const PROJECT_STAGES = ['concept', 'prototype', 'pilot_ready', 'deployed'];
-const PROJECT_STAGE_LABELS = ['Concept', 'Prototype', 'Pilot Ready', 'Deployed'];
-const FUNDING_STATUSES = ['Funded', 'Seeking Funding', 'Partially Funded'];
+const PROJECT_STAGE_LABELS: Record<string, string> = {
+  concept: 'Concept',
+  prototype: 'Prototype',
+  pilot_ready: 'Pilot Ready',
+  deployed: 'Deployed',
+};
 const SEEKING_TYPES = [
   'Industry Partnership',
   'Government Sponsor',
@@ -101,12 +105,14 @@ interface Opportunity {
   sponsor_organization?: string;
   location?: string;
   duration?: string;
-  deadline?: string;
-  featured?: boolean;
+  deadline?: Date;
+  featured: boolean;
   dod_alignment?: string[];
   requirements?: string;
   benefits?: string;
   sponsor_contact_id?: string;
+  created_at: string;
+  stage?: string;
   poc_user_id?: string;
   poc_first_name?: string;
   poc_last_name?: string;
@@ -119,7 +125,6 @@ interface Opportunity {
   pocEmail?: string;
   pocRank?: string;
   pocIsCheckedIn?: boolean;
-  created_at: string;
 }
 
 type CombinedItem =
@@ -283,17 +288,7 @@ export default function OpportunitiesDesktopPage() {
     }
 
     if (selectedStages.length > 0) {
-      console.log('Debug - Stage Filter:', {
-        selectedStages,
-        projectStages: projects.map(p => ({ id: p.id, title: p.title, stage: p.stage })),
-        beforeFilter: filtered.length
-      });
-      filtered = filtered.filter((p) => {
-        const matches = selectedStages.includes(p.stage);
-        console.log(`Project "${p.title}" stage "${p.stage}" matches:`, matches);
-        return matches;
-      });
-      console.log('After stage filter:', filtered.length);
+      filtered = filtered.filter((p) => selectedStages.includes(p.stage));
     }
 
     // Note: funding_status field doesn't exist in database - removing this filter
@@ -332,19 +327,11 @@ export default function OpportunitiesDesktopPage() {
 
     // Apply stage filter to opportunities if they have a stage field
     if (selectedStages.length > 0) {
-      console.log('Debug - Opportunity Stage Filter:', {
-        selectedStages,
-        opportunityStages: opportunities.map(o => ({ id: o.id, title: o.title, stage: (o as any).stage })),
-        beforeFilter: filtered.length
-      });
       filtered = filtered.filter((o) => {
-        const stage = (o as any).stage;
+        const stage = o.stage;
         if (!stage) return true; // Keep opportunities without stage
-        const matches = selectedStages.includes(stage);
-        console.log(`Opportunity "${o.title}" stage "${stage}" matches:`, matches);
-        return matches;
+        return selectedStages.includes(stage);
       });
-      console.log('After opportunity stage filter:', filtered.length);
     }
 
     return filtered;
@@ -363,14 +350,6 @@ export default function OpportunitiesDesktopPage() {
     const industryProjects = filteredProjects.filter(isIndustryProject);
     const npsProjects = filteredProjects.filter(p => !isIndustryProject(p));
     
-    console.log('Debug - Combined Items Logic:', {
-      totalProjects: projects.length,
-      filteredProjects: filteredProjects.length,
-      industryProjects: industryProjects.length,
-      npsProjects: npsProjects.length,
-      activeTab,
-      selectedStages
-    });
 
     const mapProjectToOpportunity = (project: Project): Opportunity & { stage?: string } => ({
       id: project.id,
@@ -554,7 +533,7 @@ export default function OpportunitiesDesktopPage() {
           <div>
             <Label className="text-sm font-medium mb-3 block">Project Stage</Label>
             <div className="space-y-2">
-              {PROJECT_STAGES.map((stage, index) => (
+              {PROJECT_STAGES.map((stage) => (
                 <div key={stage} className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -564,7 +543,7 @@ export default function OpportunitiesDesktopPage() {
                     className="h-4 w-4 rounded border-gray-300"
                   />
                   <Label htmlFor={`stage-${stage}`} className="cursor-pointer text-sm">
-                    {PROJECT_STAGE_LABELS[index]}
+                    {PROJECT_STAGE_LABELS[stage]}
                   </Label>
                 </div>
               ))}

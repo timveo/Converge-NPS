@@ -26,8 +26,12 @@ const SOURCE_TYPES = ["NPS", "Military/Gov", "Industry"];
 
 // NPS Projects filters - match backend enum values
 const PROJECT_STAGES = ["concept", "prototype", "pilot_ready", "deployed"];
-const PROJECT_STAGE_LABELS = ["Concept", "Prototype", "Pilot Ready", "Deployed"];
-const FUNDING_STATUSES = ["Funded", "Seeking Funding", "Partially Funded"];
+const PROJECT_STAGE_LABELS: Record<string, string> = {
+  concept: "Concept",
+  prototype: "Prototype",
+  pilot_ready: "Pilot Ready",
+  deployed: "Deployed",
+};
 const SEEKING_TYPES = ["Industry Partnership", "Government Sponsor", "Research Collaboration", "Funding", "Test & Evaluation"];
 
 interface Project {
@@ -82,6 +86,7 @@ interface Opportunity {
   requirements?: string;
   benefits?: string;
   sponsor_contact_id?: string;
+  stage?: string; // Optional stage field for filtering
   // POC fields - support both camelCase (API) and snake_case
   poc_user_id?: string;
   poc_first_name?: string;
@@ -327,17 +332,7 @@ function OpportunitiesMobilePage() {
     }
 
     if (selectedStages.length > 0) {
-      console.log('Debug - Mobile Stage Filter:', {
-        selectedStages,
-        projectStages: projects.map(p => ({ id: p.id, title: p.title, stage: p.stage })),
-        beforeFilter: filtered.length
-      });
-      filtered = filtered.filter(p => {
-        const matches = selectedStages.includes(p.stage);
-        console.log(`Mobile Project "${p.title}" stage "${p.stage}" matches:`, matches);
-        return matches;
-      });
-      console.log('After mobile stage filter:', filtered.length);
+      filtered = filtered.filter(p => selectedStages.includes(p.stage));
     }
 
     // Note: funding_status field doesn't exist in database - removing this filter
@@ -375,19 +370,11 @@ function OpportunitiesMobilePage() {
 
     // Apply stage filter to opportunities if they have a stage field
     if (selectedStages.length > 0) {
-      console.log('Debug - Mobile Opportunity Stage Filter:', {
-        selectedStages,
-        opportunityStages: opportunities.map(o => ({ id: o.id, title: o.title, stage: (o as any).stage })),
-        beforeFilter: filtered.length
-      });
       filtered = filtered.filter(o => {
-        const stage = (o as any).stage;
+        const stage = o.stage;
         if (!stage) return true; // Keep opportunities without stage
-        const matches = selectedStages.includes(stage);
-        console.log(`Mobile Opportunity "${o.title}" stage "${stage}" matches:`, matches);
-        return matches;
+        return selectedStages.includes(stage);
       });
-      console.log('After mobile opportunity stage filter:', filtered.length);
     }
 
     return filtered;
@@ -516,14 +503,14 @@ function OpportunitiesMobilePage() {
           <div>
             <Label className="text-xs font-semibold">Project Stage</Label>
             <div className="space-y-1.5 mt-2">
-              {PROJECT_STAGES.map((stage, index) => (
+              {PROJECT_STAGES.map((stage) => (
                 <div key={stage} className="flex items-center space-x-2">
                   <Checkbox
                     id={`stage-${stage}`}
                     checked={selectedStages.includes(stage)}
                     onCheckedChange={() => toggleArrayFilter(setSelectedStages, stage)}
                   />
-                  <Label htmlFor={`stage-${stage}`} className="text-xs">{PROJECT_STAGE_LABELS[index]}</Label>
+                  <Label htmlFor={`stage-${stage}`} className="text-xs">{PROJECT_STAGE_LABELS[stage]}</Label>
                 </div>
               ))}
             </div>

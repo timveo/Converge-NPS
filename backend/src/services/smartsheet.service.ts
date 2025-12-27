@@ -1226,33 +1226,17 @@ async function upsertIndustryProjects(context: IndustryProjectContext) {
     });
 
     if (existing) {
-      console.info('[Smartsheet] Updating partner project', {
-        partner: context.partner.name,
-        slot,
-        title,
-        classification,
-      });
       await prisma.project.update({
         where: { id: existing.id },
         data: projectData,
       });
     } else {
-      console.info('[Smartsheet] Creating partner project', {
-        partner: context.partner.name,
-        slot,
-        title,
-        classification,
-      });
       await prisma.project.create({
         data: projectData,
       });
     }
   }
 
-  console.info('[Smartsheet] Completed partner project processing', {
-    partner: context.partner.name,
-    row: context.row.rowNumber,
-  });
 }
 
 // =============================================================================
