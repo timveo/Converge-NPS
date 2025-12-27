@@ -357,15 +357,23 @@ function IndustryMobilePage() {
         {/* Filter buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <Button
-            variant="outline"
+            variant={showFilters ? "default" : "outline"}
             size="sm"
-            className="gap-2 text-sm h-11 md:h-10"
+            className={cn(
+              "gap-2 text-sm h-11 md:h-10",
+              showFilters
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-white border-primary/30 text-foreground hover:bg-primary/10 hover:text-foreground active:bg-primary active:text-primary-foreground"
+            )}
             onClick={() => setShowFilters(!showFilters)}
           >
             <Filter className="h-4 w-4" />
             Filters
             {activeFilterCount > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs">
+              <Badge variant="default" className={cn(
+                "ml-1 text-xs",
+                showFilters ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
+              )}>
                 {activeFilterCount}
               </Badge>
             )}

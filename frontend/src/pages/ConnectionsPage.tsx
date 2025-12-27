@@ -25,6 +25,7 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { offlineDataCache } from "@/lib/offlineDataCache";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
 import { useDevice } from "@/hooks/useDeviceType";
@@ -352,6 +353,43 @@ function ConnectionsMobilePage() {
     return result;
   }, [connections, searchQuery, filters, activeTab]);
 
+  const filteredParticipants = useMemo(() => {
+    let result = [...participants];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const searchLower = searchQuery.toLowerCase();
+      result = result.filter(p => {
+        const nameMatch = p.fullName?.toLowerCase().includes(searchLower);
+        const orgMatch = p.organization?.toLowerCase().includes(searchLower);
+        return nameMatch || orgMatch;
+      });
+    }
+
+    // Apply user type filter
+    if (filters.userTypes.length > 0) {
+      result = result.filter(p => {
+        const role = p.role?.toLowerCase();
+        return filters.userTypes.some(type => role?.includes(type));
+      });
+    }
+
+    // Apply sorting
+    switch (filters.sortBy) {
+      case 'recent':
+        // Participants don't have created_at, keep original order
+        break;
+      case 'name-asc':
+        result.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+        break;
+      case 'name-desc':
+        result.sort((a, b) => (b.fullName || '').localeCompare(a.fullName || ''));
+        break;
+    }
+
+    return result;
+  }, [participants, searchQuery, filters]);
+
   const handleDeleteConnection = async (connectionId: string) => {
     try {
       await api.delete(`/connections/${connectionId}`);
@@ -474,12 +512,6 @@ function ConnectionsMobilePage() {
     return `${diffDays}d`;
   };
 
-  const upcomingReminders = connections.filter(c =>
-    c.follow_up_reminder && new Date(c.follow_up_reminder) > new Date() && !c.reminder_sent
-  ).sort((a, b) =>
-    new Date(a.follow_up_reminder!).getTime() - new Date(b.follow_up_reminder!).getTime()
-  );
-
   const activeFilterCount = filters.intents.length + filters.userTypes.length;
 
   return (
@@ -517,14 +549,22 @@ function ConnectionsMobilePage() {
 
             <div className="flex gap-2 md:gap-2">
               <Button
-                variant="outline"
+                variant={showFilters ? "default" : "outline"}
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex-1 sm:flex-none h-11 md:h-11 px-4 md:px-4 text-sm md:text-sm border-accent/30 hover:bg-accent/10 transition-colors"
+                className={cn(
+                  "flex-1 sm:flex-none h-11 md:h-11 px-4 md:px-4 text-sm md:text-sm transition-colors",
+                  showFilters
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-white border-primary/30 text-foreground hover:bg-primary/10 hover:text-foreground active:bg-primary active:text-primary-foreground"
+                )}
               >
                 <SlidersHorizontal className="w-4 h-4 md:w-4 md:h-4 mr-2 md:mr-2" />
                 Filters
                 {activeFilterCount > 0 && (
-                  <Badge variant="default" className="ml-2 md:ml-2 h-5 w-5 md:h-5 md:w-5 p-0 flex items-center justify-center text-xs bg-accent">
+                  <Badge variant="default" className={cn(
+                    "ml-2 md:ml-2 h-5 w-5 md:h-5 md:w-5 p-0 flex items-center justify-center text-xs",
+                    showFilters ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
+                  )}>
                     {activeFilterCount}
                   </Badge>
                 )}
@@ -547,7 +587,10 @@ function ConnectionsMobilePage() {
         {/* Search Results Count */}
         {(searchQuery || activeFilterCount > 0) && (
           <p className="text-sm text-muted-foreground">
-            {filteredConnections.length} result{filteredConnections.length !== 1 ? 's' : ''} found
+            {activeTab === 'participants'
+              ? `${filteredParticipants.length} result${filteredParticipants.length !== 1 ? 's' : ''} found`
+              : `${filteredConnections.length} result${filteredConnections.length !== 1 ? 's' : ''} found`
+            }
           </p>
         )}
 
@@ -672,27 +715,6 @@ function ConnectionsMobilePage() {
           </div>
         )}
 
-        {/* Summary Stats */}
-        <Card className="p-3 md:p-6 bg-gradient-tech text-primary-foreground shadow-md">
-          <h3 className="font-semibold mb-2 md:mb-3 text-sm md:text-base">Your Networking Stats</h3>
-          <div className="grid grid-cols-3 gap-2 md:gap-4">
-            <div>
-              <div className="text-lg md:text-2xl font-bold">{connections.length}</div>
-              <div className="text-[10px] md:text-xs opacity-90">Connections</div>
-            </div>
-            <div>
-              <div className="text-lg md:text-2xl font-bold">{upcomingReminders.length}</div>
-              <div className="text-[10px] md:text-xs opacity-90">Reminders</div>
-            </div>
-            <div>
-              <div className="text-lg md:text-2xl font-bold">
-                {connections.reduce((sum, c) => sum + (c.collaborative_intents?.length || 0), 0)}
-              </div>
-              <div className="text-[10px] md:text-xs opacity-90">Intents</div>
-            </div>
-          </div>
-        </Card>
-
         {/* Inline Recommendations */}
         {recommendations.filter(r => !isRecommendationDismissed(r.id)).length > 0 && (
           <Card className="p-3 md:p-4 bg-gradient-to-br from-accent/5 to-primary/5 border-accent/30">
@@ -800,20 +822,24 @@ function ConnectionsMobilePage() {
                 </Card>
               ))}
             </div>
-          ) : participants.length === 0 ? (
+          ) : filteredParticipants.length === 0 ? (
             <Card className="p-6 md:p-12 text-center">
               <div className="w-14 h-14 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 bg-secondary/50 rounded-full flex items-center justify-center">
                 <Users className="h-7 w-7 md:h-10 md:w-10 text-muted-foreground" />
               </div>
               <h3 className="text-sm md:text-lg font-semibold text-foreground mb-1.5 md:mb-2">
-                No Participants Yet
+                {searchQuery || filters.userTypes.length > 0
+                  ? 'No Matching Participants'
+                  : 'No Participants Yet'}
               </h3>
               <p className="text-xs md:text-sm text-muted-foreground mb-4 md:mb-6">
-                Participants will appear here as they check in to the event
+                {searchQuery || filters.userTypes.length > 0
+                  ? 'Try adjusting your search or filters'
+                  : 'Participants will appear here as they check in to the event'}
               </p>
             </Card>
           ) : (
-            participants.map((participant) => (
+            filteredParticipants.map((participant) => (
               <Card key={participant.id} className="p-4 md:p-5 shadow-md border-border/50 hover:shadow-lg transition-all duration-300">
                 <div className="flex items-start gap-3 md:gap-4">
                   {/* Avatar */}

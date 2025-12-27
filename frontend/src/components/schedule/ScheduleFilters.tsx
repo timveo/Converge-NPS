@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -69,15 +70,23 @@ export const ScheduleFiltersPanel = ({
     <div className="space-y-2 md:space-y-4">
       <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
         <Button
-          variant="outline"
+          variant={showFilters ? "default" : "outline"}
           onClick={() => setShowFilters(!showFilters)}
           size="sm"
-          className="h-11 md:h-10 text-sm"
+          className={cn(
+            "h-11 md:h-10 text-sm",
+            showFilters
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : "bg-white border-primary/30 text-foreground hover:bg-primary/10 hover:text-foreground active:bg-primary active:text-primary-foreground"
+          )}
         >
           <SlidersHorizontal className="w-4 h-4 mr-2" />
           Filters
           {activeFilterCount > 0 && (
-            <Badge variant="secondary" className="ml-2 text-xs">
+            <Badge variant="default" className={cn(
+              "ml-2 text-xs",
+              showFilters ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
+            )}>
               {activeFilterCount}
             </Badge>
           )}

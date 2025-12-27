@@ -482,14 +482,22 @@ function OpportunitiesMobilePage() {
             <div className="flex-1 min-w-0 space-y-3">
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
+                  variant={showFilters ? "default" : "outline"}
                   onClick={() => setShowFilters(!showFilters)}
-                  className="h-11 md:h-10 text-sm"
+                  className={cn(
+                    "h-11 md:h-10 text-sm",
+                    showFilters
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-white border-primary/30 text-foreground hover:bg-primary/10 hover:text-foreground active:bg-primary active:text-primary-foreground"
+                  )}
                 >
                   <SlidersHorizontal className="w-4 h-4 mr-2" />
                   Filters
                   {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
+                    <Badge variant="default" className={cn(
+                      "ml-2 text-xs",
+                      showFilters ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
+                    )}>
                       {activeFilterCount}
                     </Badge>
                   )}
