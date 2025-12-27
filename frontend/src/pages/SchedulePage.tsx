@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { Calendar, Search, X, List, CalendarDays, AlertTriangle, Sparkles, Clock, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -95,6 +95,7 @@ function ScheduleMobilePage() {
   const [conflictDialog, setConflictDialog] = useState<{ show: boolean; newSession: Session | null; conflictingSession: Session | null }>({ show: false, newSession: null, conflictingSession: null });
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const { dismiss, isDismissed } = useDismissedRecommendations('schedule');
+  const pendingCreateRef = useRef<Record<string, { tempId: string; cancelRequested?: boolean }>>({});
 
   useEffect(() => {
     fetchData();
@@ -218,6 +219,16 @@ function ScheduleMobilePage() {
   const getRSVPForSession = (sessionId: string) =>
     rsvps.find(r => r.sessionId === sessionId && r.status !== 'cancelled');
 
+  const canSessionsOverlap = (a?: Session, b?: Session) => {
+    if (!a || !b) return false;
+    const aTitle = a.title?.toLowerCase() || '';
+    const bTitle = b.title?.toLowerCase() || '';
+    const hasShowcaseDemoPair =
+      (aTitle.includes('showcase') && bTitle.includes('demo')) ||
+      (aTitle.includes('demo') && bTitle.includes('showcase'));
+    return hasShowcaseDemoPair;
+  };
+
   const checkConflict = (session: Session): Session | null => {
     const sessionStart = new Date(session.start_time).getTime();
     const sessionEnd = new Date(session.end_time).getTime();
@@ -226,6 +237,10 @@ function ScheduleMobilePage() {
       if (rsvp.status === 'cancelled') continue;
       const rsvpSession = sessions.find(s => s.id === rsvp.sessionId);
       if (!rsvpSession || rsvpSession.id === session.id) continue;
+
+      if (canSessionsOverlap(session, rsvpSession)) {
+        continue;
+      }
 
       const rsvpStart = new Date(rsvpSession.start_time).getTime();
       const rsvpEnd = new Date(rsvpSession.end_time).getTime();
@@ -307,6 +322,15 @@ function ScheduleMobilePage() {
           : s
       ));
 
+      const pendingCreate = existingRsvp.id.startsWith('temp-')
+        ? pendingCreateRef.current[sessionId]
+        : undefined;
+
+      if (pendingCreate) {
+        pendingCreate.cancelRequested = true;
+        return;
+      }
+
       try {
         if (!navigator.onLine) {
           if (user?.id) {
@@ -353,11 +377,27 @@ function ScheduleMobilePage() {
         return;
       }
 
+      pendingCreateRef.current[sessionId] = { tempId };
+
       const response = await api.post(`/sessions/${sessionId}/rsvp`, { sessionId });
       const newRsvp = (response as any).data || response;
+      const pendingCreate = pendingCreateRef.current[sessionId];
+      delete pendingCreateRef.current[sessionId];
+
+      if (pendingCreate?.cancelRequested) {
+        try {
+          await api.delete(`/sessions/rsvps/${newRsvp.id}`);
+        } catch (autoErr) {
+          console.error('Failed to auto-cancel RSVP', autoErr);
+          fetchData();
+        }
+        return;
+      }
+
       // Replace temp RSVP with real one
       setRsvps(prev => prev.map(r => r.id === tempId ? { id: newRsvp.id, sessionId, status: 'attending' } : r));
     } catch (err) {
+      delete pendingCreateRef.current[sessionId];
       // Rollback on error
       console.error('Failed to create RSVP', err);
       setRsvps(previousRsvps);

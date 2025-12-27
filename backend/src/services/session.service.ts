@@ -108,10 +108,31 @@ export async function getSessionById(sessionId: string, userId?: string) {
 /**
  * Create RSVP for a session
  */
-export async function createRsvp(userId: string, data: {
-  sessionId: string;
-  status?: 'confirmed' | 'waitlisted' | 'cancelled';
-}) {
+function canSessionsOverlap(a?: { title?: string | null }, b?: { title?: string | null }) {
+  if (!a || !b) return false;
+  const aTitle = a.title?.toLowerCase() || '';
+  const bTitle = b.title?.toLowerCase() || '';
+  return (
+    (aTitle.includes('showcase') && bTitle.includes('demo')) ||
+    (aTitle.includes('demo') && bTitle.includes('showcase'))
+  );
+}
+
+function sessionsTrulyOverlap(
+  a?: { startTime?: Date | null; endTime?: Date | null },
+  b?: { startTime?: Date | null; endTime?: Date | null }
+) {
+  if (!a?.startTime || !a?.endTime || !b?.startTime || !b?.endTime) return false;
+  return a.startTime < b.endTime && a.endTime > b.startTime;
+}
+
+export async function createRsvp(
+  userId: string,
+  data: {
+    sessionId: string;
+    status?: 'confirmed' | 'waitlisted' | 'cancelled';
+  }
+) {
   // Check if session exists
   const session = await prisma.session.findUnique({
     where: { id: data.sessionId },
@@ -185,7 +206,14 @@ export async function createRsvp(userId: string, data: {
   });
 
   if (conflicts.length > 0 && data.status === 'confirmed') {
-    throw new Error(`Schedule conflict with: ${conflicts[0].session.title}`);
+    const blockingConflict = conflicts.find(
+      (conflict) =>
+        sessionsTrulyOverlap(conflict.session, session) &&
+        !canSessionsOverlap(conflict.session, session)
+    );
+    if (blockingConflict) {
+      throw new Error(`Schedule conflict with: ${blockingConflict.session.title}`);
+    }
   }
 
   // Create RSVP
@@ -270,13 +298,20 @@ export async function updateRsvp(userId: string, rsvpId: string, data: {
         session: {
           select: {
             title: true,
+            startTime: true,
+            endTime: true,
           },
         },
       },
     });
 
-    if (conflicts.length > 0) {
-      throw new Error(`Schedule conflict with: ${conflicts[0].session.title}`);
+    const blockingConflict = conflicts.find(
+      (conflict) =>
+        sessionsTrulyOverlap(conflict.session, existingRsvp.session) &&
+        !canSessionsOverlap(conflict.session, existingRsvp.session)
+    );
+    if (blockingConflict) {
+      throw new Error(`Schedule conflict with: ${blockingConflict.session.title}`);
     }
   }
 

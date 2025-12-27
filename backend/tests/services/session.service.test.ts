@@ -223,12 +223,73 @@ describe('Session Service', () => {
       (prisma.rsvp.count as jest.Mock).mockResolvedValue(10);
       (prisma.rsvp.findFirst as jest.Mock).mockResolvedValue(null);
       (prisma.rsvp.findMany as jest.Mock).mockResolvedValue([
-        { session: { title: 'Conflicting Session' } },
+        {
+          session: {
+            title: 'Conflicting Session',
+            startTime: new Date('2024-03-15T09:30:00'),
+            endTime: new Date('2024-03-15T10:30:00'),
+          },
+        },
       ]);
 
       await expect(
         createRsvp('user-1', { sessionId: 'session-1', status: 'confirmed' })
       ).rejects.toThrow('Schedule conflict with: Conflicting Session');
+    });
+
+    it('should allow overlap when one session is a showcase and the other a demo', async () => {
+      (prisma.session.findUnique as jest.Mock).mockResolvedValue({
+        ...mockSession,
+        title: 'AI Demo',
+      });
+      (prisma.rsvp.count as jest.Mock).mockResolvedValue(10);
+      (prisma.rsvp.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.rsvp.findMany as jest.Mock).mockResolvedValue([
+        {
+          session: {
+            title: 'Showcase: Future Tech',
+            startTime: new Date('2024-03-15T09:30:00'),
+            endTime: new Date('2024-03-15T10:30:00'),
+          },
+        },
+      ]);
+      (prisma.rsvp.create as jest.Mock).mockResolvedValue({
+        id: 'rsvp-1',
+        sessionId: mockSession.id,
+        status: 'confirmed',
+        session: mockSession,
+      });
+
+      const result = await createRsvp('user-1', { sessionId: 'session-1', status: 'confirmed' });
+
+      expect(result.id).toBe('rsvp-1');
+      expect(prisma.rsvp.create).toHaveBeenCalled();
+    });
+
+    it('should ignore sessions that only touch at boundaries (back-to-back)', async () => {
+      (prisma.session.findUnique as jest.Mock).mockResolvedValue(mockSession);
+      (prisma.rsvp.count as jest.Mock).mockResolvedValue(10);
+      (prisma.rsvp.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.rsvp.findMany as jest.Mock).mockResolvedValue([
+        {
+          session: {
+            title: 'Previous Session',
+            startTime: new Date('2024-03-15T08:00:00'),
+            endTime: new Date('2024-03-15T09:00:00'),
+          },
+        },
+      ]);
+      (prisma.rsvp.create as jest.Mock).mockResolvedValue({
+        id: 'rsvp-1',
+        sessionId: mockSession.id,
+        status: 'confirmed',
+        session: mockSession,
+      });
+
+      const result = await createRsvp('user-1', { sessionId: 'session-1', status: 'confirmed' });
+
+      expect(result.id).toBe('rsvp-1');
+      expect(prisma.rsvp.create).toHaveBeenCalled();
     });
   });
 
@@ -295,12 +356,67 @@ describe('Session Service', () => {
       (prisma.rsvp.findUnique as jest.Mock).mockResolvedValue(mockRsvp);
       (prisma.rsvp.count as jest.Mock).mockResolvedValue(10);
       (prisma.rsvp.findMany as jest.Mock).mockResolvedValue([
-        { session: { title: 'Conflicting Session' } },
+        {
+          session: {
+            title: 'Conflicting Session',
+            startTime: new Date('2024-03-15T09:30:00'),
+            endTime: new Date('2024-03-15T10:30:00'),
+          },
+        },
       ]);
 
       await expect(updateRsvp('user-1', 'rsvp-1', { status: 'confirmed' })).rejects.toThrow(
         'Schedule conflict with: Conflicting Session'
       );
+    });
+
+    it('should allow status change when overlap is showcase/demo', async () => {
+      (prisma.rsvp.findUnique as jest.Mock).mockResolvedValue({
+        ...mockRsvp,
+        session: { ...mockRsvp.session, title: 'Demo: AI' },
+      });
+      (prisma.rsvp.count as jest.Mock).mockResolvedValue(10);
+      (prisma.rsvp.findMany as jest.Mock).mockResolvedValue([
+        {
+          session: {
+            title: 'Showcase Innovation',
+            startTime: new Date('2024-03-15T09:30:00'),
+            endTime: new Date('2024-03-15T10:30:00'),
+          },
+        },
+      ]);
+      (prisma.rsvp.update as jest.Mock).mockResolvedValue({
+        ...mockRsvp,
+        status: 'confirmed',
+      });
+
+      const result = await updateRsvp('user-1', 'rsvp-1', { status: 'confirmed' });
+
+      expect(result.status).toBe('confirmed');
+      expect(prisma.rsvp.update).toHaveBeenCalled();
+    });
+
+    it('should allow status change when overlapping sessions are back-to-back only', async () => {
+      (prisma.rsvp.findUnique as jest.Mock).mockResolvedValue(mockRsvp);
+      (prisma.rsvp.count as jest.Mock).mockResolvedValue(10);
+      (prisma.rsvp.findMany as jest.Mock).mockResolvedValue([
+        {
+          session: {
+            title: 'Previous Session',
+            startTime: new Date('2024-03-15T08:00:00'),
+            endTime: new Date('2024-03-15T09:00:00'),
+          },
+        },
+      ]);
+      (prisma.rsvp.update as jest.Mock).mockResolvedValue({
+        ...mockRsvp,
+        status: 'confirmed',
+      });
+
+      const result = await updateRsvp('user-1', 'rsvp-1', { status: 'confirmed' });
+
+      expect(result.status).toBe('confirmed');
+      expect(prisma.rsvp.update).toHaveBeenCalled();
     });
   });
 

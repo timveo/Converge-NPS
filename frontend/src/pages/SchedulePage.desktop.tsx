@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import {
   Calendar,
@@ -93,11 +93,26 @@ export default function ScheduleDesktopPage() {
   }>({ show: false, newSession: null, conflictingSession: null });
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const { isDismissed } = useDismissedRecommendations('schedule');
+  const pendingCreateRef = useRef<Record<string, { tempId: string; cancelRequested?: boolean }>>({});
 
   useEffect(() => {
     fetchData();
     fetchRecommendations();
   }, []);
+
+  useEffect(() => {
+    if (!selectedSession) return;
+    const updated = sessions.find((s) => s.id === selectedSession.id);
+    if (!updated) return;
+    if (
+      updated.registered_count !== selectedSession.registered_count ||
+      updated.capacity !== selectedSession.capacity ||
+      updated.start_time !== selectedSession.start_time ||
+      updated.end_time !== selectedSession.end_time
+    ) {
+      setSelectedSession(updated);
+    }
+  }, [sessions, selectedSession?.id, selectedSession?.registered_count, selectedSession?.capacity, selectedSession?.start_time, selectedSession?.end_time]);
 
   const fetchRecommendations = async () => {
     try {
@@ -176,6 +191,16 @@ export default function ScheduleDesktopPage() {
     [rsvps]
   );
 
+  const canSessionsOverlap = useCallback((a?: Session, b?: Session) => {
+    if (!a || !b) return false;
+    const aTitle = a.title?.toLowerCase() || '';
+    const bTitle = b.title?.toLowerCase() || '';
+    const hasShowcaseDemoPair =
+      (aTitle.includes('showcase') && bTitle.includes('demo')) ||
+      (aTitle.includes('demo') && bTitle.includes('showcase'));
+    return hasShowcaseDemoPair;
+  }, []);
+
   const checkConflict = useCallback(
     (session: Session): Session | null => {
       const sessionStart = new Date(session.start_time).getTime();
@@ -186,6 +211,10 @@ export default function ScheduleDesktopPage() {
         const rsvpSession = sessions.find((s) => s.id === rsvp.sessionId);
         if (!rsvpSession || rsvpSession.id === session.id) continue;
 
+        if (canSessionsOverlap(session, rsvpSession)) {
+          continue;
+        }
+
         const rsvpStart = new Date(rsvpSession.start_time).getTime();
         const rsvpEnd = new Date(rsvpSession.end_time).getTime();
 
@@ -195,7 +224,7 @@ export default function ScheduleDesktopPage() {
       }
       return null;
     },
-    [rsvps, sessions]
+    [rsvps, sessions, canSessionsOverlap]
   );
 
   const getConflictingSession = useCallback(
@@ -275,6 +304,15 @@ export default function ScheduleDesktopPage() {
         )
       );
 
+      const pendingCreate = existingRsvp.id.startsWith('temp-')
+        ? pendingCreateRef.current[sessionId]
+        : undefined;
+
+      if (pendingCreate) {
+        pendingCreate.cancelRequested = true;
+        return;
+      }
+
       try {
         await api.delete(`/sessions/rsvps/${existingRsvp.id}`);
       } catch (err) {
@@ -303,15 +341,31 @@ export default function ScheduleDesktopPage() {
     );
 
     try {
+      pendingCreateRef.current[sessionId] = { tempId };
+
       const response = await api.post(`/sessions/${sessionId}/rsvp`, {
         sessionId,
         status: 'confirmed',
       });
       const newRsvp = (response as any).data || response;
+      const pendingCreate = pendingCreateRef.current[sessionId];
+      delete pendingCreateRef.current[sessionId];
+
+      if (pendingCreate?.cancelRequested) {
+        try {
+          await api.delete(`/sessions/rsvps/${newRsvp.id}`);
+        } catch (autoErr) {
+          console.error('Failed to auto-cancel RSVP', autoErr);
+          fetchData();
+        }
+        return;
+      }
+
       setRsvps((prev) =>
         prev.map((r) => (r.id === tempId ? { id: newRsvp.id, sessionId, status: 'attending' } : r))
       );
     } catch (err) {
+      delete pendingCreateRef.current[sessionId];
       console.error('Failed to create RSVP', err);
       setRsvps(previousRsvps);
       setSessions(previousSessions);
