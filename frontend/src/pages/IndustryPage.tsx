@@ -46,6 +46,8 @@ interface IndustryPartner {
   primary_contact_title: string | null;
   primary_contact_email: string | null;
   primary_contact_phone: string | null;
+  primaryContactEmail?: string | null;
+  primaryContactPhone?: string | null;
   technology_focus_areas: string[];
   dod_sponsors: string | null;
   seeking: string[];
