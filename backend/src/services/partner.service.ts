@@ -12,7 +12,7 @@ import { z } from 'zod';
 export const partnerFiltersSchema = z.object({
   organizationType: z.string().optional(),
   technologyFocus: z.string().optional(),
-  seekingCollaboration: z.string().optional(),
+  seeking: z.string().optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
@@ -24,7 +24,7 @@ export type PartnerFilters = z.infer<typeof partnerFiltersSchema>;
  * List all industry partners with optional filters
  */
 export async function listPartners(filters: PartnerFilters) {
-  const { organizationType, technologyFocus, seekingCollaboration, search, page, limit } = filters;
+  const { organizationType, technologyFocus, seeking, search, page, limit } = filters;
 
   const skip = (page - 1) * limit;
 
@@ -40,9 +40,9 @@ export async function listPartners(filters: PartnerFilters) {
     };
   }
 
-  if (seekingCollaboration) {
-    where.seekingCollaboration = {
-      has: seekingCollaboration,
+  if (seeking) {
+    where.seeking = {
+      has: seeking,
     };
   }
 
@@ -67,8 +67,11 @@ export async function listPartners(filters: PartnerFilters) {
         description: true,
         logoUrl: true,
         websiteUrl: true,
-        partnershipType: true,
+        // Organization type field
+        organizationType: true,
         researchAreas: true,
+        seeking: true,
+        collaborationPitch: true,
         pocUserId: true,
         pocFirstName: true,
         pocLastName: true,
@@ -104,8 +107,10 @@ export async function getPartnerById(partnerId: string, userId?: string) {
       description: true,
       logoUrl: true,
       websiteUrl: true,
-      partnershipType: true,
+      organizationType: true,
       researchAreas: true,
+      seeking: true,
+      collaborationPitch: true,
       pocUserId: true,
       pocFirstName: true,
       pocLastName: true,
@@ -181,8 +186,9 @@ export async function favoritePartner(userId: string, partnerId: string, notes?:
           id: true,
           name: true,
           logoUrl: true,
-          partnershipType: true,
+          organizationType: true,
           researchAreas: true,
+          collaborationPitch: true,
         },
       },
     },
@@ -232,8 +238,10 @@ export async function getUserFavorites(userId: string) {
           description: true,
           logoUrl: true,
           websiteUrl: true,
-          partnershipType: true,
+          organizationType: true,
           researchAreas: true,
+          seeking: true,
+          collaborationPitch: true,
           isFeatured: true,
         },
       },

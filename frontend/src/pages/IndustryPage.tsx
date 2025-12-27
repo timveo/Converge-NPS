@@ -46,9 +46,12 @@ interface IndustryPartner {
   primary_contact_title: string | null;
   primary_contact_email: string | null;
   primary_contact_phone: string | null;
+  primaryContactEmail?: string | null;
+  primaryContactPhone?: string | null;
   technology_focus_areas: string[];
   dod_sponsors: string | null;
-  seeking_collaboration: string[];
+  seeking: string[];
+  collaboration_pitch: string | null;
   booth_location: string | null;
   team_members: any;
   hide_contact_info: boolean | null;
@@ -133,22 +136,38 @@ function IndustryMobilePage() {
 
   const handleContact = async (partner: IndustryPartner) => {
     const pocUserId = partner.pocUserId || partner.poc_user_id;
-    
-    if (!pocUserId) {
-      toast.error("POC is not registered in app");
+    const fallbackEmail =
+      partner.poc_email ||
+      partner.primary_contact_email ||
+      partner.primaryContactEmail ||
+      undefined;
+
+    if (pocUserId) {
+      try {
+        const response = await api.post('/messages/conversations', { participantId: pocUserId });
+        const conversation = (response as any).data?.data || (response as any).data;
+        if (conversation?.id) {
+          navigate(`/messages/${conversation.id}`);
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to start conversation:', error);
+        if (fallbackEmail) {
+          window.location.href = `mailto:${fallbackEmail}`;
+          toast.info('Messaging unavailable—opening email instead.');
+          return;
+        }
+        toast.error("Failed to start conversation");
+        return;
+      }
+    }
+
+    if (fallbackEmail) {
+      window.location.href = `mailto:${fallbackEmail}`;
       return;
     }
 
-    try {
-      const response = await api.post('/messages/conversations', { participantId: pocUserId });
-      const conversation = (response as any).data?.data || (response as any).data;
-      if (conversation?.id) {
-        navigate(`/messages/${conversation.id}`);
-      }
-    } catch (error) {
-      console.error('Failed to start conversation:', error);
-      toast.error("Failed to start conversation");
-    }
+    toast.error("POC is not registered in app");
   };
 
   // Extract unique DoD sponsors
@@ -216,7 +235,8 @@ function IndustryMobilePage() {
         primary_contact_phone: p.primaryContactPhone || p.primary_contact_phone,
         technology_focus_areas: p.technologyFocusAreas || p.technology_focus_areas || p.researchAreas || p.research_areas || [],
         dod_sponsors: p.dodSponsors || p.dod_sponsors,
-        seeking_collaboration: p.seekingCollaboration || p.seeking_collaboration || [],
+        seeking: p.seeking || [],
+        collaboration_pitch: p.collaborationPitch || p.collaboration_pitch || null,
         booth_location: p.boothLocation || p.booth_location,
         team_members: p.teamMembers || p.team_members,
         hide_contact_info: p.hideContactInfo || p.hide_contact_info,
@@ -267,7 +287,7 @@ function IndustryMobilePage() {
     }
 
     if (selectedSeeking.length > 0) {
-      filtered = filtered.filter(p => selectedSeeking.some(s => p.seeking_collaboration.includes(s)));
+      filtered = filtered.filter(p => selectedSeeking.some(s => p.seeking.includes(s)));
     }
 
     if (selectedDodSponsor) {
@@ -620,13 +640,6 @@ function IndustryMobilePage() {
                           <p className="text-sm text-muted-foreground mb-4">{partner.description}</p>
                         )}
 
-                        {partner.organization_type && (
-                          <div className="mb-4">
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Organization Type</p>
-                            <Badge variant="default" className="text-xs">{partner.organization_type}</Badge>
-                          </div>
-                        )}
-
                         {partner.technology_focus_areas.length > 0 && (
                           <div className="mb-4">
                             <p className="text-xs font-medium text-muted-foreground mb-2">Technology Focus</p>
@@ -638,13 +651,24 @@ function IndustryMobilePage() {
                           </div>
                         )}
 
-                        {partner.seeking_collaboration.length > 0 && (
+                        {partner.seeking.length > 0 && (
                           <div className="mb-4">
                             <p className="text-xs font-medium text-muted-foreground mb-2">Seeking</p>
                             <div className="flex flex-wrap gap-2">
-                              {partner.seeking_collaboration.map(i => (
-                                <Badge key={i} variant="outline" className="text-xs py-1">{i}</Badge>
+                              {partner.seeking.map(i => (
+                                <Badge key={i} variant="outline" className="text-xs py-1 px-2">{i}</Badge>
                               ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {partner.collaboration_pitch && (
+                          <div className="mb-4">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Collaboration Pitch</p>
+                            <div className="p-3 rounded-lg bg-muted/40 border border-dashed border-border/60">
+                              <p className="text-sm leading-relaxed text-foreground whitespace-pre-line">
+                                {partner.collaboration_pitch}
+                              </p>
                             </div>
                           </div>
                         )}
