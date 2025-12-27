@@ -48,7 +48,8 @@ interface IndustryPartner {
   primary_contact_phone: string | null;
   technology_focus_areas: string[];
   dod_sponsors: string | null;
-  seeking_collaboration: string[];
+  seeking: string[];
+  collaboration_pitch: string | null;
   booth_location: string | null;
   team_members: any;
   hide_contact_info: boolean | null;
@@ -216,7 +217,8 @@ function IndustryMobilePage() {
         primary_contact_phone: p.primaryContactPhone || p.primary_contact_phone,
         technology_focus_areas: p.technologyFocusAreas || p.technology_focus_areas || p.researchAreas || p.research_areas || [],
         dod_sponsors: p.dodSponsors || p.dod_sponsors,
-        seeking_collaboration: p.seekingCollaboration || p.seeking_collaboration || [],
+        seeking: p.seeking || [],
+        collaboration_pitch: p.collaborationPitch || p.collaboration_pitch || null,
         booth_location: p.boothLocation || p.booth_location,
         team_members: p.teamMembers || p.team_members,
         hide_contact_info: p.hideContactInfo || p.hide_contact_info,
@@ -267,7 +269,7 @@ function IndustryMobilePage() {
     }
 
     if (selectedSeeking.length > 0) {
-      filtered = filtered.filter(p => selectedSeeking.some(s => p.seeking_collaboration.includes(s)));
+      filtered = filtered.filter(p => selectedSeeking.some(s => p.seeking.includes(s)));
     }
 
     if (selectedDodSponsor) {
@@ -638,11 +640,11 @@ function IndustryMobilePage() {
                           </div>
                         )}
 
-                        {partner.seeking_collaboration.length > 0 && (
+                        {partner.seeking.length > 0 && (
                           <div className="mb-4">
                             <p className="text-xs font-medium text-muted-foreground mb-2">Seeking</p>
                             <div className="flex flex-wrap gap-2">
-                              {partner.seeking_collaboration.map(i => (
+                              {partner.seeking.map(i => (
                                 <Badge key={i} variant="outline" className="text-xs py-1">{i}</Badge>
                               ))}
                             </div>

@@ -1542,8 +1542,9 @@ export async function importPartners(): Promise<ImportResult> {
         const description = getCellValue(row, sheet.columns, 'Description');
         const organizationType = getCellValue(row, sheet.columns, 'Organization Type') || getCellValue(row, sheet.columns, 'Type');
         const website = getCellValue(row, sheet.columns, 'Website') || getCellValue(row, sheet.columns, 'Website URL');
-        const technologyFocus = parseArray(getCellValue(row, sheet.columns, 'Technology Focus') || getCellValue(row, sheet.columns, 'Focus Areas'));
-        const seekingCollaboration = parseArray(getCellValue(row, sheet.columns, 'Seeking Collaboration') || getCellValue(row, sheet.columns, 'Looking For'));
+        const technologyFocus = parseArray(getCellValue(row, sheet.columns, 'Technology Focus'));
+        const seeking = parseArray(getCellValue(row, sheet.columns, 'Seeking'));
+        const collaborationPitch = getCellValue(row, sheet.columns, 'Collaboration Pitch') || getCellValue(row, sheet.columns, 'Pitch') || getCellValue(row, sheet.columns, 'Collaboration');
         const boothLocation = getCellValue(row, sheet.columns, 'Booth Location') || getCellValue(row, sheet.columns, 'Booth');
         const contactName = getCellValue(row, sheet.columns, 'Contact Name') || getCellValue(row, sheet.columns, 'Primary Contact');
         const contactTitle = getCellValue(row, sheet.columns, 'Contact Title');
@@ -1588,9 +1589,11 @@ export async function importPartners(): Promise<ImportResult> {
         const partnerData = {
           name: companyName,
           description,
-          partnershipType: organizationType,
+          organizationType: organizationType,
           websiteUrl: website,
           researchAreas: technologyFocus,
+          seeking,
+          collaborationPitch,
           isFeatured: false,
           pocUserId,
           pocFirstName: pocFirstName || null,

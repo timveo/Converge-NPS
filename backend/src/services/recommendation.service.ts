@@ -118,12 +118,12 @@ export async function getPersonalizedRecommendations(
       seeking: p.seeking,
       keywords: p.keywords,
     })),
-    industryPartners: partners.map(ip => ({
+    industryPartners: partners.map((ip: any) => ({
       id: ip.id,
       name: ip.name,
       description: ip.description,
       researchAreas: ip.researchAreas,
-      partnershipType: ip.partnershipType,
+      organizationType: ip.organizationType,
     })),
   };
 

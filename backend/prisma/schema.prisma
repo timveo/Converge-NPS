@@ -357,8 +357,10 @@ model Partner {
   description     String?
   websiteUrl      String?           @map("website_url")
   logoUrl         String?           @map("logo_url")
-  partnershipType String?           @map("partnership_type")
+  organizationType String?           @map("organization_type")
   researchAreas   String[]          @map("research_areas")
+  seeking         String[]          @map("seeking")
+  collaborationPitch String?         @map("collaboration_pitch")
   pocUserId       String?           @map("poc_user_id") @db.Uuid
   pocFirstName    String?           @map("poc_first_name")
   pocLastName     String?           @map("poc_last_name")
@@ -371,9 +373,10 @@ model Partner {
   favorites       PartnerFavorite[]
 
   @@index([isFeatured])
-  @@index([partnershipType])
+  @@index([organizationType])
   @@index([pocUserId])
   @@index([researchAreas], type: Gin)
+  @@index([seeking], type: Gin)
   @@map("partners")
 }
 

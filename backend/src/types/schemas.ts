@@ -194,7 +194,7 @@ export const CreateIndustryPartnerSchema = z.object({
   primaryContactEmail: z.string().email().max(255).optional(),
   primaryContactPhone: z.string().max(20).optional(),
   technologyFocusAreas: z.array(z.string()),
-  seekingCollaboration: z.array(z.string()).optional(),
+  seeking: z.array(z.string()).optional(),
   dodSponsors: z.string().max(500).optional(),
   boothLocation: z.string().max(100).optional(),
   teamMembers: z.any().optional(), // JSONB
