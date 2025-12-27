@@ -61,11 +61,13 @@ interface IndustryPartner {
   poc_last_name?: string | null;
   poc_email?: string | null;
   poc_rank?: string | null;
+  poc_is_checked_in?: boolean | null;
   pocUserId?: string | null;
   pocFirstName?: string | null;
   pocLastName?: string | null;
   pocEmail?: string | null;
   pocRank?: string | null;
+  pocIsCheckedIn?: boolean | null;
 }
 
 function IndustrySkeleton() {
@@ -245,7 +247,8 @@ function IndustryMobilePage() {
         poc_first_name: p.pocFirstName || p.poc_first_name,
         poc_last_name: p.pocLastName || p.poc_last_name,
         poc_email: p.pocEmail || p.poc_email,
-        poc_rank: p.pocRank || p.poc_rank
+        poc_rank: p.pocRank || p.poc_rank,
+        poc_is_checked_in: p.pocIsCheckedIn ?? p.poc_is_checked_in ?? false
       }));
       setPartners(mappedPartners);
 
@@ -622,15 +625,27 @@ function IndustryMobilePage() {
                     </div>
 
                     {/* POC Info */}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-3">
-                      <Users className="h-4 w-4 shrink-0 text-accent" />
-                      <span className="truncate">
-                        {(partner.poc_rank || partner.pocRank) && <span className="font-medium">{partner.poc_rank || partner.pocRank}</span>}
-                        {(partner.poc_rank || partner.pocRank) && (partner.poc_first_name || partner.pocFirstName || partner.poc_last_name || partner.pocLastName) && ' '}
-                        {(partner.poc_first_name || partner.pocFirstName || partner.poc_last_name || partner.pocLastName)
-                          ? `${partner.poc_first_name || partner.pocFirstName || ''} ${partner.poc_last_name || partner.pocLastName || ''}`.trim()
-                          : 'Contact available'}
-                      </span>
+                    <div className="flex flex-col gap-1 text-sm text-muted-foreground mt-3">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 shrink-0 text-accent" />
+                        <span className="truncate">
+                          {(partner.poc_rank || partner.pocRank) && <span className="font-medium">{partner.poc_rank || partner.pocRank}</span>}
+                          {(partner.poc_rank || partner.pocRank) && (partner.poc_first_name || partner.pocFirstName || partner.poc_last_name || partner.pocLastName) && ' '}
+                          {(partner.poc_first_name || partner.pocFirstName || partner.poc_last_name || partner.pocLastName)
+                            ? `${partner.poc_first_name || partner.pocFirstName || ''} ${partner.poc_last_name || partner.pocLastName || ''}`.trim()
+                            : 'Contact available'}
+                        </span>
+                      </div>
+                      {(partner.poc_email || partner.pocEmail) && (
+                        <a
+                          href={`mailto:${partner.poc_email || partner.pocEmail}`}
+                          className="flex items-center gap-2 text-xs text-primary hover:underline ml-6"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Mail className="h-3 w-3" />
+                          {partner.poc_email || partner.pocEmail}
+                        </a>
+                      )}
                     </div>
 
                     {/* Expandable content */}
@@ -749,12 +764,26 @@ function IndustryMobilePage() {
                       </div>
                     </CollapsibleContent>
 
-                    {/* Always visible footer with Contact button and expand arrow */}
+                    {/* Always visible footer with Message button and expand arrow */}
                     <div className="flex items-center gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
-                      <Button className="flex-1 h-11 md:h-10 text-sm gap-2" onClick={() => handleContact(partner)}>
-                        <MessageSquare className="h-4 w-4" />
-                        Contact
-                      </Button>
+                      <div className="flex-1 flex flex-col items-center">
+                        <Button
+                          className={cn(
+                            "w-full h-11 md:h-10 text-sm gap-2",
+                            (partner.poc_is_checked_in || partner.pocIsCheckedIn)
+                              ? "bg-primary hover:bg-primary/90"
+                              : "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                          )}
+                          onClick={() => handleContact(partner)}
+                          disabled={!(partner.poc_is_checked_in || partner.pocIsCheckedIn)}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          Message
+                        </Button>
+                        {!(partner.poc_is_checked_in || partner.pocIsCheckedIn) && (
+                          <span className="text-[10px] text-muted-foreground mt-1">POC is not at the Event</span>
+                        )}
+                      </div>
                       {partner.website_url && (
                         <Button variant="outline" size="icon" className="h-11 w-11 md:h-10 md:w-10" asChild>
                           <a href={partner.website_url} target="_blank" rel="noopener noreferrer">

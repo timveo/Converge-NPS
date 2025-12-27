@@ -79,13 +79,25 @@ export async function listPartners(filters: PartnerFilters) {
         pocRank: true,
         isFeatured: true,
         createdAt: true,
+        poc: {
+          select: {
+            isCheckedIn: true,
+          },
+        },
       },
     }),
     prisma.partner.count({ where }),
   ]);
 
+  // Flatten the poc.isCheckedIn into pocIsCheckedIn
+  const partnersWithCheckedIn = partners.map((partner) => ({
+    ...partner,
+    pocIsCheckedIn: partner.poc?.isCheckedIn ?? false,
+    poc: undefined, // Remove the nested poc object
+  }));
+
   return {
-    partners,
+    partners: partnersWithCheckedIn,
     pagination: {
       page,
       limit,
@@ -119,6 +131,11 @@ export async function getPartnerById(partnerId: string, userId?: string) {
       isFeatured: true,
       createdAt: true,
       updatedAt: true,
+      poc: {
+        select: {
+          isCheckedIn: true,
+        },
+      },
     },
   });
 
@@ -144,6 +161,8 @@ export async function getPartnerById(partnerId: string, userId?: string) {
 
   return {
     ...partner,
+    pocIsCheckedIn: partner.poc?.isCheckedIn ?? false,
+    poc: undefined,
     isFavorited,
   };
 }

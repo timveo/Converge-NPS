@@ -72,6 +72,16 @@ interface RecommendedConnection {
   sameOrganization: boolean;
 }
 
+interface Participant {
+  id: string;
+  fullName: string;
+  organization?: string;
+  department?: string;
+  role?: string;
+  avatarUrl?: string;
+  accelerationInterests?: string[];
+}
+
 const COLLABORATION_TYPES = [
   { value: 'collaborative_research', label: 'Collaborative Research' },
   { value: 'brainstorming', label: 'Brainstorming' },
@@ -125,6 +135,8 @@ function ConnectionsMobilePage() {
   const [recommendations, setRecommendations] = useState<RecommendedConnection[]>([]);
   const [connectingUser, setConnectingUser] = useState<string | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
   const { dismiss: dismissRecommendation, isDismissed: isRecommendationDismissed } = useDismissedRecommendations('connections');
 
   const navigate = useNavigate();
@@ -138,6 +150,63 @@ function ConnectionsMobilePage() {
       fetchRecommendations();
     }
   }, [connections]);
+
+  // Fetch participants when tab is "participants"
+  useEffect(() => {
+    if (activeTab === 'participants') {
+      fetchParticipants();
+    }
+  }, [activeTab]);
+
+  const fetchParticipants = async (): Promise<Participant[]> => {
+    setParticipantsLoading(true);
+    try {
+      const response = await api.get('/users/participants');
+      const data = (response as any).data || [];
+      const mapped: Participant[] = data.map((p: any) => ({
+        id: p.id,
+        fullName: p.fullName || p.full_name || 'Unknown',
+        organization: p.organization,
+        department: p.department,
+        role: p.role,
+        avatarUrl: p.avatarUrl,
+        accelerationInterests: p.accelerationInterests || p.acceleration_interests || [],
+      }));
+      setParticipants(mapped);
+      return mapped;
+    } catch (error) {
+      console.error('Error fetching participants:', error);
+      return [];
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
+
+  const handleConnectParticipant = async (participantId: string) => {
+    setConnectingUser(participantId);
+    try {
+      if (!navigator.onLine) {
+        if (user?.id) {
+          await offlineQueue.add(user.id, 'create_connection', { connectedUserId: participantId });
+          toast.success('Connection queued offline. Will sync when back online.');
+        } else {
+          toast.error('You must be logged in to add connections');
+        }
+        return;
+      }
+      await api.post('/connections', { connectedUserId: participantId });
+      toast.success('Connection added successfully');
+      // Remove from participants list and refresh connections
+      setParticipants(prev => prev.filter(p => p.id !== participantId));
+      setActiveTab('all');
+      fetchConnections();
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to add connection';
+      toast.error(message);
+    } finally {
+      setConnectingUser(null);
+    }
+  };
 
   const fetchRecommendations = async () => {
     try {
@@ -233,11 +302,12 @@ function ConnectionsMobilePage() {
   };
 
   const filteredConnections = useMemo(() => {
-    let result = [...connections];
-
-    if (activeTab === 'reminders') {
-      result = result.filter(c => c.follow_up_reminder && !c.reminder_sent);
+    // When on participants tab, return empty to hide connections
+    if (activeTab === 'participants') {
+      return [];
     }
+
+    let result = [...connections];
 
     if (searchQuery.trim()) {
       const searchLower = searchQuery.toLowerCase();
@@ -695,17 +765,118 @@ function ConnectionsMobilePage() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2 h-8 md:h-10">
-            <TabsTrigger value="all" className="text-xs md:text-sm">All ({connections.length})</TabsTrigger>
-            <TabsTrigger value="reminders" className="text-xs md:text-sm">
-              <Bell className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" />
-              Reminders ({upcomingReminders.length})
+            <TabsTrigger value="all" className="text-xs md:text-sm">
+              My Connections
+              <Badge variant="secondary" className="ml-1.5 text-[10px] md:text-xs px-1.5 py-0">
+                {connections.length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="participants" className="text-xs md:text-sm">
+              <Users className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
+              Participants
+              <Badge variant="secondary" className="ml-1.5 text-[10px] md:text-xs px-1.5 py-0">
+                {participants.length}
+              </Badge>
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {/* Connections List */}
+        {/* Content List */}
         <div className="space-y-2.5 md:space-y-4">
-        {loading ? (
+        {/* Participants Tab Content */}
+        {activeTab === 'participants' && (
+          participantsLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="p-4 md:p-5">
+                  <div className="flex items-start gap-3 md:gap-4">
+                    <Skeleton className="w-12 h-12 md:w-14 md:h-14 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <Skeleton className="h-10 w-24 rounded-md" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : participants.length === 0 ? (
+            <Card className="p-6 md:p-12 text-center">
+              <div className="w-14 h-14 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 bg-secondary/50 rounded-full flex items-center justify-center">
+                <Users className="h-7 w-7 md:h-10 md:w-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-sm md:text-lg font-semibold text-foreground mb-1.5 md:mb-2">
+                No Participants Yet
+              </h3>
+              <p className="text-xs md:text-sm text-muted-foreground mb-4 md:mb-6">
+                Participants will appear here as they check in to the event
+              </p>
+            </Card>
+          ) : (
+            participants.map((participant) => (
+              <Card key={participant.id} className="p-4 md:p-5 shadow-md border-border/50 hover:shadow-lg transition-all duration-300">
+                <div className="flex items-start gap-3 md:gap-4">
+                  {/* Avatar */}
+                  <Avatar className="w-12 h-12 md:w-14 md:h-14">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm md:text-base">
+                      {participant.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  {/* Main Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h3 className="font-semibold text-foreground text-base md:text-lg">
+                        {participant.fullName}
+                      </h3>
+                      {participant.role && (
+                        <Badge variant="outline" className="text-[10px] md:text-xs px-1.5 py-0">
+                          {participant.role}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm md:text-sm text-muted-foreground">
+                      {participant.organization || 'Organization not specified'}
+                    </p>
+                    {participant.accelerationInterests && participant.accelerationInterests.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {participant.accelerationInterests.slice(0, 2).map((interest) => (
+                          <Badge key={interest} variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {interest}
+                          </Badge>
+                        ))}
+                        {participant.accelerationInterests.length > 2 && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            +{participant.accelerationInterests.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Connect Button */}
+                  <Button
+                    className="gap-2 h-10 px-4"
+                    onClick={() => handleConnectParticipant(participant.id)}
+                    disabled={connectingUser === participant.id}
+                  >
+                    {connectingUser === participant.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <UserPlus className="h-4 w-4" />
+                        <span className="hidden sm:inline">Connect</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </Card>
+            ))
+          )
+        )}
+
+        {/* Connections Tab Content */}
+        {activeTab === 'all' && (loading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <Card key={i} className="p-4 md:p-5">
@@ -729,16 +900,12 @@ function ConnectionsMobilePage() {
             <h3 className="text-sm md:text-lg font-semibold text-foreground mb-1.5 md:mb-2">
               {searchQuery || activeFilterCount > 0
                 ? 'No Matching Connections'
-                : activeTab === 'all'
-                  ? 'No Connections Yet'
-                  : 'No Upcoming Reminders'}
+                : 'No Connections Yet'}
             </h3>
             <p className="text-xs md:text-sm text-muted-foreground mb-4 md:mb-6">
               {searchQuery || activeFilterCount > 0
                 ? 'Try adjusting your search or filters'
-                : activeTab === 'all'
-                  ? 'Start networking by scanning QR codes at the event'
-                  : 'Set reminders when saving connections to follow up later'
+                : 'Start networking by scanning QR codes at the event'
               }
             </p>
             {!searchQuery && activeFilterCount === 0 && (
@@ -969,7 +1136,7 @@ function ConnectionsMobilePage() {
               </Card>
             );
           })
-        )}
+        ))}
         </div>
       </main>
     </div>

@@ -97,6 +97,7 @@ interface IndustryPartner {
   poc_last_name?: string | null;
   poc_email?: string | null;
   poc_rank?: string | null;
+  poc_is_checked_in?: boolean | null;
 }
 
 export default function IndustryDesktopPage() {
@@ -242,6 +243,7 @@ export default function IndustryDesktopPage() {
         poc_last_name: p.pocLastName || p.poc_last_name,
         poc_email: p.pocEmail || p.poc_email,
         poc_rank: p.pocRank || p.poc_rank,
+        poc_is_checked_in: p.pocIsCheckedIn ?? p.poc_is_checked_in ?? false,
       }));
 
       setPartners(mappedPartners);
@@ -761,19 +763,25 @@ export default function IndustryDesktopPage() {
               )}
             />
           </Button>
-          <Button
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => handleContact(selectedPartner, true)}
-            disabled={
-              !selectedPartner.poc_user_id &&
-              !selectedPartner.poc_email &&
-              (selectedPartner.hide_contact_info || !selectedPartner.primary_contact_email)
-            }
-          >
-            <MessageSquare className="h-3 w-3 mr-1" />
-            Contact
-          </Button>
+          <div className="flex flex-col items-end">
+            <Button
+              size="sm"
+              className={cn(
+                "h-8 text-xs",
+                selectedPartner.poc_is_checked_in
+                  ? "bg-primary hover:bg-primary/90"
+                  : "bg-gray-400 hover:bg-gray-400"
+              )}
+              onClick={() => handleContact(selectedPartner, true)}
+              disabled={!selectedPartner.poc_is_checked_in}
+            >
+              <MessageSquare className="h-3 w-3 mr-1" />
+              Message
+            </Button>
+            {!selectedPartner.poc_is_checked_in && (
+              <span className="text-[9px] text-muted-foreground mt-0.5">POC is not at the Event</span>
+            )}
+          </div>
         </div>
       </div>
 

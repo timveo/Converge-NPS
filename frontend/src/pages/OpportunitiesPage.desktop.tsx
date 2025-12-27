@@ -19,6 +19,7 @@ import {
   MapPin,
   Tag,
   DollarSign,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -68,6 +69,18 @@ interface Project {
   interested?: number;
   pi_id?: string;
   created_at: string;
+  poc_user_id?: string;
+  poc_first_name?: string;
+  poc_last_name?: string;
+  poc_email?: string;
+  poc_rank?: string;
+  poc_is_checked_in?: boolean;
+  pocUserId?: string;
+  pocFirstName?: string;
+  pocLastName?: string;
+  pocEmail?: string;
+  pocRank?: string;
+  pocIsCheckedIn?: boolean;
   profiles?: {
     id: string;
     full_name: string;
@@ -91,6 +104,18 @@ interface Opportunity {
   requirements?: string;
   benefits?: string;
   sponsor_contact_id?: string;
+  poc_user_id?: string;
+  poc_first_name?: string;
+  poc_last_name?: string;
+  poc_email?: string;
+  poc_rank?: string;
+  poc_is_checked_in?: boolean;
+  pocUserId?: string;
+  pocFirstName?: string;
+  pocLastName?: string;
+  pocEmail?: string;
+  pocRank?: string;
+  pocIsCheckedIn?: boolean;
   created_at: string;
 }
 
@@ -616,20 +641,32 @@ export default function OpportunitiesDesktopPage() {
             <p className="text-sm text-muted-foreground">View opportunity info</p>
           </div>
         </div>
-        <Button
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() =>
-            handleContact(
-              isNPSItem(selectedItem)
-                ? (selectedItem as Project).pi_id
-                : (selectedItem as Opportunity).sponsor_contact_id
-            )
-          }
-        >
-          <MessageSquare className="h-3 w-3 mr-1" />
-          Contact
-        </Button>
+        <div className="flex flex-col items-end">
+          <Button
+            size="sm"
+            className={cn(
+              "h-8 text-xs",
+              (selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn)
+                ? "bg-primary hover:bg-primary/90"
+                : "bg-gray-400 hover:bg-gray-400"
+            )}
+            onClick={() =>
+              handleContact(
+                selectedItem.pocUserId || selectedItem.poc_user_id ||
+                (isNPSItem(selectedItem)
+                  ? (selectedItem as Project).pi_id
+                  : (selectedItem as Opportunity).sponsor_contact_id)
+              )
+            }
+            disabled={!(selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn)}
+          >
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Message
+          </Button>
+          {!(selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn) && (
+            <span className="text-[9px] text-muted-foreground mt-0.5">POC is not at the Event</span>
+          )}
+        </div>
       </div>
 
       {/* Title and Source Badge */}
@@ -687,6 +724,39 @@ export default function OpportunitiesDesktopPage() {
           {isNPSItem(selectedItem) ? (
             // NPS Project Details
             <>
+              {/* POC Info */}
+              {(selectedItem.poc_first_name || selectedItem.pocFirstName ||
+                selectedItem.poc_last_name || selectedItem.pocLastName ||
+                selectedItem.poc_email || selectedItem.pocEmail) && (
+                <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                  <Label className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    Point of Contact
+                  </Label>
+                  <p className="font-medium text-sm">
+                    {(selectedItem.poc_rank || selectedItem.pocRank) && (
+                      <span className="text-muted-foreground mr-1">
+                        {selectedItem.poc_rank || selectedItem.pocRank}
+                      </span>
+                    )}
+                    {(selectedItem.poc_first_name || selectedItem.pocFirstName ||
+                      selectedItem.poc_last_name || selectedItem.pocLastName) &&
+                      `${selectedItem.poc_first_name || selectedItem.pocFirstName || ''} ${
+                        selectedItem.poc_last_name || selectedItem.pocLastName || ''
+                      }`.trim()}
+                  </p>
+                  {(selectedItem.poc_email || selectedItem.pocEmail) && (
+                    <a
+                      href={`mailto:${selectedItem.poc_email || selectedItem.pocEmail}`}
+                      className="flex items-center gap-2 text-xs text-primary hover:underline mt-2"
+                    >
+                      <Mail className="h-3 w-3" />
+                      {selectedItem.poc_email || selectedItem.pocEmail}
+                    </a>
+                  )}
+                </div>
+              )}
+
               {/* PI Info */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-sm">
@@ -798,6 +868,39 @@ export default function OpportunitiesDesktopPage() {
           ) : (
             // Military/Gov Opportunity Details
             <>
+              {/* POC Info */}
+              {(selectedItem.poc_first_name || selectedItem.pocFirstName ||
+                selectedItem.poc_last_name || selectedItem.pocLastName ||
+                selectedItem.poc_email || selectedItem.pocEmail) && (
+                <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                  <Label className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    Point of Contact
+                  </Label>
+                  <p className="font-medium text-sm">
+                    {(selectedItem.poc_rank || selectedItem.pocRank) && (
+                      <span className="text-muted-foreground mr-1">
+                        {selectedItem.poc_rank || selectedItem.pocRank}
+                      </span>
+                    )}
+                    {(selectedItem.poc_first_name || selectedItem.pocFirstName ||
+                      selectedItem.poc_last_name || selectedItem.pocLastName) &&
+                      `${selectedItem.poc_first_name || selectedItem.pocFirstName || ''} ${
+                        selectedItem.poc_last_name || selectedItem.pocLastName || ''
+                      }`.trim()}
+                  </p>
+                  {(selectedItem.poc_email || selectedItem.pocEmail) && (
+                    <a
+                      href={`mailto:${selectedItem.poc_email || selectedItem.pocEmail}`}
+                      className="flex items-center gap-2 text-xs text-primary hover:underline mt-2"
+                    >
+                      <Mail className="h-3 w-3" />
+                      {selectedItem.poc_email || selectedItem.pocEmail}
+                    </a>
+                  )}
+                </div>
+              )}
+
               {/* Organization Info */}
               <div className="space-y-3">
                 {(selectedItem as Opportunity).sponsor_organization && (
