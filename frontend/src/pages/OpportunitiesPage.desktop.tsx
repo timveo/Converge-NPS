@@ -108,7 +108,7 @@ export default function OpportunitiesDesktopPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<CombinedItem | null>(null);
 
-  // Source type filter
+  // Organization type filter
   const [activeTab, setActiveTab] = useState<'all' | 'nps' | 'military' | 'industry'>('all');
 
   // NPS filters

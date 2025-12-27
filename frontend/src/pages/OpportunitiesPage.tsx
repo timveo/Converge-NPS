@@ -92,7 +92,10 @@ interface Opportunity {
   created_at: string;
 }
 
-type CombinedItem = (Project & { sourceType: 'NPS' }) | (Opportunity & { sourceType: 'Military/Gov' });
+type CombinedItem =
+  | (Project & { sourceType: 'NPS' })
+  | (Opportunity & { sourceType: 'Military/Gov' })
+  | (Opportunity & { sourceType: 'Industry' });
 
 function OpportunitiesSkeleton() {
   return (
@@ -295,11 +298,16 @@ function OpportunitiesMobilePage() {
   // Combined and filtered items
   const filteredItems = useMemo(() => {
     const npsItems: CombinedItem[] = filteredProjects.map(p => ({ ...p, sourceType: 'NPS' as const }));
-    const milItems: CombinedItem[] = filteredOpportunities.map(o => ({ ...o, sourceType: 'Military/Gov' as const }));
+    const industryItems: CombinedItem[] = filteredOpportunities
+      .filter(o => o.type?.toLowerCase() === 'industry')
+      .map(o => ({ ...o, sourceType: 'Industry' as const }));
+    const milItems: CombinedItem[] = filteredOpportunities
+      .filter(o => o.type?.toLowerCase() !== 'industry')
+      .map(o => ({ ...o, sourceType: 'Military/Gov' as const }));
 
-    let combined = [...npsItems, ...milItems];
+    let combined = [...npsItems, ...milItems, ...industryItems];
 
-    // Filter by source type
+    // Filter by organization type
     if (selectedSourceTypes.length > 0) {
       combined = combined.filter(item => selectedSourceTypes.includes(item.sourceType));
     }
@@ -315,9 +323,9 @@ function OpportunitiesMobilePage() {
   const renderFilterPanel = () => {
     return (
       <div className="space-y-4">
-        {/* Source Type Filter */}
+        {/* Organization Type Filter */}
         <div>
-          <Label className="text-xs font-semibold">Source Type</Label>
+          <Label className="text-xs font-semibold">Organization Type</Label>
           <div className="flex gap-3 mt-2">
             {SOURCE_TYPES.map(type => (
               <div key={type} className="flex items-center space-x-2">
