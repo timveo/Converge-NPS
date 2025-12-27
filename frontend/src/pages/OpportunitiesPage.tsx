@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare, Loader2, Mail } from "lucide-react";
+import { Plus, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare, Loader2, Mail, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDevice } from "@/hooks/useDeviceType";
 import { PageHeader } from "@/components/PageHeader";
@@ -145,6 +145,11 @@ function OpportunitiesMobilePage() {
   const [sortBy, setSortBy] = useState("recent");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
+  // Favorites state
+  const [projectFavorites, setProjectFavorites] = useState<Set<string>>(new Set());
+  const [opportunityFavorites, setOpportunityFavorites] = useState<Set<string>>(new Set());
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
   const toggleCardExpanded = (id: string) => {
     setExpandedCards(prev => {
       const next = new Set(prev);
@@ -156,6 +161,52 @@ function OpportunitiesMobilePage() {
       return next;
     });
   };
+
+  const toggleFavorite = async (id: string, isProject: boolean) => {
+    const favorites = isProject ? projectFavorites : opportunityFavorites;
+    const setFavorites = isProject ? setProjectFavorites : setOpportunityFavorites;
+    const endpoint = isProject ? `/projects/${id}/bookmark` : `/opportunities/${id}/bookmark`;
+
+    const isFavorited = favorites.has(id);
+
+    // Optimistic update
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (isFavorited) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+
+    try {
+      if (isFavorited) {
+        await api.delete(endpoint);
+      } else {
+        await api.post(endpoint);
+      }
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      // Revert on error
+      setFavorites(prev => {
+        const next = new Set(prev);
+        if (isFavorited) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      });
+      toast.error('Failed to update favorite');
+    }
+  };
+
+  const isFavorite = (id: string, isProject: boolean) => {
+    return isProject ? projectFavorites.has(id) : opportunityFavorites.has(id);
+  };
+
+  const totalFavoritesCount = projectFavorites.size + opportunityFavorites.size;
 
   const handleContact = async (e: React.MouseEvent, pocUserId?: string | null) => {
     e.stopPropagation();
@@ -178,7 +229,25 @@ function OpportunitiesMobilePage() {
 
   useEffect(() => {
     loadData();
+    loadFavorites();
   }, []);
+
+  const loadFavorites = async () => {
+    try {
+      const [projectBookmarksRes, oppBookmarksRes] = await Promise.all([
+        api.get('/projects/bookmarks'),
+        api.get('/opportunities/bookmarks')
+      ]);
+
+      const projectBookmarks = (projectBookmarksRes as any).data?.data || (projectBookmarksRes as any).data || [];
+      const oppBookmarks = (oppBookmarksRes as any).data?.data || (oppBookmarksRes as any).data || [];
+
+      setProjectFavorites(new Set(projectBookmarks.map((b: any) => b.projectId || b.project_id)));
+      setOpportunityFavorites(new Set(oppBookmarks.map((b: any) => b.opportunityId || b.opportunity_id)));
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -295,6 +364,7 @@ function OpportunitiesMobilePage() {
     setSelectedStages([]);
     setSelectedFunding([]);
     setSelectedSeeking([]);
+    setShowFavoritesOnly(false);
   };
 
   // Combined and filtered items
@@ -309,13 +379,24 @@ function OpportunitiesMobilePage() {
       combined = combined.filter(item => selectedSourceTypes.includes(item.sourceType));
     }
 
+    // Filter by favorites
+    if (showFavoritesOnly) {
+      combined = combined.filter(item => {
+        if (item.sourceType === 'NPS') {
+          return projectFavorites.has(item.id);
+        } else {
+          return opportunityFavorites.has(item.id);
+        }
+      });
+    }
+
     // Sort
     if (sortBy === "recent") {
       combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
 
     return combined;
-  }, [filteredProjects, filteredOpportunities, selectedSourceTypes, sortBy]);
+  }, [filteredProjects, filteredOpportunities, selectedSourceTypes, sortBy, showFavoritesOnly, projectFavorites, opportunityFavorites]);
 
   const renderFilterPanel = () => {
     return (
@@ -417,10 +498,19 @@ function OpportunitiesMobilePage() {
     selectedFunding.forEach(s => filters.push({ label: s, onRemove: () => setSelectedFunding(prev => prev.filter(x => x !== s)) }));
     selectedSeeking.forEach(s => filters.push({ label: s, onRemove: () => setSelectedSeeking(prev => prev.filter(x => x !== s)) }));
 
-    if (filters.length === 0) return null;
+    if (filters.length === 0 && !showFavoritesOnly) return null;
 
     return (
       <div className="flex flex-wrap gap-1.5 items-center">
+        {showFavoritesOnly && (
+          <Badge variant="default" className="gap-1 text-xs py-1 px-2">
+            <Star className="w-3 h-3 fill-current" />
+            Favorites
+            <button onClick={() => setShowFavoritesOnly(false)}>
+              <X className="w-3 h-3 ml-1" />
+            </button>
+          </Badge>
+        )}
         {filters.map((filter, idx) => (
           <Badge key={idx} variant="secondary" className="gap-1 text-xs py-1 px-2">
             {filter.label}
@@ -503,6 +593,19 @@ function OpportunitiesMobilePage() {
                   )}
                 </Button>
 
+                <Button
+                  variant={showFavoritesOnly ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                  className="gap-2 text-sm h-11 md:h-10"
+                >
+                  <Star className={cn("w-4 h-4", showFavoritesOnly && "fill-current")} />
+                  <span className="hidden sm:inline">Favorites</span>
+                  {totalFavoritesCount > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-xs">{totalFavoritesCount}</Badge>
+                  )}
+                </Button>
+
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-[130px] md:w-[150px] h-11 md:h-10 text-sm">
                     <SelectValue placeholder="Sort by..." />
@@ -572,12 +675,25 @@ function OpportunitiesMobilePage() {
               </div>
             ) : filteredItems.length === 0 ? (
               <Card className="p-12 text-center">
-                <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Opportunities Found</h3>
-                <p className="text-muted-foreground mb-6">Try adjusting your filters or search</p>
-                <Button onClick={clearFilters} variant="outline">
-                  Clear Filters
-                </Button>
+                {showFavoritesOnly ? (
+                  <>
+                    <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Favorites Yet</h3>
+                    <p className="text-muted-foreground mb-6">Mark opportunities as favorites to easily find them later</p>
+                    <Button onClick={() => setShowFavoritesOnly(false)} variant="outline">
+                      Browse All Opportunities
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Opportunities Found</h3>
+                    <p className="text-muted-foreground mb-6">Try adjusting your filters or search</p>
+                    <Button onClick={clearFilters} variant="outline">
+                      Clear Filters
+                    </Button>
+                  </>
+                )}
               </Card>
             ) : (
               filteredItems.map((item) => (
@@ -589,12 +705,23 @@ function OpportunitiesMobilePage() {
                     onOpenChange={() => toggleCardExpanded(item.id)}
                   >
                     <Card className="p-4 md:p-6 hover:shadow-lg transition-shadow">
-                      {/* NPS Badge */}
-                      <div className="mb-3">
+                      {/* NPS Badge and Star */}
+                      <div className="flex items-center justify-between mb-3">
                         <Badge className="bg-blue-600 text-white text-xs">
                           <GraduationCap className="h-3 w-3 mr-1" />
                           NPS
                         </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 h-9 w-9"
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, true); }}
+                        >
+                          <Star className={cn(
+                            "w-5 h-5 transition-colors",
+                            isFavorite(item.id, true) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
+                          )} />
+                        </Button>
                       </div>
 
                       <div className="flex items-start justify-between mb-3">
@@ -765,12 +892,23 @@ function OpportunitiesMobilePage() {
                     onOpenChange={() => toggleCardExpanded(item.id)}
                   >
                     <Card className="p-4 md:p-6 hover:shadow-lg transition-shadow">
-                      {/* Military Badge */}
-                      <div className="mb-3">
+                      {/* Military Badge and Star */}
+                      <div className="flex items-center justify-between mb-3">
                         <Badge className="bg-green-700 text-white text-xs">
                           <Building2 className="h-3 w-3 mr-1" />
                           Military/Gov
                         </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 h-9 w-9"
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, false); }}
+                        >
+                          <Star className={cn(
+                            "w-5 h-5 transition-colors",
+                            isFavorite(item.id, false) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
+                          )} />
+                        </Button>
                       </div>
 
                       <div className="flex items-start justify-between mb-3">
