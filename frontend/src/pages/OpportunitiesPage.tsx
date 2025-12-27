@@ -24,8 +24,9 @@ import { toast } from "sonner";
 // Source types
 const SOURCE_TYPES = ["NPS", "Military/Gov", "Industry"];
 
-// NPS Projects filters
-const PROJECT_STAGES = ["Concept", "Prototype", "Pilot Ready", "Deployed"];
+// NPS Projects filters - match backend enum values
+const PROJECT_STAGES = ["concept", "prototype", "pilot_ready", "deployed"];
+const PROJECT_STAGE_LABELS = ["Concept", "Prototype", "Pilot Ready", "Deployed"];
 const FUNDING_STATUSES = ["Funded", "Seeking Funding", "Partially Funded"];
 const SEEKING_TYPES = ["Industry Partnership", "Government Sponsor", "Research Collaboration", "Funding", "Test & Evaluation"];
 
@@ -326,12 +327,23 @@ function OpportunitiesMobilePage() {
     }
 
     if (selectedStages.length > 0) {
-      filtered = filtered.filter(p => selectedStages.includes(p.stage));
+      console.log('Debug - Mobile Stage Filter:', {
+        selectedStages,
+        projectStages: projects.map(p => ({ id: p.id, title: p.title, stage: p.stage })),
+        beforeFilter: filtered.length
+      });
+      filtered = filtered.filter(p => {
+        const matches = selectedStages.includes(p.stage);
+        console.log(`Mobile Project "${p.title}" stage "${p.stage}" matches:`, matches);
+        return matches;
+      });
+      console.log('After mobile stage filter:', filtered.length);
     }
 
-    if (selectedFunding.length > 0) {
-      filtered = filtered.filter(p => selectedFunding.includes(p.funding_status || ''));
-    }
+    // Note: funding_status field doesn't exist in database - removing this filter
+    // if (selectedFunding.length > 0) {
+    //   filtered = filtered.filter(p => selectedFunding.includes(p.funding_status || ''));
+    // }
 
     if (selectedSeeking.length > 0) {
       filtered = filtered.filter(p =>
@@ -361,8 +373,34 @@ function OpportunitiesMobilePage() {
       );
     }
 
+    // Apply stage filter to opportunities if they have a stage field
+    if (selectedStages.length > 0) {
+      console.log('Debug - Mobile Opportunity Stage Filter:', {
+        selectedStages,
+        opportunityStages: opportunities.map(o => ({ id: o.id, title: o.title, stage: (o as any).stage })),
+        beforeFilter: filtered.length
+      });
+      filtered = filtered.filter(o => {
+        const stage = (o as any).stage;
+        if (!stage) return true; // Keep opportunities without stage
+        const matches = selectedStages.includes(stage);
+        console.log(`Mobile Opportunity "${o.title}" stage "${stage}" matches:`, matches);
+        return matches;
+      });
+      console.log('After mobile opportunity stage filter:', filtered.length);
+    }
+
     return filtered;
-  }, [opportunities, searchQuery]);
+  }, [opportunities, searchQuery, selectedStages]);
+
+  const toggleArrayFilter = (
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    value: string
+  ) => {
+    setter((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+  };
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -478,24 +516,20 @@ function OpportunitiesMobilePage() {
           <div>
             <Label className="text-xs font-semibold">Project Stage</Label>
             <div className="space-y-1.5 mt-2">
-              {PROJECT_STAGES.map(stage => (
+              {PROJECT_STAGES.map((stage, index) => (
                 <div key={stage} className="flex items-center space-x-2">
                   <Checkbox
                     id={`stage-${stage}`}
                     checked={selectedStages.includes(stage)}
-                    onCheckedChange={(checked) => {
-                      setSelectedStages(prev =>
-                        checked ? [...prev, stage] : prev.filter(s => s !== stage)
-                      );
-                    }}
-                    className="h-4 w-4"
+                    onCheckedChange={() => toggleArrayFilter(setSelectedStages, stage)}
                   />
-                  <Label htmlFor={`stage-${stage}`} className="text-xs cursor-pointer font-normal">{stage}</Label>
+                  <Label htmlFor={`stage-${stage}`} className="text-xs">{PROJECT_STAGE_LABELS[index]}</Label>
                 </div>
               ))}
             </div>
           </div>
-          <div>
+          {/* Funding Status Filters - Hidden since field doesn't exist in database */}
+          {/* <div>
             <Label className="text-xs font-semibold">Funding Status</Label>
             <div className="space-y-1.5 mt-2">
               {FUNDING_STATUSES.map(status => (
@@ -514,7 +548,7 @@ function OpportunitiesMobilePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
           <div>
             <Label className="text-xs font-semibold">Seeking</Label>
             <div className="space-y-1.5 mt-2">

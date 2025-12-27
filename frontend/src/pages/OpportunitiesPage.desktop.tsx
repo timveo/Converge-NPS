@@ -44,8 +44,9 @@ import { ThreePanelLayout } from '@/components/desktop/layouts/ThreePanelLayout'
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-// NPS Projects filters
-const PROJECT_STAGES = ['Concept', 'Prototype', 'Pilot Ready', 'Deployed'];
+// NPS Projects filters - match backend enum values
+const PROJECT_STAGES = ['concept', 'prototype', 'pilot_ready', 'deployed'];
+const PROJECT_STAGE_LABELS = ['Concept', 'Prototype', 'Pilot Ready', 'Deployed'];
 const FUNDING_STATUSES = ['Funded', 'Seeking Funding', 'Partially Funded'];
 const SEEKING_TYPES = [
   'Industry Partnership',
@@ -282,12 +283,23 @@ export default function OpportunitiesDesktopPage() {
     }
 
     if (selectedStages.length > 0) {
-      filtered = filtered.filter((p) => selectedStages.includes(p.stage));
+      console.log('Debug - Stage Filter:', {
+        selectedStages,
+        projectStages: projects.map(p => ({ id: p.id, title: p.title, stage: p.stage })),
+        beforeFilter: filtered.length
+      });
+      filtered = filtered.filter((p) => {
+        const matches = selectedStages.includes(p.stage);
+        console.log(`Project "${p.title}" stage "${p.stage}" matches:`, matches);
+        return matches;
+      });
+      console.log('After stage filter:', filtered.length);
     }
 
-    if (selectedFunding.length > 0) {
-      filtered = filtered.filter((p) => selectedFunding.includes(p.funding_status || ''));
-    }
+    // Note: funding_status field doesn't exist in database - removing this filter
+    // if (selectedFunding.length > 0) {
+    //   filtered = filtered.filter((p) => selectedFunding.includes(p.funding_status || ''));
+    // }
 
     if (selectedSeeking.length > 0) {
       filtered = filtered.filter((p) =>
@@ -318,8 +330,25 @@ export default function OpportunitiesDesktopPage() {
       );
     }
 
+    // Apply stage filter to opportunities if they have a stage field
+    if (selectedStages.length > 0) {
+      console.log('Debug - Opportunity Stage Filter:', {
+        selectedStages,
+        opportunityStages: opportunities.map(o => ({ id: o.id, title: o.title, stage: (o as any).stage })),
+        beforeFilter: filtered.length
+      });
+      filtered = filtered.filter((o) => {
+        const stage = (o as any).stage;
+        if (!stage) return true; // Keep opportunities without stage
+        const matches = selectedStages.includes(stage);
+        console.log(`Opportunity "${o.title}" stage "${stage}" matches:`, matches);
+        return matches;
+      });
+      console.log('After opportunity stage filter:', filtered.length);
+    }
+
     return filtered;
-  }, [opportunities, searchQuery]);
+  }, [opportunities, searchQuery, selectedStages]);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -333,6 +362,15 @@ export default function OpportunitiesDesktopPage() {
   const { combinedItems, counts } = useMemo(() => {
     const industryProjects = filteredProjects.filter(isIndustryProject);
     const npsProjects = filteredProjects.filter(p => !isIndustryProject(p));
+    
+    console.log('Debug - Combined Items Logic:', {
+      totalProjects: projects.length,
+      filteredProjects: filteredProjects.length,
+      industryProjects: industryProjects.length,
+      npsProjects: npsProjects.length,
+      activeTab,
+      selectedStages
+    });
 
     const mapProjectToOpportunity = (project: Project): Opportunity & { stage?: string } => ({
       id: project.id,
@@ -516,7 +554,7 @@ export default function OpportunitiesDesktopPage() {
           <div>
             <Label className="text-sm font-medium mb-3 block">Project Stage</Label>
             <div className="space-y-2">
-              {PROJECT_STAGES.map((stage) => (
+              {PROJECT_STAGES.map((stage, index) => (
                 <div key={stage} className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -526,7 +564,7 @@ export default function OpportunitiesDesktopPage() {
                     className="h-4 w-4 rounded border-gray-300"
                   />
                   <Label htmlFor={`stage-${stage}`} className="cursor-pointer text-sm">
-                    {stage}
+                    {PROJECT_STAGE_LABELS[index]}
                   </Label>
                 </div>
               ))}
@@ -535,8 +573,8 @@ export default function OpportunitiesDesktopPage() {
 
           <Separator />
 
-          {/* Funding Status Filters */}
-          <div>
+          {/* Funding Status Filters - Hidden since field doesn't exist in database */}
+          {/* <div>
             <Label className="text-sm font-medium mb-3 block">Funding Status</Label>
             <div className="space-y-2">
               {FUNDING_STATUSES.map((status) => (
@@ -554,7 +592,7 @@ export default function OpportunitiesDesktopPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
           <Separator />
 
