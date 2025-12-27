@@ -6,7 +6,40 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    react()
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon-32x32.png', 'apple-touch-icon.png', 'nps-logo.png', 'NPSF-native-app-icon.png'],
+      manifest: {
+        name: 'NPSF Converge',
+        short_name: 'NPSF',
+        description: 'NPS Tech Accelerator 2026 Networking Platform',
+        theme_color: '#0F172A',
+        background_color: '#0F172A',
+        display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
+        start_url: '/',
+        icons: [
+          {
+            src: '/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: '/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: '/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          }
+        ]
+      }
+    })
   ],
   resolve: {
     alias: {
