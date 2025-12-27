@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare, Loader2 } from "lucide-react";
+import { Plus, ChevronDown, GraduationCap, Building2, Users, Sparkles, TrendingUp, Search, SlidersHorizontal, X, MessageSquare, Loader2, Mail } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useDevice } from "@/hooks/useDeviceType";
 import { PageHeader } from "@/components/PageHeader";
 
@@ -50,11 +51,13 @@ interface Project {
   poc_last_name?: string;
   poc_email?: string;
   poc_rank?: string;
+  poc_is_checked_in?: boolean;
   pocUserId?: string;
   pocFirstName?: string;
   pocLastName?: string;
   pocEmail?: string;
   pocRank?: string;
+  pocIsCheckedIn?: boolean;
   profiles?: {
     id: string;
     full_name: string;
@@ -84,11 +87,13 @@ interface Opportunity {
   poc_last_name?: string;
   poc_email?: string;
   poc_rank?: string;
+  poc_is_checked_in?: boolean;
   pocUserId?: string;
   pocFirstName?: string;
   pocLastName?: string;
   pocEmail?: string;
   pocRank?: string;
+  pocIsCheckedIn?: boolean;
   created_at: string;
 }
 
@@ -616,25 +621,37 @@ function OpportunitiesMobilePage() {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Users className="h-4 w-4 shrink-0" />
-                          <span className="truncate">
-                            {(item.poc_rank || item.pocRank) && <span className="font-medium">{item.poc_rank || item.pocRank}</span>}
-                            {(item.poc_rank || item.pocRank) && (item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName) && ' '}
-                            {(item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName)
-                              ? `${item.poc_first_name || item.pocFirstName || ''} ${item.poc_last_name || item.pocLastName || ''}`.trim()
-                              : item.profiles?.full_name || 'Unknown'}
-                          </span>
-                          {item.department && (
-                            <span className="text-xs hidden md:inline">• {item.department}</span>
+                      <div className="flex flex-col gap-1 text-sm text-muted-foreground mb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Users className="h-4 w-4 shrink-0" />
+                            <span className="truncate">
+                              {(item.poc_rank || item.pocRank) && <span className="font-medium">{item.poc_rank || item.pocRank}</span>}
+                              {(item.poc_rank || item.pocRank) && (item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName) && ' '}
+                              {(item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName)
+                                ? `${item.poc_first_name || item.pocFirstName || ''} ${item.poc_last_name || item.pocLastName || ''}`.trim()
+                                : item.profiles?.full_name || 'Unknown'}
+                            </span>
+                            {item.department && (
+                              <span className="text-xs hidden md:inline">• {item.department}</span>
+                            )}
+                          </div>
+                          {(item.interested || 0) > 0 && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <TrendingUp className="h-4 w-4" />
+                              <span>{item.interested}</span>
+                            </div>
                           )}
                         </div>
-                        {(item.interested || 0) > 0 && (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <TrendingUp className="h-4 w-4" />
-                            <span>{item.interested}</span>
-                          </div>
+                        {(item.poc_email || item.pocEmail) && (
+                          <a
+                            href={`mailto:${item.poc_email || item.pocEmail}`}
+                            className="flex items-center gap-2 text-xs text-primary hover:underline ml-6"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Mail className="h-3 w-3" />
+                            {item.poc_email || item.pocEmail}
+                          </a>
                         )}
                       </div>
 
@@ -704,15 +721,26 @@ function OpportunitiesMobilePage() {
                         )}
                       </CollapsibleContent>
 
-                      {/* Footer with Contact button and expand arrow */}
+                      {/* Footer with Message button and expand arrow */}
                       <div className="flex items-center gap-2 mt-3">
-                        <Button
-                          className="flex-1 h-11 md:h-10 text-sm gap-2"
-                          onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.pi_id)}
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          Contact
-                        </Button>
+                        <div className="flex-1 flex flex-col items-center">
+                          <Button
+                            className={cn(
+                              "w-full h-11 md:h-10 text-sm gap-2",
+                              (item.poc_is_checked_in || item.pocIsCheckedIn)
+                                ? "bg-primary hover:bg-primary/90"
+                                : "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                            )}
+                            onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.pi_id)}
+                            disabled={!(item.poc_is_checked_in || item.pocIsCheckedIn)}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            Message
+                          </Button>
+                          {!(item.poc_is_checked_in || item.pocIsCheckedIn) && (
+                            <span className="text-[10px] text-muted-foreground mt-1">POC is not at the Event</span>
+                          )}
+                        </div>
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10">
                             <ChevronDown className={`h-4 w-4 transition-transform ${expandedCards.has(item.id) ? 'rotate-180' : ''}`} />
@@ -773,15 +801,27 @@ function OpportunitiesMobilePage() {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                        <Users className="h-4 w-4 shrink-0" />
-                        <span className="truncate">
-                          {(item.poc_rank || item.pocRank) && <span className="font-medium">{item.poc_rank || item.pocRank}</span>}
-                          {(item.poc_rank || item.pocRank) && (item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName) && ' '}
-                          {(item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName)
-                            ? `${item.poc_first_name || item.pocFirstName || ''} ${item.poc_last_name || item.pocLastName || ''}`.trim()
-                            : 'Unknown'}
-                        </span>
+                      <div className="flex flex-col gap-1 text-sm text-muted-foreground mb-3">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 shrink-0" />
+                          <span className="truncate">
+                            {(item.poc_rank || item.pocRank) && <span className="font-medium">{item.poc_rank || item.pocRank}</span>}
+                            {(item.poc_rank || item.pocRank) && (item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName) && ' '}
+                            {(item.poc_first_name || item.pocFirstName || item.poc_last_name || item.pocLastName)
+                              ? `${item.poc_first_name || item.pocFirstName || ''} ${item.poc_last_name || item.pocLastName || ''}`.trim()
+                              : 'Unknown'}
+                          </span>
+                        </div>
+                        {(item.poc_email || item.pocEmail) && (
+                          <a
+                            href={`mailto:${item.poc_email || item.pocEmail}`}
+                            className="flex items-center gap-2 text-xs text-primary hover:underline ml-6"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Mail className="h-3 w-3" />
+                            {item.poc_email || item.pocEmail}
+                          </a>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
@@ -817,15 +857,26 @@ function OpportunitiesMobilePage() {
                         )}
                       </CollapsibleContent>
 
-                      {/* Footer with Contact button and expand arrow */}
+                      {/* Footer with Message button and expand arrow */}
                       <div className="flex items-center gap-2 mt-3">
-                        <Button
-                          className="flex-1 h-11 md:h-10 text-sm gap-2"
-                          onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.sponsor_contact_id)}
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          Contact
-                        </Button>
+                        <div className="flex-1 flex flex-col items-center">
+                          <Button
+                            className={cn(
+                              "w-full h-11 md:h-10 text-sm gap-2",
+                              (item.poc_is_checked_in || item.pocIsCheckedIn)
+                                ? "bg-primary hover:bg-primary/90"
+                                : "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                            )}
+                            onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.sponsor_contact_id)}
+                            disabled={!(item.poc_is_checked_in || item.pocIsCheckedIn)}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            Message
+                          </Button>
+                          {!(item.poc_is_checked_in || item.pocIsCheckedIn) && (
+                            <span className="text-[10px] text-muted-foreground mt-1">POC is not at the Event</span>
+                          )}
+                        </div>
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10">
                             <ChevronDown className={`h-4 w-4 transition-transform ${expandedCards.has(item.id) ? 'rotate-180' : ''}`} />
