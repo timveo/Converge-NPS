@@ -24,9 +24,14 @@ import { toast } from "sonner";
 // Source types
 const SOURCE_TYPES = ["NPS", "Military/Gov", "Industry"];
 
-// NPS Projects filters
-const PROJECT_STAGES = ["Concept", "Prototype", "Pilot Ready", "Deployed"];
-const FUNDING_STATUSES = ["Funded", "Seeking Funding", "Partially Funded"];
+// NPS Projects filters - match backend enum values
+const PROJECT_STAGES = ["concept", "prototype", "pilot_ready", "deployed"];
+const PROJECT_STAGE_LABELS: Record<string, string> = {
+  concept: "Concept",
+  prototype: "Prototype",
+  pilot_ready: "Pilot Ready",
+  deployed: "Deployed",
+};
 const SEEKING_TYPES = ["Industry Partnership", "Government Sponsor", "Research Collaboration", "Funding", "Test & Evaluation"];
 
 interface Project {
@@ -81,6 +86,7 @@ interface Opportunity {
   requirements?: string;
   benefits?: string;
   sponsor_contact_id?: string;
+  stage?: string; // Optional stage field for filtering
   // POC fields - support both camelCase (API) and snake_case
   poc_user_id?: string;
   poc_first_name?: string;
@@ -97,7 +103,10 @@ interface Opportunity {
   created_at: string;
 }
 
-type CombinedItem = (Project & { sourceType: 'NPS' }) | (Opportunity & { sourceType: 'Military/Gov' });
+type CombinedItem =
+  | (Project & { sourceType: 'NPS' })
+  | (Opportunity & { sourceType: 'Military/Gov' })
+  | (Opportunity & { sourceType: 'Industry' });
 
 function OpportunitiesSkeleton() {
   return (
@@ -305,6 +314,9 @@ function OpportunitiesMobilePage() {
   }, [selectedSourceTypes, selectedStages, selectedFunding, selectedSeeking]);
 
   // Filter NPS projects
+  const isIndustryProject = (project: Project) =>
+    (project.classification || '').toLowerCase() === 'industry';
+
   const filteredProjects = useMemo(() => {
     let filtered = [...projects];
 
@@ -323,9 +335,10 @@ function OpportunitiesMobilePage() {
       filtered = filtered.filter(p => selectedStages.includes(p.stage));
     }
 
-    if (selectedFunding.length > 0) {
-      filtered = filtered.filter(p => selectedFunding.includes(p.funding_status || ''));
-    }
+    // Note: funding_status field doesn't exist in database - removing this filter
+    // if (selectedFunding.length > 0) {
+    //   filtered = filtered.filter(p => selectedFunding.includes(p.funding_status || ''));
+    // }
 
     if (selectedSeeking.length > 0) {
       filtered = filtered.filter(p =>
@@ -355,8 +368,26 @@ function OpportunitiesMobilePage() {
       );
     }
 
+    // Apply stage filter to opportunities if they have a stage field
+    if (selectedStages.length > 0) {
+      filtered = filtered.filter(o => {
+        const stage = o.stage;
+        if (!stage) return true; // Keep opportunities without stage
+        return selectedStages.includes(stage);
+      });
+    }
+
     return filtered;
-  }, [opportunities, searchQuery]);
+  }, [opportunities, searchQuery, selectedStages]);
+
+  const toggleArrayFilter = (
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    value: string
+  ) => {
+    setter((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+  };
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -369,12 +400,54 @@ function OpportunitiesMobilePage() {
 
   // Combined and filtered items
   const filteredItems = useMemo(() => {
-    const npsItems: CombinedItem[] = filteredProjects.map(p => ({ ...p, sourceType: 'NPS' as const }));
-    const milItems: CombinedItem[] = filteredOpportunities.map(o => ({ ...o, sourceType: 'Military/Gov' as const }));
+    const industryProjects = filteredProjects.filter(isIndustryProject);
+    const npsProjects = filteredProjects.filter(p => !isIndustryProject(p));
 
-    let combined = [...npsItems, ...milItems];
+    const mapProjectToOpportunity = (project: Project): Opportunity & { stage?: string } => ({
+      id: project.id,
+      title: project.title,
+      description: project.description,
+      type: 'Industry',
+      sponsor_organization: project.department || 'Industry Partner',
+      location: project.department || undefined,
+      duration: project.demo_schedule || undefined,
+      deadline: undefined,
+      featured: false,
+      dod_alignment: project.research_areas || [],
+      requirements: project.seeking?.join(', ') || undefined,
+      benefits: project.keywords?.join(', ') || undefined,
+      sponsor_contact_id: project.poc_user_id || project.pocUserId || undefined,
+      stage: project.stage, // Preserve stage for Industry projects
+      poc_user_id: project.poc_user_id || project.pocUserId,
+      poc_first_name: project.poc_first_name || project.pocFirstName,
+      poc_last_name: project.poc_last_name || project.pocLastName,
+      poc_email: project.poc_email || project.pocEmail,
+      poc_rank: project.poc_rank || project.pocRank,
+      pocUserId: project.pocUserId,
+      pocFirstName: project.pocFirstName,
+      pocLastName: project.pocLastName,
+      pocEmail: project.pocEmail,
+      pocRank: project.pocRank,
+      created_at: project.created_at,
+    });
 
-    // Filter by source type
+    const industryProjectOpportunities: Opportunity[] = industryProjects.map(mapProjectToOpportunity);
+
+    const npsItems: CombinedItem[] = npsProjects.map(p => ({ ...p, sourceType: 'NPS' as const }));
+
+    const industryOpportunities = [
+      ...filteredOpportunities.filter(o => o.type?.toLowerCase() === 'industry'),
+      ...industryProjectOpportunities,
+    ];
+
+    const industryItems: CombinedItem[] = industryOpportunities.map(o => ({ ...o, sourceType: 'Industry' as const }));
+    const milItems: CombinedItem[] = filteredOpportunities
+      .filter(o => o.type?.toLowerCase() !== 'industry')
+      .map(o => ({ ...o, sourceType: 'Military/Gov' as const }));
+
+    let combined = [...npsItems, ...milItems, ...industryItems];
+
+    // Filter by organization type
     if (selectedSourceTypes.length > 0) {
       combined = combined.filter(item => selectedSourceTypes.includes(item.sourceType));
     }
@@ -401,25 +474,27 @@ function OpportunitiesMobilePage() {
   const renderFilterPanel = () => {
     return (
       <div className="space-y-4">
-        {/* Source Type Filter */}
+        {/* Organization Type Filter */}
         <div>
-          <Label className="text-xs font-semibold">Source Type</Label>
-          <div className="flex gap-3 mt-2">
-            {SOURCE_TYPES.map(type => (
-              <div key={type} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`source-${type}`}
-                  checked={selectedSourceTypes.includes(type)}
-                  onCheckedChange={(checked) => {
-                    setSelectedSourceTypes(prev =>
-                      checked ? [...prev, type] : prev.filter(s => s !== type)
-                    );
-                  }}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor={`source-${type}`} className="text-xs cursor-pointer font-normal">{type}</Label>
-              </div>
-            ))}
+          <div>
+            <Label className="text-xs font-semibold">Organization Type</Label>
+            <div className="flex gap-3 mt-2">
+              {SOURCE_TYPES.map(type => (
+                <div key={type} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`source-${type}`}
+                    checked={selectedSourceTypes.includes(type)}
+                    onCheckedChange={(checked) => {
+                      setSelectedSourceTypes(prev =>
+                        checked ? [...prev, type] : prev.filter(s => s !== type)
+                      );
+                    }}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor={`source-${type}`} className="text-xs cursor-pointer font-normal">{type}</Label>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -428,24 +503,20 @@ function OpportunitiesMobilePage() {
           <div>
             <Label className="text-xs font-semibold">Project Stage</Label>
             <div className="space-y-1.5 mt-2">
-              {PROJECT_STAGES.map(stage => (
+              {PROJECT_STAGES.map((stage) => (
                 <div key={stage} className="flex items-center space-x-2">
                   <Checkbox
                     id={`stage-${stage}`}
                     checked={selectedStages.includes(stage)}
-                    onCheckedChange={(checked) => {
-                      setSelectedStages(prev =>
-                        checked ? [...prev, stage] : prev.filter(s => s !== stage)
-                      );
-                    }}
-                    className="h-4 w-4"
+                    onCheckedChange={() => toggleArrayFilter(setSelectedStages, stage)}
                   />
-                  <Label htmlFor={`stage-${stage}`} className="text-xs cursor-pointer font-normal">{stage}</Label>
+                  <Label htmlFor={`stage-${stage}`} className="text-xs">{PROJECT_STAGE_LABELS[stage]}</Label>
                 </div>
               ))}
             </div>
           </div>
-          <div>
+          {/* Funding Status Filters - Hidden since field doesn't exist in database */}
+          {/* <div>
             <Label className="text-xs font-semibold">Funding Status</Label>
             <div className="space-y-1.5 mt-2">
               {FUNDING_STATUSES.map(status => (
@@ -464,7 +535,7 @@ function OpportunitiesMobilePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
           <div>
             <Label className="text-xs font-semibold">Seeking</Label>
             <div className="space-y-1.5 mt-2">
@@ -885,19 +956,26 @@ function OpportunitiesMobilePage() {
                     </Card>
                   </Collapsible>
                 ) : (
-                  // Military/Gov Card
+                  // Military/Gov or Industry Card
                   <Collapsible
-                    key={`mil-${item.id}`}
+                    key={`opp-${item.id}`}
                     open={expandedCards.has(item.id)}
                     onOpenChange={() => toggleCardExpanded(item.id)}
                   >
                     <Card className="p-4 md:p-6 hover:shadow-lg transition-shadow">
-                      {/* Military Badge and Star */}
+                      {/* Badge and Star */}
                       <div className="flex items-center justify-between mb-3">
-                        <Badge className="bg-green-700 text-white text-xs">
-                          <Building2 className="h-3 w-3 mr-1" />
-                          Military/Gov
-                        </Badge>
+                        {item.sourceType === 'Industry' ? (
+                          <Badge className="bg-orange-600 text-white text-xs">
+                            <Users className="h-3 w-3 mr-1" />
+                            Industry
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-green-700 text-white text-xs">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            Military/Gov
+                          </Badge>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -927,7 +1005,7 @@ function OpportunitiesMobilePage() {
                           )}
                         </div>
                         <Badge variant="secondary" className="ml-3 shrink-0 capitalize text-xs">
-                          {item.type}
+                          {item.sourceType === 'Industry' && (item as any).stage ? (item as any).stage : item.type}
                         </Badge>
                       </div>
 
@@ -988,7 +1066,7 @@ function OpportunitiesMobilePage() {
                           <p className="text-sm text-muted-foreground">{item.description}</p>
                         )}
 
-                        {item.requirements && (
+                        {item.requirements && item.sourceType !== 'Industry' && (
                           <div className="text-sm">
                             <span className="font-medium text-xs text-muted-foreground">Requirements:</span>
                             <p className="text-sm mt-1">{item.requirements}</p>

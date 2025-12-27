@@ -1,6 +1,7 @@
 import prisma from '../config/database';
 import axios, { AxiosInstance } from 'axios';
 import { randomUUID } from 'crypto';
+import type { ProjectStage } from '@prisma/client';
 
 // Smartsheet API configuration
 const SMARTSHEET_API_BASE = 'https://api.smartsheet.com/2.0';
@@ -935,9 +936,18 @@ export async function clearFailedSyncs(): Promise<number> {
 // =============================================================================
 
 // Helper function to get cell value by column name
+function normalizeColumnTitle(value: string | null | undefined): string {
+  if (!value) return '';
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function getCellValue(row: SmartsheetRow, columns: any[], columnName: string): any {
-  const normalizedName = columnName.toLowerCase().trim();
-  const column = columns.find(col => col.title?.toLowerCase().trim() === normalizedName);
+  const normalizedName = normalizeColumnTitle(columnName);
+  const column = columns.find(col => normalizeColumnTitle(col.title) === normalizedName);
   if (!column) return null;
 
   const cell = row.cells.find(c => c.columnId === column.id);
@@ -1106,6 +1116,127 @@ function isValidEmail(email: string): boolean {
   if (!email) return false;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
+}
+
+const PROJECT_STAGE_MAP: Record<string, ProjectStage> = {
+  'concept': 'concept',
+  'idea': 'concept',
+  'prototype': 'prototype',
+  'alpha': 'prototype',
+  'pilot': 'pilot_ready',
+  'pilot ready': 'pilot_ready',
+  'pilot-ready': 'pilot_ready',
+  'pilot_ready': 'pilot_ready',
+  'deployed': 'deployed',
+  'production': 'deployed',
+};
+
+function mapProjectStage(value: any): ProjectStage {
+  if (!value || (typeof value === 'string' && value.trim().length === 0)) {
+    return 'concept';
+  }
+
+  const normalized = String(value).toLowerCase().trim();
+  return PROJECT_STAGE_MAP[normalized] ?? 'concept';
+}
+
+interface IndustryProjectContext {
+  row: SmartsheetRow;
+  columns: SmartsheetSheet['columns'];
+  partner: {
+    id: string;
+    name: string;
+    researchAreas?: string[] | null;
+    seeking?: string[] | null;
+    organizationType?: string | null;
+  };
+  boothLocation?: string | null;
+  pocUserId: string | null;
+  pocFirstName: string | null;
+  pocLastName: string | null;
+  pocEmail: string | null;
+  pocRank: string | null;
+}
+
+async function upsertIndustryProjects(context: IndustryProjectContext) {
+  const projectSlots = [1, 2, 3];
+  console.info('[Smartsheet] Processing partner projects', {
+    partner: context.partner.name,
+    row: context.row.rowNumber,
+  });
+
+  for (const slot of projectSlots) {
+    const title =
+      getCellValue(context.row, context.columns, `Collaborative Project ${slot} - Title`) ||
+      getCellValue(context.row, context.columns, `Project ${slot} - Title`) ||
+      getCellValue(context.row, context.columns, `Project ${slot} Title`);
+    const description =
+      getCellValue(context.row, context.columns, `Collaborative Project ${slot} - Description`) ||
+      getCellValue(context.row, context.columns, `Project ${slot} - Description`) ||
+      getCellValue(context.row, context.columns, `Project ${slot} -Description`) ||
+      getCellValue(context.row, context.columns, `Project ${slot} Description`);
+
+    if (!title || !description) {
+      continue;
+    }
+
+    const stageRaw =
+      getCellValue(context.row, context.columns, `Project ${slot} - Stage`) ||
+      getCellValue(context.row, context.columns, `Collaborative Project ${slot} - Stage`) ||
+      getCellValue(context.row, context.columns, `Project ${slot} Stage`);
+    const fundingStatus =
+      getCellValue(context.row, context.columns, `Project ${slot} Funding Status`) ||
+      getCellValue(context.row, context.columns, `Project ${slot} - Funding Status`) ||
+      getCellValue(context.row, context.columns, `Project ${slot} Funding`);
+
+    const keywords: string[] = [];
+    if (fundingStatus) {
+      keywords.push(String(fundingStatus));
+    }
+
+    // Determine classification based on organization type
+    const classification = (context.partner.organizationType?.toLowerCase() === 'industry') ? 'Industry' : 'Military/Gov';
+
+    const projectData = {
+      title,
+      description,
+      piId: null as string | null,
+      piRole: null as string | null,
+      department: context.partner.name,
+      stage: mapProjectStage(stageRaw),
+      classification,
+      researchAreas: context.partner.researchAreas || [],
+      keywords,
+      students: [] as string[],
+      seeking: context.partner.seeking || [],
+      demoSchedule: context.boothLocation || null,
+      pocUserId: context.pocUserId,
+      pocFirstName: context.pocFirstName,
+      pocLastName: context.pocLastName,
+      pocEmail: context.pocEmail,
+      pocRank: context.pocRank,
+    };
+
+    const existing = await prisma.project.findFirst({
+      where: {
+        title,
+        classification,
+        department: context.partner.name,
+      },
+    });
+
+    if (existing) {
+      await prisma.project.update({
+        where: { id: existing.id },
+        data: projectData,
+      });
+    } else {
+      await prisma.project.create({
+        data: projectData,
+      });
+    }
+  }
+
 }
 
 // =============================================================================
@@ -1295,18 +1426,7 @@ export async function importProjects(): Promise<ImportResult> {
           }
         }
 
-        // Map research stage to ProjectStage enum
-        let stage: any = 'concept';
-        if (researchStage) {
-          const stageMap: Record<string, string> = {
-            'concept': 'concept',
-            'prototype': 'prototype',
-            'pilot ready': 'pilot_ready',
-            'pilot_ready': 'pilot_ready',
-            'deployed': 'deployed',
-          };
-          stage = stageMap[researchStage.toLowerCase()] || 'concept';
-        }
+        const stage = mapProjectStage(researchStage);
 
         // Check if project already exists
         const existing = await prisma.project.findFirst({
@@ -1602,18 +1722,34 @@ export async function importPartners(): Promise<ImportResult> {
           pocRank: pocRank || null,
         };
 
+        let savedPartner;
         if (partner) {
-          await prisma.partner.update({
+          savedPartner = await prisma.partner.update({
             where: { id: partner.id },
             data: partnerData,
           });
           result.updated++;
         } else {
-          await prisma.partner.create({
+          savedPartner = await prisma.partner.create({
             data: partnerData,
           });
           result.imported++;
         }
+
+        await upsertIndustryProjects({
+          row,
+          columns: sheet.columns,
+          partner: {
+            ...savedPartner,
+            organizationType: savedPartner.organizationType,
+          },
+          boothLocation,
+          pocUserId,
+          pocFirstName: pocFirstName || null,
+          pocLastName: pocLastName || null,
+          pocEmail: pocEmail || contactEmail || null,
+          pocRank: pocRank || null,
+        });
       } catch (error: any) {
         result.errors.push({
           row: row.rowNumber,

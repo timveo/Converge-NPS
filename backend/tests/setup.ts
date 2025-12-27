@@ -14,6 +14,10 @@ process.env.API_URL = 'http://localhost:3000';
 process.env.JWT_EXPIRES_IN = '1h';
 process.env.JWT_REFRESH_EXPIRES_IN = '30d';
 process.env.BCRYPT_ROUNDS = '4'; // Use lower rounds for faster tests
+process.env.SMARTSHEET_PARTNERS_SHEET_ID = 'test-partners-sheet-id';
+process.env.SMARTSHEET_OPPORTUNITIES_SHEET_ID = 'test-opportunities-sheet-id';
+process.env.SMARTSHEET_SESSIONS_SHEET_ID = 'test-sessions-sheet-id';
+process.env.SMARTSHEET_ACCESS_TOKEN = 'test-access-token';
 
 // Mock the database module (src/config/database.ts) which uses prisma.$on
 // This must be mocked before any service imports
@@ -84,6 +88,7 @@ jest.mock('../src/config/database', () => {
     project: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -254,6 +259,7 @@ jest.mock('@prisma/client', () => {
     project: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),

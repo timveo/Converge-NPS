@@ -44,9 +44,14 @@ import { ThreePanelLayout } from '@/components/desktop/layouts/ThreePanelLayout'
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-// NPS Projects filters
-const PROJECT_STAGES = ['Concept', 'Prototype', 'Pilot Ready', 'Deployed'];
-const FUNDING_STATUSES = ['Funded', 'Seeking Funding', 'Partially Funded'];
+// NPS Projects filters - match backend enum values
+const PROJECT_STAGES = ['concept', 'prototype', 'pilot_ready', 'deployed'];
+const PROJECT_STAGE_LABELS: Record<string, string> = {
+  concept: 'Concept',
+  prototype: 'Prototype',
+  pilot_ready: 'Pilot Ready',
+  deployed: 'Deployed',
+};
 const SEEKING_TYPES = [
   'Industry Partnership',
   'Government Sponsor',
@@ -100,12 +105,14 @@ interface Opportunity {
   sponsor_organization?: string;
   location?: string;
   duration?: string;
-  deadline?: string;
-  featured?: boolean;
+  deadline?: Date;
+  featured: boolean;
   dod_alignment?: string[];
   requirements?: string;
   benefits?: string;
   sponsor_contact_id?: string;
+  created_at: string;
+  stage?: string;
   poc_user_id?: string;
   poc_first_name?: string;
   poc_last_name?: string;
@@ -118,7 +125,6 @@ interface Opportunity {
   pocEmail?: string;
   pocRank?: string;
   pocIsCheckedIn?: boolean;
-  created_at: string;
 }
 
 type CombinedItem =
@@ -135,7 +141,7 @@ export default function OpportunitiesDesktopPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<CombinedItem | null>(null);
 
-  // Source type filter
+  // Organization type filter
   const [activeTab, setActiveTab] = useState<'all' | 'nps' | 'military' | 'industry'>('all');
 
   // NPS filters
@@ -262,6 +268,9 @@ export default function OpportunitiesDesktopPage() {
     return selectedStages.length + selectedFunding.length + selectedSeeking.length;
   }, [selectedStages, selectedFunding, selectedSeeking]);
 
+  const isIndustryProject = (project: Project) =>
+    (project.classification || '').toLowerCase() === 'industry';
+
   // Filter NPS projects
   const filteredProjects = useMemo(() => {
     let filtered = [...projects];
@@ -282,9 +291,10 @@ export default function OpportunitiesDesktopPage() {
       filtered = filtered.filter((p) => selectedStages.includes(p.stage));
     }
 
-    if (selectedFunding.length > 0) {
-      filtered = filtered.filter((p) => selectedFunding.includes(p.funding_status || ''));
-    }
+    // Note: funding_status field doesn't exist in database - removing this filter
+    // if (selectedFunding.length > 0) {
+    //   filtered = filtered.filter((p) => selectedFunding.includes(p.funding_status || ''));
+    // }
 
     if (selectedSeeking.length > 0) {
       filtered = filtered.filter((p) =>
@@ -315,8 +325,17 @@ export default function OpportunitiesDesktopPage() {
       );
     }
 
+    // Apply stage filter to opportunities if they have a stage field
+    if (selectedStages.length > 0) {
+      filtered = filtered.filter((o) => {
+        const stage = o.stage;
+        if (!stage) return true; // Keep opportunities without stage
+        return selectedStages.includes(stage);
+      });
+    }
+
     return filtered;
-  }, [opportunities, searchQuery]);
+  }, [opportunities, searchQuery, selectedStages]);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -326,9 +345,33 @@ export default function OpportunitiesDesktopPage() {
     setShowFavoritesOnly(false);
   };
 
-  // Combined and filtered items
-  const filteredItems = useMemo(() => {
-    const npsItems: CombinedItem[] = filteredProjects.map((p) => ({
+  // Combined and filtered items with counts
+  const { combinedItems, counts } = useMemo(() => {
+    const industryProjects = filteredProjects.filter(isIndustryProject);
+    const npsProjects = filteredProjects.filter(p => !isIndustryProject(p));
+    
+
+    const mapProjectToOpportunity = (project: Project): Opportunity & { stage?: string } => ({
+      id: project.id,
+      title: project.title,
+      description: project.description,
+      type: 'Industry',
+      sponsor_organization: project.department || 'Industry Partner',
+      location: project.department || undefined,
+      duration: project.demo_schedule || undefined,
+      deadline: undefined,
+      featured: false,
+      dod_alignment: project.research_areas || [],
+      requirements: project.seeking?.join(', ') || undefined,
+      benefits: project.keywords?.join(', ') || undefined,
+      sponsor_contact_id: undefined,
+      created_at: project.created_at,
+      stage: project.stage, // Preserve stage for Industry projects
+    });
+
+    const industryProjectOpportunities = industryProjects.map(mapProjectToOpportunity);
+
+    const npsItems: CombinedItem[] = npsProjects.map((p) => ({
       ...p,
       sourceType: 'NPS' as const,
     }));
@@ -338,12 +381,18 @@ export default function OpportunitiesDesktopPage() {
         ...o,
         sourceType: 'Military/Gov' as const,
       }));
-    const industryItems: CombinedItem[] = filteredOpportunities
-      .filter((o) => o.type === 'Industry')
-      .map((o) => ({
+    const industryItems: CombinedItem[] = [
+      ...filteredOpportunities
+        .filter((o) => o.type === 'Industry')
+        .map((o) => ({
+          ...o,
+          sourceType: 'Industry' as const,
+        })),
+      ...industryProjectOpportunities.map((o) => ({
         ...o,
         sourceType: 'Industry' as const,
-      }));
+      })),
+    ];
 
     let combined: CombinedItem[] = [];
 
@@ -375,7 +424,14 @@ export default function OpportunitiesDesktopPage() {
       );
     }
 
-    return combined;
+    return {
+      combinedItems: combined,
+      counts: {
+        nps: npsItems.length,
+        mil: milItems.length,
+        industry: industryItems.length,
+      },
+    };
   }, [filteredProjects, filteredOpportunities, activeTab, sortBy, showFavoritesOnly, projectFavorites, opportunityFavorites]);
 
   const isNPSItem = (item: CombinedItem): item is Project & { sourceType: 'NPS' } => {
@@ -390,10 +446,6 @@ export default function OpportunitiesDesktopPage() {
       prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
     );
   };
-
-  const npsCount = filteredProjects.length;
-  const milCount = filteredOpportunities.filter((o) => o.type !== 'Industry').length;
-  const industryCount = filteredOpportunities.filter((o) => o.type === 'Industry').length;
 
   // Left Panel - Filters
   const FiltersPanel = (
@@ -475,7 +527,6 @@ export default function OpportunitiesDesktopPage() {
               )}
             </Button>
           </div>
-
           <Separator />
 
           {/* Project Stage Filters (NPS) */}
@@ -492,7 +543,7 @@ export default function OpportunitiesDesktopPage() {
                     className="h-4 w-4 rounded border-gray-300"
                   />
                   <Label htmlFor={`stage-${stage}`} className="cursor-pointer text-sm">
-                    {stage}
+                    {PROJECT_STAGE_LABELS[stage]}
                   </Label>
                 </div>
               ))}
@@ -501,8 +552,8 @@ export default function OpportunitiesDesktopPage() {
 
           <Separator />
 
-          {/* Funding Status Filters */}
-          <div>
+          {/* Funding Status Filters - Hidden since field doesn't exist in database */}
+          {/* <div>
             <Label className="text-sm font-medium mb-3 block">Funding Status</Label>
             <div className="space-y-2">
               {FUNDING_STATUSES.map((status) => (
@@ -520,7 +571,7 @@ export default function OpportunitiesDesktopPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
           <Separator />
 
@@ -577,28 +628,28 @@ export default function OpportunitiesDesktopPage() {
             <TabsTrigger value="all" className="flex-1 text-sm">
               All
               <Badge variant="secondary" className="ml-2 text-xs">
-                {npsCount + milCount + industryCount}
+                {counts.nps + counts.mil + counts.industry}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="nps" className="flex-1 text-sm">
               <GraduationCap className="h-3 w-3 mr-1" />
               NPS
               <Badge variant="secondary" className="ml-2 text-xs">
-                {npsCount}
+                {counts.nps}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="military" className="flex-1 text-sm">
               <Building2 className="h-3 w-3 mr-1" />
               Gov
               <Badge variant="secondary" className="ml-2 text-xs">
-                {milCount}
+                {counts.mil}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="industry" className="flex-1 text-sm">
               <Briefcase className="h-3 w-3 mr-1" />
               Industry
               <Badge variant="secondary" className="ml-2 text-xs">
-                {industryCount}
+                {counts.industry}
               </Badge>
             </TabsTrigger>
           </TabsList>
@@ -622,7 +673,7 @@ export default function OpportunitiesDesktopPage() {
                 </div>
               ))}
             </div>
-          ) : filteredItems.length === 0 ? (
+          ) : combinedItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4">
               {showFavoritesOnly ? (
                 <>
@@ -659,7 +710,7 @@ export default function OpportunitiesDesktopPage() {
           ) : (
             <div className="space-y-1 pr-0 overflow-hidden">
               <AnimatePresence mode="popLayout">
-                {filteredItems.map((item) => {
+                {combinedItems.map((item) => {
                   const isSelected = selectedItem?.id === item.id;
                   const isNPS = isNPSItem(item);
 
@@ -716,7 +767,7 @@ export default function OpportunitiesDesktopPage() {
                                 isNPS ? 'border-blue-200 text-blue-700' : item.sourceType === 'Industry' ? 'border-orange-200 text-orange-700' : 'border-green-200 text-green-700'
                               )}
                             >
-                              {isNPS ? (item as Project).stage : (item as Opportunity).type}
+                              {isNPS ? (item as Project).stage : item.sourceType === 'Industry' && (item as any).stage ? (item as any).stage : (item as Opportunity).type}
                             </Badge>
                             {isNPS && (item as Project).funding_status && (
                               <Badge variant="outline" className="text-[10px] py-0 px-1.5">
@@ -1057,8 +1108,12 @@ export default function OpportunitiesDesktopPage() {
                     <Tag className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Type</p>
-                    <p className="font-medium capitalize">{(selectedItem as Opportunity).type}</p>
+                    <p className="text-muted-foreground text-xs">{selectedItem.sourceType === 'Industry' ? 'Stage' : 'Type'}</p>
+                    <p className="font-medium capitalize">
+                      {selectedItem.sourceType === 'Industry' && (selectedItem as any).stage 
+                        ? (selectedItem as any).stage 
+                        : (selectedItem as Opportunity).type}
+                    </p>
                   </div>
                 </div>
 
@@ -1118,8 +1173,8 @@ export default function OpportunitiesDesktopPage() {
                   </div>
                 )}
 
-              {/* Requirements */}
-              {(selectedItem as Opportunity).requirements && (
+              {/* Requirements - Only show for non-Industry items */}
+              {(selectedItem as Opportunity).requirements && selectedItem.sourceType !== 'Industry' && (
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Requirements</Label>
                   <p className="text-sm leading-relaxed">
