@@ -486,7 +486,7 @@ function StaffCheckinMobilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="px-3 md:px-6 pb-3 md:pb-6">
-            <div className="h-[400px] overflow-y-auto space-y-2">
+            <div className="max-h-[300px] md:max-h-[400px] overflow-y-auto space-y-2">
               {recentCheckIns.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
                   No check-ins yet
