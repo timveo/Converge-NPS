@@ -1,15 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  X, QrCode, Camera, Check, WifiOff, Bell, CheckCircle, AlertCircle,
+  X, QrCode, Camera, Check, WifiOff, CheckCircle, AlertCircle,
   Keyboard, Sun, Maximize, Smartphone, CloudOff, Loader2, Lock, Mail,
   MessageCircle, ExternalLink, UserPlus, ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -26,13 +24,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 type ScanState = 'idle' | 'success' | 'error';
 type CameraPermission = 'granted' | 'denied' | 'prompt' | 'checking';
@@ -295,25 +286,82 @@ export default function ScannerPage() {
         navigator.vibrate(200);
       }
 
-      // Store the QR code data (user ID) - profile will be fetched from backend
+      // Store basic scanned data
       setScannedData({
         uuid: userId,
-        qrCodeData: decodedText, // Store raw QR data for backend
-        name: qrData.name || 'Loading...',
-        org: qrData.org || qrData.organization || '',
-        role: qrData.role || '',
-        bio: qrData.bio || '',
-        interests: qrData.interests || qrData.acceleration_interests || [],
-        linkedin: qrData.linkedin || qrData.linkedin_url || '',
-        email: qrData.email || '',
-        currentSessions: qrData.currentSessions || []
+        qrCodeData: decodedText,
+        name: 'Loading...',
+        org: '',
+        role: '',
+        bio: '',
+        interests: [],
+        linkedin: '',
+        email: '',
+        currentSessions: []
       });
 
       toast.success("QR Code Scanned Successfully!");
 
-      // Go to intent selection (BEFORE profile preview)
+      // Fetch full profile data from backend
+      try {
+        const response = await api.get(`/profiles/${userId}`);
+        const profile = (response as any).profile;
+
+        // Update with fetched profile data
+        const updatedScannedData = {
+          uuid: userId,
+          qrCodeData: decodedText,
+          name: profile?.fullName || 'Unknown Participant',
+          org: profile?.organization || '',
+          role: profile?.role || '',
+          bio: profile?.bio || '',
+          interests: profile?.accelerationInterests || [],
+          linkedin: profile?.linkedinUrl || '',
+          email: profile?.email || '',
+          currentSessions: []
+        };
+
+        setScannedData(updatedScannedData);
+
+        // Set profile data for preview
+        setProfileData({
+          id: updatedScannedData.uuid,
+          full_name: updatedScannedData.name,
+          organization: updatedScannedData.org,
+          role: updatedScannedData.role,
+          bio: updatedScannedData.bio,
+          acceleration_interests: updatedScannedData.interests,
+          linkedin_url: updatedScannedData.linkedin,
+          email: updatedScannedData.email,
+          allow_qr_scan: profile?.allowQrScanning !== false,
+          show_organization: profile?.show_organization !== false,
+          show_role: profile?.show_role !== false,
+          share_email: profile?.share_email !== false && !!updatedScannedData.email,
+          allow_messaging: profile?.allowMessaging !== false
+        });
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+        // Use basic info if profile fetch fails
+        setProfileData({
+          id: userId,
+          full_name: 'Event Participant',
+          organization: '',
+          role: '',
+          bio: '',
+          acceleration_interests: [],
+          linkedin_url: '',
+          email: '',
+          allow_qr_scan: true,
+          show_organization: true,
+          show_role: true,
+          share_email: false,
+          allow_messaging: true
+        });
+      }
+
+      // Go directly to preview (skip intent selection)
       setTimeout(() => {
-        setScanStage('intent');
+        setScanStage('preview');
       }, 500);
 
     } catch {
@@ -364,7 +412,26 @@ export default function ScannerPage() {
       triggerHapticFeedback('medium');
       toast.success('Code accepted!');
       setShowManualEntry(false);
-      setScanStage('intent');
+      
+      // Set profile data from scanned data and go directly to preview
+      setProfileData({
+        id: profile?.id,
+        full_name: profile?.fullName || 'Event Participant',
+        organization: profile?.organization,
+        role: profile?.role,
+        bio: profile?.bio,
+        acceleration_interests: profile?.accelerationInterests || [],
+        linkedin_url: profile?.linkedinUrl,
+        email: profile?.email,
+        allow_qr_scan: true,
+        show_organization: true,
+        show_role: true,
+        share_email: !!profile?.email,
+        allow_messaging: true
+      });
+      
+      // Go directly to preview (skip intent selection)
+      setScanStage('preview');
 
     } catch (error) {
       console.error('Manual code error:', error);
@@ -374,46 +441,10 @@ export default function ScannerPage() {
     }
   };
 
-  const handleToggleIntent = (intentId: string) => {
-    triggerHapticFeedback('light');
-    setSelectedIntents(prev =>
-      prev.includes(intentId)
-        ? prev.filter(id => id !== intentId)
-        : [...prev, intentId]
-    );
-  };
-
-  const handleProceedToPreview = async () => {
-    if (selectedIntents.length === 0) {
-      toast.error("Please select at least one collaborative intent");
-      return;
-    }
-
-    // Set profile data from scanned data
-    setProfileData({
-      id: scannedData?.uuid,
-      full_name: scannedData?.name || 'Unknown Participant',
-      organization: scannedData?.org,
-      role: scannedData?.role,
-      bio: scannedData?.bio,
-      acceleration_interests: scannedData?.interests,
-      linkedin_url: scannedData?.linkedin,
-      email: scannedData?.email,
-      allow_qr_scan: true,
-      show_organization: true,
-      show_role: true,
-      share_email: !!scannedData?.email,
-      allow_messaging: true
-    });
-
-    setScanStage('preview');
-  };
+  // Intent selection removed - flow goes directly from scan to preview
 
   const handleSaveConnection = async () => {
-    if (selectedIntents.length === 0) {
-      toast.error("Please select at least one collaborative intent");
-      return;
-    }
+    // Intent selection removed - save connection without requiring intents
 
     triggerHapticFeedback('medium');
     setIsProcessing(true);
@@ -555,102 +586,7 @@ export default function ScannerPage() {
     !profileData.allow_qr_scan
   );
 
-  // Intent selection screen (after scan, before preview)
-  if (scanStage === 'intent') {
-    return (
-      <div className="min-h-screen bg-background/95 backdrop-blur-sm fixed inset-0 z-50 animate-fade-in overflow-y-auto">
-        <div className="container mx-auto px-3 md:px-4 py-3 md:py-6 max-w-lg">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-3 md:mb-6">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Check className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-base md:text-xl font-bold text-foreground">Why are you connecting?</h2>
-                <p className="text-xs md:text-sm text-muted-foreground">Select at least one intent</p>
-              </div>
-            </div>
-            <Button variant="ghost" size="icon" onClick={handleClose} className="h-11 w-11 md:h-10 md:w-10">
-              <X className="h-5 w-5 md:h-6 md:w-6" />
-            </Button>
-          </div>
-
-          {/* Intent Selection */}
-          <Card className="p-3 md:p-6 mb-3 md:mb-6 shadow-lg">
-            <div className="space-y-2 md:space-y-3 mb-3 md:mb-6">
-              {collaborativeIntents.map((intent) => (
-                <div
-                  key={intent.id}
-                  onClick={() => handleToggleIntent(intent.id)}
-                  className={cn(
-                    "flex items-start gap-2 md:gap-3 p-2.5 md:p-4 rounded-lg border-2 cursor-pointer transition-all duration-200",
-                    selectedIntents.includes(intent.id)
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  )}
-                >
-                  <Checkbox
-                    checked={selectedIntents.includes(intent.id)}
-                    onCheckedChange={() => handleToggleIntent(intent.id)}
-                    className="mt-0.5 h-4 w-4"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-xs md:text-sm text-foreground">{intent.label}</div>
-                    <div className="text-[10px] md:text-xs text-muted-foreground">{intent.description}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Quick Note - 50 char limit */}
-            <div className="mb-3 md:mb-6">
-              <Label className="text-xs md:text-sm font-medium text-foreground mb-1.5 md:mb-2 block">
-                Quick Note (Optional)
-              </Label>
-              <Textarea
-                placeholder="E.g., Discuss AI project..."
-                value={note}
-                onChange={(e) => {
-                  if (e.target.value.length <= 50) {
-                    setNote(e.target.value);
-                  }
-                }}
-                maxLength={50}
-                className="resize-none h-12 md:h-16 text-sm"
-              />
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-1 text-right">{note.length}/50</p>
-            </div>
-
-            {/* Proceed Button - DISABLED until intent selected */}
-            <Button
-              onClick={handleProceedToPreview}
-              disabled={selectedIntents.length === 0 || isLoadingProfile}
-              className="w-full h-11 md:h-10 text-sm md:text-base"
-            >
-              {isLoadingProfile ? (
-                <>
-                  <Loader2 className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
-                  Loading...
-                </>
-              ) : selectedIntents.length === 0 ? (
-                <>
-                  <AlertCircle className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                  Select intent to continue
-                </>
-              ) : (
-                'Continue to Preview'
-              )}
-            </Button>
-          </Card>
-
-          <Button variant="outline" onClick={handleClose} className="w-full h-11 md:h-10 text-sm md:text-base">
-            Cancel
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Intent selection screen removed - flow goes directly from scan to preview
 
   // Profile preview screen (shows intents as confirmation)
   if (scanStage === 'preview') {
@@ -814,72 +750,75 @@ export default function ScannerPage() {
                 </div>
               </div>
             )}
-          </Card>
 
-          {/* Connection Intent Confirmation (read-only) */}
-          <Card className="p-3 md:p-6 mb-3 md:mb-6 shadow-lg">
-            <div className="mb-2.5 md:mb-4">
-              <h3 className="font-semibold text-sm md:text-lg text-foreground mb-0.5 md:mb-1">
-                Your Connection Intent
-              </h3>
-              <p className="text-xs md:text-sm text-muted-foreground">
-                Review before saving
-              </p>
-            </div>
-
-            {/* Display selected intents as badges */}
-            <div className="mb-2.5 md:mb-4">
-              <Label className="text-xs md:text-sm font-medium text-foreground mb-1.5 md:mb-2 block">Selected:</Label>
-              <div className="flex flex-wrap gap-1 md:gap-2">
-                {selectedIntents.map(intentId => {
-                  const intent = collaborativeIntents.find(i => i.id === intentId);
-                  return (
-                    <Badge key={intentId} variant="secondary" className="px-2 md:px-3 py-0.5 md:py-1 text-xs">
-                      {intent?.label || intentId}
-                    </Badge>
-                  );
-                })}
+            {/* Additional Profile Info */}
+            <div className="border-t pt-2.5 md:pt-4">
+              <p className="text-[10px] md:text-xs font-medium text-muted-foreground mb-1.5 md:mb-2">Profile Details</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs md:text-sm">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span className="text-muted-foreground">QR Scanning:</span>
+                  <span className={profileData?.allow_qr_scan !== false ? "text-green-600" : "text-red-600"}>
+                    {profileData?.allow_qr_scan !== false ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  <span className="text-muted-foreground">Messaging:</span>
+                  <span className={profileData?.allow_messaging !== false ? "text-green-600" : "text-red-600"}>
+                    {profileData?.allow_messaging !== false ? "Available" : "Unavailable"}
+                  </span>
+                </div>
               </div>
-            </div>
-
-            {/* Display note as read-only */}
-            {note && (
-              <div className="mb-2.5 md:mb-4">
-                <Label className="text-xs md:text-sm font-medium text-foreground mb-1 md:mb-2 block">Note:</Label>
-                <p className="text-xs md:text-sm text-muted-foreground italic bg-muted/50 p-2 md:p-3 rounded-lg">
-                  "{note}"
+              
+              {/* User ID for reference */}
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <p className="text-[10px] text-muted-foreground">
+                  ID: {(profileData?.id || scannedData?.uuid || '').slice(0, 8).toUpperCase()}
                 </p>
               </div>
-            )}
-
-            {/* Back to edit intents */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setScanStage('intent')}
-              className="mb-2.5 md:mb-4 h-7 md:h-8 text-xs md:text-sm"
-            >
-              ← Edit Intents
-            </Button>
-
-            {/* Follow-up Reminder */}
-            <div>
-              <label className="text-xs md:text-sm font-medium text-foreground mb-1.5 md:mb-2 flex items-center gap-1.5 md:gap-2">
-                <Bell className="h-3.5 w-3.5 md:h-4 md:w-4 text-accent" />
-                Follow-up Reminder
-              </label>
-              <Select value={reminderTime} onValueChange={setReminderTime}>
-                <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
-                  <SelectValue placeholder="No reminder" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1hour">In 1 hour</SelectItem>
-                  <SelectItem value="1day">Tomorrow</SelectItem>
-                  <SelectItem value="3days">In 3 days</SelectItem>
-                  <SelectItem value="1week">In 1 week</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background/95 backdrop-blur-sm fixed inset-0 z-50 animate-fade-in overflow-y-auto">
+      <div className="container mx-auto px-3 md:px-4 py-3 md:py-6 max-w-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3 md:mb-6">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-green-500/10 flex items-center justify-center">
+              <Check className="h-5 w-5 md:h-6 md:w-6 text-green-500" />
+            </div>
+            <div>
+              <h2 className="text-base md:text-xl font-bold text-foreground">Review Connection</h2>
+              <p className="text-xs md:text-sm text-muted-foreground">Confirm and save</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 md:gap-2">
+            {hasPrivacyLimits && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Badge variant="outline" className="gap-0.5 md:gap-1 text-xs">
+                      <Lock className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                      Limited
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    This participant has limited their profile visibility
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 md:h-10 md:w-10">
+              <X className="h-4 w-4 md:h-5 md:w-5" />
+            </Button>
+          </div>
+        </div>
           </Card>
 
           {/* Offline indicator */}
@@ -964,11 +903,11 @@ export default function ScannerPage() {
             )}
 
             {/* Camera viewfinder */}
-            <div className="w-full aspect-square max-w-[280px] md:max-w-sm mx-auto mb-3 md:mb-6 relative overflow-hidden rounded-xl md:rounded-2xl">
+            <div className="relative w-full max-w-[280px] md:max-w-sm mx-auto mb-3 md:mb-6 overflow-hidden rounded-xl md:rounded-2xl bg-muted" style={{ minHeight: '300px' }}>
               <div
                 id="qr-scanner-container"
                 ref={scannerContainerRef}
-                className="w-full h-full"
+                style={{ width: '100%', minHeight: '300px' }}
               />
 
               {/* Scanning frame with state-based colors */}
