@@ -4,13 +4,10 @@ import {
   ChevronLeft,
   Loader2,
   Users,
-  Calendar,
   TrendingUp,
   UserCog,
   Settings,
-  Download,
   Database,
-  Briefcase,
   BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,6 +36,7 @@ interface RecentUser {
   email: string;
   created_at: string;
   roles: string[];
+  participant_type?: string;
 }
 
 interface AdminUsersResponse {
@@ -51,6 +49,7 @@ interface AdminUsersResponse {
     department?: string;
     role?: string;
     roles?: string[];
+    participant_type?: string;
     created_at: string;
   }>;
 }
@@ -99,6 +98,7 @@ function AdminDashboardMobile() {
           email: u.email,
           created_at: u.created_at,
           roles: u.roles || [],
+          participant_type: u.participant_type,
         })));
       }
     } catch (error) {
@@ -237,44 +237,6 @@ function AdminDashboardMobile() {
 
             <button
               className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
-              onClick={() => navigate('/opportunities', { state: { fromAdmin: true } })}
-            >
-              <div className="flex flex-col items-start gap-3">
-                <div className="w-11 h-11 rounded-xl bg-teal-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                  <Briefcase className="h-5 w-5 text-white" />
-                </div>
-                <div className="text-left w-full">
-                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 text-foreground group-hover:text-primary transition-colors duration-300">
-                    View Projects
-                  </div>
-                  <div className="text-xs md:text-sm text-muted-foreground leading-snug line-clamp-2">
-                    Monitor research activity
-                  </div>
-                </div>
-              </div>
-            </button>
-
-            <button
-              className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
-              onClick={() => navigate('/schedule', { state: { fromAdmin: true } })}
-            >
-              <div className="flex flex-col items-start gap-3">
-                <div className="w-11 h-11 rounded-xl bg-blue-900 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                  <Calendar className="h-5 w-5 text-white" />
-                </div>
-                <div className="text-left w-full">
-                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 text-foreground group-hover:text-primary transition-colors duration-300">
-                    Event Schedule
-                  </div>
-                  <div className="text-xs md:text-sm text-muted-foreground leading-snug line-clamp-2">
-                    Manage sessions
-                  </div>
-                </div>
-              </div>
-            </button>
-
-            <button
-              className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
               onClick={() => navigate('/admin/smartsheet')}
             >
               <div className="flex flex-col items-start gap-3">
@@ -330,24 +292,6 @@ function AdminDashboardMobile() {
               </div>
             </button>
 
-            <button
-              className="bg-card hover:shadow-lg active:shadow-md border border-border hover:border-primary/50 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 cursor-pointer group"
-              onClick={() => navigate('/admin/raisers-edge-export')}
-            >
-              <div className="flex flex-col items-start gap-3">
-                <div className="w-11 h-11 rounded-xl bg-red-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                  <Download className="h-5 w-5 text-white" />
-                </div>
-                <div className="text-left w-full">
-                  <div className="font-semibold text-sm md:text-base leading-tight mb-1 text-foreground group-hover:text-primary transition-colors duration-300">
-                    RE Export
-                  </div>
-                  <div className="text-xs md:text-sm text-muted-foreground leading-snug line-clamp-2">
-                    Export for Raiser's Edge
-                  </div>
-                </div>
-              </div>
-            </button>
           </div>
         </Card>
 
@@ -377,29 +321,44 @@ function AdminDashboardMobile() {
                     <div className="font-medium text-sm text-foreground truncate">
                       {recentUser.full_name}
                     </div>
-                    <div className="flex items-center gap-1 mt-0.5">
+                    <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                      {recentUser.participant_type && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-1.5 py-0"
+                          style={{
+                            borderColor: COLORS[recentUser.participant_type as keyof typeof COLORS] || COLORS.none,
+                            color: COLORS[recentUser.participant_type as keyof typeof COLORS] || COLORS.none,
+                          }}
+                        >
+                          {recentUser.participant_type}
+                        </Badge>
+                      )}
                       {recentUser.roles.length > 0 ? (
-                        recentUser.roles.slice(0, 2).map((role) => (
-                          <Badge
-                            key={role}
-                            variant="outline"
-                            className="text-xs px-1.5 py-0"
-                            style={{
-                              borderColor: COLORS[role as keyof typeof COLORS],
-                              color: COLORS[role as keyof typeof COLORS],
-                            }}
-                          >
-                            {role}
-                          </Badge>
-                        ))
-                      ) : (
+                        recentUser.roles
+                          .filter((role) => role === 'admin' || role === 'staff')
+                          .slice(0, 2)
+                          .map((role) => (
+                            <Badge
+                              key={role}
+                              variant="outline"
+                              className="text-xs px-1.5 py-0"
+                              style={{
+                                borderColor: COLORS[role as keyof typeof COLORS],
+                                color: COLORS[role as keyof typeof COLORS],
+                              }}
+                            >
+                              {role}
+                            </Badge>
+                          ))
+                      ) : !recentUser.participant_type ? (
                         <Badge
                           variant="outline"
                           className="text-xs px-1.5 py-0 text-muted-foreground"
                         >
                           No role
                         </Badge>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground whitespace-nowrap">

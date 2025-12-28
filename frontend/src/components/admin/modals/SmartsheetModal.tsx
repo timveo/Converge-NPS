@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,8 +7,6 @@ import {
   Download,
   Upload,
   RefreshCw,
-  CheckCircle,
-  AlertCircle,
   Database,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,6 +19,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+
+const STORAGE_KEY = 'smartsheet-sync-history';
 
 type ImportType = 'partners' | 'projects' | 'sessions' | 'opportunities' | 'attendees';
 
@@ -37,12 +37,33 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-interface ImportJob {
+interface SyncJob {
   id: string;
   type: string;
+  operation: 'import' | 'export';
   status: 'completed' | 'failed';
   records: number;
   lastRun: string;
+}
+
+function loadSyncHistory(): SyncJob[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Failed to load sync history:', e);
+  }
+  return [];
+}
+
+function saveSyncHistory(jobs: SyncJob[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
+  } catch (e) {
+    console.error('Failed to save sync history:', e);
+  }
 }
 
 const importOptions: Array<{ type: Exclude<ImportType, 'opportunities'>; label: string; description: string }> = [
@@ -57,12 +78,34 @@ interface SmartsheetModalProps {
 }
 
 export function SmartsheetModal({ open, onOpenChange }: SmartsheetModalProps) {
-  const [importing, setImporting] = useState<ImportType | null>(null);
-  const [importJobs, setImportJobs] = useState<ImportJob[]>([]);
+  const [importingStates, setImportingStates] = useState<Record<ImportType, boolean>>({
+    partners: false,
+    projects: false,
+    sessions: false,
+    opportunities: false,
+    attendees: false,
+  });
+  const [syncJobs, setSyncJobs] = useState<SyncJob[]>([]);
   const [exportingAttendees, setExportingAttendees] = useState(false);
 
+  // Load sync history from localStorage when modal opens
+  useEffect(() => {
+    if (open) {
+      setSyncJobs(loadSyncHistory());
+    }
+  }, [open]);
+
+  // Save sync history to localStorage whenever it changes
+  const addSyncJob = (job: SyncJob) => {
+    setSyncJobs(prev => {
+      const updated = [job, ...prev].slice(0, 10); // Keep last 10 jobs
+      saveSyncHistory(updated);
+      return updated;
+    });
+  };
+
   const handleImport = async (option: { type: ImportType; label: string }) => {
-    setImporting(option.type);
+    setImportingStates(prev => ({ ...prev, [option.type]: true }));
     try {
       const response = await api.post<ApiResponse<ImportSummary>>(`/admin/smartsheet/import/${option.type}`);
       const result = response.data;
@@ -79,20 +122,26 @@ export function SmartsheetModal({ open, onOpenChange }: SmartsheetModalProps) {
       toast.success(summary.replace(/\n/g, ' '));
 
       const completedCount = (result?.imported ?? 0) + (result?.updated ?? 0);
-      setImportJobs(prev => [
-        {
-          id: crypto.randomUUID(),
-          type: option.label,
-          status: result.failed > 0 ? 'failed' : 'completed',
-          records: completedCount,
-          lastRun: new Date().toLocaleString(),
-        },
-        ...prev.slice(0, 4),
-      ]);
+      addSyncJob({
+        id: crypto.randomUUID(),
+        type: option.label,
+        operation: 'import',
+        status: result.failed > 0 ? 'failed' : 'completed',
+        records: completedCount,
+        lastRun: new Date().toLocaleString(),
+      });
     } catch (error: any) {
       toast.error(error.response?.data?.error || `Failed to import ${option.label}`);
+      addSyncJob({
+        id: crypto.randomUUID(),
+        type: option.label,
+        operation: 'import',
+        status: 'failed',
+        records: 0,
+        lastRun: new Date().toLocaleString(),
+      });
     } finally {
-      setImporting(null);
+      setImportingStates(prev => ({ ...prev, [option.type]: false }));
     }
   };
 
@@ -117,8 +166,26 @@ export function SmartsheetModal({ open, onOpenChange }: SmartsheetModalProps) {
           : '');
 
       toast.success(summary.replace(/\n/g, ' '));
+
+      const completedCount = (result?.added ?? 0) + (result?.updated ?? 0);
+      addSyncJob({
+        id: crypto.randomUUID(),
+        type: 'Attendees',
+        operation: 'export',
+        status: result.failed > 0 ? 'failed' : 'completed',
+        records: completedCount,
+        lastRun: new Date().toLocaleString(),
+      });
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to export attendees');
+      addSyncJob({
+        id: crypto.randomUUID(),
+        type: 'Attendees',
+        operation: 'export',
+        status: 'failed',
+        records: 0,
+        lastRun: new Date().toLocaleString(),
+      });
     } finally {
       setExportingAttendees(false);
     }
@@ -163,11 +230,11 @@ export function SmartsheetModal({ open, onOpenChange }: SmartsheetModalProps) {
                     <Button
                       key={option.type}
                       onClick={() => handleImport(option)}
-                      disabled={importing !== null}
+                      disabled={importingStates[option.type]}
                       className="w-full h-10 text-sm justify-between"
                     >
                       <span className="flex items-center gap-2">
-                        {importing === option.type ? (
+                        {importingStates[option.type] ? (
                           <RefreshCw className="w-4 h-4 animate-spin" />
                         ) : (
                           <Upload className="w-4 h-4" />
@@ -198,7 +265,7 @@ export function SmartsheetModal({ open, onOpenChange }: SmartsheetModalProps) {
                     variant="outline"
                     className="w-full h-10 text-sm"
                     onClick={handleExportAttendees}
-                    disabled={exportingAttendees || importing !== null}
+                    disabled={exportingAttendees}
                   >
                     {exportingAttendees ? (
                       <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -213,29 +280,31 @@ export function SmartsheetModal({ open, onOpenChange }: SmartsheetModalProps) {
 
             <Card className="border-border">
               <CardHeader className="p-4">
-                <CardTitle className="text-sm">Import History</CardTitle>
-                <CardDescription className="text-xs">Recent import operations</CardDescription>
+                <CardTitle className="text-sm">Sync History</CardTitle>
+                <CardDescription className="text-xs">Recent import and export operations</CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                {importJobs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">No imports have been run yet.</p>
+                {syncJobs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">No sync operations have been run yet.</p>
                 ) : (
                   <div className="space-y-2">
-                    {importJobs.map((job) => (
+                    {syncJobs.map((job) => (
                       <div
                         key={job.id}
                         className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          {job.status === 'completed' ? (
-                            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                          {job.operation === 'import' ? (
+                            <Upload className="w-4 h-4 text-blue-600 flex-shrink-0" />
                           ) : (
-                            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                            <Download className="w-4 h-4 text-green-600 flex-shrink-0" />
                           )}
                           <div>
-                            <p className="font-medium text-sm text-foreground">{job.type}</p>
+                            <p className="font-medium text-sm text-foreground">
+                              {job.operation === 'import' ? 'Import' : 'Export'} {job.type}
+                            </p>
                             <p className="text-xs text-muted-foreground">
-                              {job.records} records - {job.lastRun}
+                              {job.records} records • {job.lastRun}
                             </p>
                           </div>
                         </div>

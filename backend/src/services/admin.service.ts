@@ -216,6 +216,7 @@ export async function listUsers(filters: {
         fullName: true,
         email: true,
         role: true,
+        participantType: true,
         organization: true,
         createdAt: true,
         userRoles: {
@@ -238,6 +239,7 @@ export async function listUsers(filters: {
     full_name: user.fullName,
     email: user.email,
     role: user.role,
+    participant_type: user.participantType,
     organization: user.organization,
     createdAt: user.createdAt,
     created_at: user.createdAt,
@@ -570,8 +572,13 @@ export async function getEventAnalytics() {
   ]);
 
   // Batch 2: Demographics and groupings
-  const [usersByRole, usersByOrganization] = await Promise.all([
+  const [usersByRole, usersByParticipantType, usersByOrganization] = await Promise.all([
     prisma.userRole.groupBy({ by: ['role'], _count: true }),
+    prisma.profile.groupBy({
+      by: ['participantType'],
+      _count: true,
+      where: { participantType: { not: null } },
+    }),
     prisma.profile.groupBy({
       by: ['organization'],
       _count: true,
@@ -610,11 +617,21 @@ export async function getEventAnalytics() {
   ]);
 
   // Batch 5: Additional data (less critical)
-  const [connectionsByMethod, projectInterests] = await Promise.all([
+  // Use actual bookmark count for project popularity (users "favorite" projects via bookmarks)
+  const [connectionsByMethod, topProjects] = await Promise.all([
     prisma.connection.groupBy({ by: ['connectionMethod'], _count: true }),
     prisma.project.findMany({
-      select: { id: true, title: true, interestedCount: true, stage: true },
-      orderBy: { interestedCount: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        stage: true,
+        _count: {
+          select: { bookmarks: true },
+        },
+      },
+      orderBy: {
+        bookmarks: { _count: 'desc' },
+      },
       take: 10,
     }),
   ]);
@@ -682,6 +699,10 @@ export async function getEventAnalytics() {
       walkIns,
     },
     demographics: {
+      byParticipantType: usersByParticipantType.map(p => ({
+        participantType: p.participantType,
+        count: p._count,
+      })),
       byRole: usersByRole.map(r => ({
         role: r.role,
         count: r._count,
@@ -714,10 +735,10 @@ export async function getEventAnalytics() {
       totalMessages,
       totalConversations,
       connectionGraph,
-      projectInterest: projectInterests.map(p => ({
+      projectInterest: topProjects.map(p => ({
         id: p.id,
         title: p.title,
-        interested: p.interestedCount,
+        interested: p._count.bookmarks,
         stage: p.stage,
       })),
     },
@@ -725,119 +746,7 @@ export async function getEventAnalytics() {
 }
 
 /**
- * Export data for Raiser's Edge import (admin only)
- * Returns CSV data with user profiles and roles
- */
-export async function exportRaisersEdge() {
-  // Fetch all profiles with required fields
-  const profiles = await prisma.profile.findMany({
-    select: {
-      id: true,
-      email: true,
-      fullName: true,
-      rank: true,
-      department: true,
-      organization: true,
-      role: true,
-      participantType: true,
-      linkedinUrl: true,
-      websiteUrl: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  // Helper to split fullName into first/last
-  const splitName = (fullName: string | null): { firstName: string; lastName: string } => {
-    if (!fullName) return { firstName: '', lastName: '' };
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length === 1) return { firstName: parts[0], lastName: '' };
-    const lastName = parts.pop() || '';
-    const firstName = parts.join(' ');
-    return { firstName, lastName };
-  };
-
-  // Map participantType enum to display labels
-  const participantTypeLabels: Record<string, string> = {
-    student: 'Student',
-    faculty: 'Faculty/Staff',
-    industry: 'Industry',
-    alumni: 'Alumni',
-    guest: 'Guest',
-  };
-
-  // Build export data with RE-compatible fields
-  const exportData = profiles.map(profile => {
-    const { firstName, lastName } = splitName(profile.fullName);
-    const participantType = profile.participantType
-      ? participantTypeLabels[profile.participantType] || profile.participantType
-      : 'Attendee';
-
-    return {
-      UUID: profile.id,
-      ParticipantType: participantType,
-      FirstName: firstName,
-      LastName: lastName,
-      Email: profile.email || '',
-      RankTitle: profile.rank || '',
-      BranchOfService: profile.department || '',
-      Organization: profile.organization || '',
-      Role: profile.role || '',
-      LinkedinURL: profile.linkedinUrl || '',
-      WebsiteURL: profile.websiteUrl || '',
-      RSVPDate: profile.createdAt ? profile.createdAt.toISOString().split('T')[0] : '',
-    };
-  });
-
-  // CSV headers matching Raiser's Edge import format
-  const headers = [
-    'UUID',
-    'ParticipantType',
-    'FirstName',
-    'LastName',
-    'Email',
-    'RankTitle',
-    'BranchOfService',
-    'Organization',
-    'Role',
-    'LinkedinURL',
-    'WebsiteURL',
-    'RSVPDate',
-  ];
-
-  // Escape CSV values properly (RFC 4180)
-  const escapeCSV = (value: string): string => {
-    const str = String(value ?? '');
-    const escaped = str.replace(/"/g, '""');
-    if (escaped.includes(',') || escaped.includes('\n') || escaped.includes('"')) {
-      return `"${escaped}"`;
-    }
-    return escaped;
-  };
-
-  // Generate CSV rows
-  const csvRows = [
-    headers.join(','),
-    ...exportData.map(row =>
-      headers.map(header => escapeCSV(row[header as keyof typeof row])).join(',')
-    ),
-  ];
-
-  // Add BOM for Excel UTF-8 compatibility
-  const BOM = '\uFEFF';
-  const csv = BOM + csvRows.join('\n');
-
-  const filename = `raisers-edge-export-${new Date().toISOString().split('T')[0]}.csv`;
-
-  return {
-    csv,
-    filename,
-    recordCount: exportData.length,
-  };
-}
-
-/**
- * Get interests for a project (admin only - bypasses PI restriction)
+ * Get bookmarks (favorites) for a project (admin only)
  */
 export async function getProjectInterestsAdmin(projectId: string) {
   // Check if project exists
@@ -847,7 +756,9 @@ export async function getProjectInterestsAdmin(projectId: string) {
       id: true,
       title: true,
       stage: true,
-      interestedCount: true,
+      _count: {
+        select: { bookmarks: true },
+      },
     },
   });
 
@@ -855,7 +766,8 @@ export async function getProjectInterestsAdmin(projectId: string) {
     throw new Error('Project not found');
   }
 
-  const interests = await prisma.projectInterest.findMany({
+  // Fetch bookmarks (favorites) instead of interests
+  const bookmarks = await prisma.projectBookmark.findMany({
     where: { projectId },
     include: {
       user: {
@@ -866,6 +778,7 @@ export async function getProjectInterestsAdmin(projectId: string) {
           organization: true,
           department: true,
           role: true,
+          participantType: true,
           linkedinUrl: true,
         },
       },
@@ -876,9 +789,17 @@ export async function getProjectInterestsAdmin(projectId: string) {
   });
 
   return {
-    project,
-    interests,
-    count: interests.length,
+    project: {
+      ...project,
+      interestedCount: project._count.bookmarks,
+    },
+    interests: bookmarks.map(b => ({
+      id: b.id,
+      createdAt: b.createdAt,
+      message: b.notes,
+      user: b.user,
+    })),
+    count: bookmarks.length,
   };
 }
 

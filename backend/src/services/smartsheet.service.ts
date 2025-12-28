@@ -368,21 +368,39 @@ function buildCellsForAttendeeProfile(profile: any, columns: SmartsheetSheet['co
 
   const { firstName, lastName } = splitFullName(profile.fullName);
 
-  setIfPresent(['Profile ID', 'User ID', 'Id', 'ID'], profile.id);
+  // ID fields
+  setIfPresent(['Profile ID', 'User ID', 'Id', 'ID', 'UUID', 'Import ID'], profile.id);
+
+  // Name fields
   setIfPresent(['Full Name', 'Name'], profile.fullName);
   setIfPresent(['First Name', 'FirstName', 'First NAme'], firstName);
   setIfPresent(['Last Name', 'LastName'], lastName);
+
+  // Contact fields
   setIfPresent(['Email', 'Email Address'], profile.email);
   setIfPresent(['Phone', 'Phone Number', 'Phone #', 'Mobile', 'Cell'], profile.phone || '');
-  setIfPresent(['Rank', 'Rank/Title', 'Title'], profile.rank || '');
-  setIfPresent(['Organization', 'Organizations', 'Company'], profile.organization || '');
-  setIfPresent(['Department'], profile.department || '');
-  setIfPresent(['Branch of Service', 'Branch', 'Service Branch'], profile.branchOfService || '');
-  setIfPresent(['Role', 'Position'], profile.role || '');
-  setIfPresent(['Participant Type', 'Type'], profile.participantType || profile.role || '');
-  setIfPresent(['LinkedIn', 'LinkedIn URL', 'Linkedin URL'], profile.linkedinUrl || '');
-  setIfPresent(['Website', 'Personal/Company Website', 'Company Website'], profile.websiteUrl || '');
-  setIfPresent(['RSVP Date', 'RSVP date', 'RSVPDate'], profile.rsvpDate ? new Date(profile.rsvpDate).toISOString().split('T')[0] : '');
+
+  // Title/Rank fields (maps to RE "Title" field)
+  setIfPresent(['Rank', 'Rank/Title', 'Title', 'RankTitle'], profile.rank || '');
+
+  // Organization fields (maps to RE "Org Name" field)
+  setIfPresent(['Organization', 'Organizations', 'Company', 'Org Name'], profile.organization || '');
+
+  // Department fields (maps to RE "Department" field via BranchOfService column)
+  setIfPresent(['Department', 'Branch of Service', 'Branch', 'Service Branch', 'BranchOfService'], profile.department || '');
+
+  // Role/Job Title fields (maps to RE "Job Title" field)
+  setIfPresent(['Role', 'Position', 'Job Title'], profile.role || '');
+
+  // Participant Type fields (maps to RE "Constituent Type" field)
+  setIfPresent(['Participant Type', 'Type', 'ParticipantType', 'Constituent Type'], profile.participantType || '');
+
+  // Social/Web fields
+  setIfPresent(['LinkedIn', 'LinkedIn URL', 'Linkedin URL', 'LinkedInURL'], profile.linkedinUrl || '');
+  setIfPresent(['Website', 'Personal/Company Website', 'Company Website', 'WebsiteURL'], profile.websiteUrl || '');
+
+  // Date fields (maps to RE "Date Added" field)
+  setIfPresent(['RSVP Date', 'RSVP date', 'RSVPDate', 'Date Added', 'Registration Date'], profile.rsvpDate ? new Date(profile.rsvpDate).toISOString().split('T')[0] : '');
 
   return cells;
 }
