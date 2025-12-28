@@ -9,7 +9,7 @@ import { OfflineDataBanner } from "@/components/OfflineDataBanner";
 // Lazy load desktop version
 const IndustryDesktopPage = lazy(() => import('./IndustryPage.desktop'));
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -218,17 +218,6 @@ function IndustryMobilePage() {
     toast.error("POC is not registered in app");
   };
 
-  // Extract unique DoD sponsors
-  const dodSponsors = useMemo(() => {
-    const sponsors = new Set<string>();
-    partners.forEach(partner => {
-      if (partner.dod_sponsors) {
-        partner.dod_sponsors.split(',').map(s => s.trim()).filter(Boolean).forEach(s => sponsors.add(s));
-      }
-    });
-    return Array.from(sponsors).sort();
-  }, [partners]);
-
   useEffect(() => {
     fetchPartners();
     fetchRecommendations();
@@ -357,8 +346,8 @@ function IndustryMobilePage() {
 
     if (sortBy === "alphabetical") {
       filtered.sort((a, b) => a.company_name.localeCompare(b.company_name));
-    } else if (sortBy === "booth") {
-      filtered.sort((a, b) => (a.booth_location || "").localeCompare(b.booth_location || ""));
+    } else if (sortBy === "reverse") {
+      filtered.sort((a, b) => b.company_name.localeCompare(a.company_name));
     }
 
     return filtered;
@@ -571,8 +560,8 @@ function IndustryMobilePage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-background z-50">
-              <SelectItem value="alphabetical">Alphabetical</SelectItem>
-              <SelectItem value="booth">By Booth</SelectItem>
+              <SelectItem value="alphabetical">A-Z</SelectItem>
+              <SelectItem value="reverse">Z-A</SelectItem>
             </SelectContent>
           </Select>
         </div>
