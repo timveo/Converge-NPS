@@ -148,6 +148,7 @@ export default function ConnectionsDesktopPage() {
 
   useEffect(() => {
     fetchConnections();
+    fetchParticipants();
   }, []);
 
   useEffect(() => {
@@ -155,13 +156,6 @@ export default function ConnectionsDesktopPage() {
       fetchRecommendations();
     }
   }, [connections]);
-
-  // Fetch participants when tab is "participants"
-  useEffect(() => {
-    if (activeTab === 'participants') {
-      fetchParticipants();
-    }
-  }, [activeTab]);
 
   // Handle query params (userId and tab)
   useEffect(() => {
@@ -587,7 +581,7 @@ export default function ConnectionsDesktopPage() {
         }}>
           <TabsList className="w-full">
             <TabsTrigger value="all" className="flex-1 text-sm">
-              All Connections
+              My Connections
               <Badge variant="secondary" className="ml-2 text-xs">
                 {connections.length}
               </Badge>

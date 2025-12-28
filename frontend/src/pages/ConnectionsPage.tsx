@@ -144,6 +144,7 @@ function ConnectionsMobilePage() {
 
   useEffect(() => {
     fetchConnections();
+    fetchParticipants();
   }, []);
 
   useEffect(() => {
@@ -151,13 +152,6 @@ function ConnectionsMobilePage() {
       fetchRecommendations();
     }
   }, [connections]);
-
-  // Fetch participants when tab is "participants"
-  useEffect(() => {
-    if (activeTab === 'participants') {
-      fetchParticipants();
-    }
-  }, [activeTab]);
 
   const fetchParticipants = async (): Promise<Participant[]> => {
     setParticipantsLoading(true);
