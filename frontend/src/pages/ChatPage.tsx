@@ -239,7 +239,7 @@ export default function ChatPage() {
 
     const handleScroll = () => {
       // Blur the textarea to dismiss keyboard when user scrolls
-      if (textareaRef.current === document.activeElement) {
+      if (textareaRef.current && textareaRef.current === document.activeElement) {
         textareaRef.current.blur();
       }
     };
