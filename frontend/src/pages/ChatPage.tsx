@@ -251,11 +251,11 @@ export default function ChatPage() {
   // Scroll to bottom on new messages
   useEffect(() => {
     if (messages.length === 0 || isLoading) return;
-    
+
     const container = messagesContainerRef.current;
     const hasNewMessages = messages.length > prevMessageCountRef.current;
     prevMessageCountRef.current = messages.length;
-    
+
     // Always scroll on initial load - use requestAnimationFrame to ensure DOM is rendered
     if (isInitialLoadRef.current) {
       requestAnimationFrame(() => {
@@ -268,7 +268,7 @@ export default function ChatPage() {
       isInitialLoadRef.current = false;
       return;
     }
-    
+
     // Only auto-scroll if there are new messages AND user is near the bottom
     if (hasNewMessages && container) {
       const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
