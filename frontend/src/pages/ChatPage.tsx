@@ -59,6 +59,7 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
   const prevMessageCountRef = useRef(0);
@@ -231,6 +232,22 @@ export default function ChatPage() {
     };
   }, [socket, conversationId, user?.id]);
 
+  // Dismiss keyboard when scrolling messages
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      // Blur the textarea to dismiss keyboard when user scrolls
+      if (textareaRef.current && textareaRef.current === document.activeElement) {
+        textareaRef.current.blur();
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Scroll to bottom on new messages
   useEffect(() => {
     if (messages.length === 0 || isLoading) return;
@@ -356,9 +373,9 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-muted">
+    <div className="flex flex-col h-[100dvh] bg-muted fixed inset-0 overflow-hidden">
       {/* Header - Navy gradient matching the design */}
-      <header className="bg-gradient-navy text-primary-foreground px-4 py-3 shrink-0 z-50">
+      <header className="bg-gradient-navy text-primary-foreground px-4 py-3 shrink-0 z-50 relative">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -472,17 +489,29 @@ export default function ChatPage() {
       </div>
 
       {/* Input Area - Part of flex layout, moves with keyboard */}
-      <div className="bg-card border-t border-border p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shrink-0">
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2 max-w-screen-lg mx-auto">
-          <input
-            type="text"
+      <div className="bg-card border-t border-border p-4 shrink-0 relative">
+        <form onSubmit={handleSendMessage} className="flex items-end gap-2 max-w-screen-lg mx-auto">
+          <textarea
+            ref={textareaRef}
             value={newMessage}
             onChange={(e) => {
               setNewMessage(e.target.value);
               handleTyping();
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage(e);
+              }
+            }}
             placeholder="Type a message..."
-            className="flex-1 px-4 py-3 bg-muted border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
+            rows={1}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
+            className="flex-1 px-4 py-3 bg-muted border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base resize-none max-h-32 overflow-y-auto"
+            style={{ fieldSizing: 'content' } as React.CSSProperties}
           />
           <Button
             type="submit"
