@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone, Users } from "lucide-react";
+import { Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone, Users, ChevronRight } from "lucide-react";
 import { useDevice } from "@/hooks/useDeviceType";
 import { PageHeader } from "@/components/PageHeader";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
@@ -9,7 +9,7 @@ import { OfflineDataBanner } from "@/components/OfflineDataBanner";
 // Lazy load desktop version
 const IndustryDesktopPage = lazy(() => import('./IndustryPage.desktop'));
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -136,7 +137,8 @@ function IndustryMobilePage() {
   const [selectedDodSponsor, setSelectedDodSponsor] = useState<string>("");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [sortBy, setSortBy] = useState<string>("alphabetical");
-  const [showFilters, setShowFilters] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [expandedFilterSections, setExpandedFilterSections] = useState<Set<string>>(new Set());
   const [expandedPartners, setExpandedPartners] = useState<Set<string>>(new Set());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -149,6 +151,18 @@ function IndustryMobilePage() {
         newSet.delete(partnerId);
       } else {
         newSet.add(partnerId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleFilterSection = (section: string) => {
+    setExpandedFilterSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(section)) {
+        newSet.delete(section);
+      } else {
+        newSet.add(section);
       }
       return newSet;
     });
@@ -203,17 +217,6 @@ function IndustryMobilePage() {
 
     toast.error("POC is not registered in app");
   };
-
-  // Extract unique DoD sponsors
-  const dodSponsors = useMemo(() => {
-    const sponsors = new Set<string>();
-    partners.forEach(partner => {
-      if (partner.dod_sponsors) {
-        partner.dod_sponsors.split(',').map(s => s.trim()).filter(Boolean).forEach(s => sponsors.add(s));
-      }
-    });
-    return Array.from(sponsors).sort();
-  }, [partners]);
 
   useEffect(() => {
     fetchPartners();
@@ -343,8 +346,8 @@ function IndustryMobilePage() {
 
     if (sortBy === "alphabetical") {
       filtered.sort((a, b) => a.company_name.localeCompare(b.company_name));
-    } else if (sortBy === "booth") {
-      filtered.sort((a, b) => (a.booth_location || "").localeCompare(b.booth_location || ""));
+    } else if (sortBy === "reverse") {
+      filtered.sort((a, b) => b.company_name.localeCompare(a.company_name));
     }
 
     return filtered;
@@ -396,28 +399,148 @@ function IndustryMobilePage() {
         </div>
         {/* Filter buttons */}
         <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant={showFilters ? "default" : "outline"}
-            size="sm"
-            className={cn(
-              "gap-2 text-sm h-11 md:h-10",
-              showFilters
-                ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                : "bg-white border-primary/30 text-foreground hover:bg-primary/10 hover:text-foreground active:bg-primary active:text-primary-foreground"
-            )}
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="h-4 w-4" />
-            Filters
-            {activeFilterCount > 0 && (
-              <Badge variant="default" className={cn(
-                "ml-1 text-xs",
-                showFilters ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
-              )}>
-                {activeFilterCount}
-              </Badge>
-            )}
-          </Button>
+          <Popover open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={activeFilterCount > 0 ? "default" : "outline"}
+                size="sm"
+                className={cn(
+                  "gap-2 text-sm h-11 md:h-10",
+                  activeFilterCount > 0
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-white border-primary/30 text-foreground hover:bg-primary/10 hover:text-foreground active:bg-primary active:text-primary-foreground"
+                )}
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <Badge variant="default" className={cn(
+                    "ml-1 text-xs",
+                    "bg-primary-foreground text-primary"
+                  )}>
+                    {activeFilterCount}
+                  </Badge>
+                )}
+                <ChevronDown className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  isFilterSheetOpen && "rotate-180"
+                )} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-[calc(100vw-1.5rem)] max-w-none p-0 mx-3"
+              align="start"
+              sideOffset={8}
+            >
+              <div className="flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                  <span className="font-semibold text-sm">Filters</span>
+                  {activeFilterCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Clear all
+                    </Button>
+                  )}
+                </div>
+
+                {/* Scrollable filter content */}
+                <div className="max-h-[50vh] overflow-y-auto">
+                  <div className="p-4 space-y-4">
+                    {/* Technology Filter - Collapsible */}
+                    <Collapsible
+                      open={expandedFilterSections.has('technology')}
+                      onOpenChange={() => toggleFilterSection('technology')}
+                    >
+                      <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-muted/50 rounded-lg px-2 -mx-2">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide cursor-pointer">
+                            Technology
+                          </Label>
+                          {selectedTechAreas.length > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {selectedTechAreas.length}
+                            </Badge>
+                          )}
+                        </div>
+                        <ChevronRight className={cn(
+                          "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                          expandedFilterSections.has('technology') && "rotate-90"
+                        )} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-3 pl-2">
+                          {TECHNOLOGY_AREAS.map(area => (
+                            <div key={area} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`filter-tech-${area}`}
+                                checked={selectedTechAreas.includes(area)}
+                                onCheckedChange={() => toggleTechArea(area)}
+                                className="h-5 w-5"
+                              />
+                              <Label htmlFor={`filter-tech-${area}`} className="text-sm cursor-pointer font-normal leading-tight">{area}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* Seeking Filter - Collapsible */}
+                    <Collapsible
+                      open={expandedFilterSections.has('seeking')}
+                      onOpenChange={() => toggleFilterSection('seeking')}
+                    >
+                      <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-muted/50 rounded-lg px-2 -mx-2">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide cursor-pointer">
+                            Seeking
+                          </Label>
+                          {selectedSeeking.length > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {selectedSeeking.length}
+                            </Badge>
+                          )}
+                        </div>
+                        <ChevronRight className={cn(
+                          "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                          expandedFilterSections.has('seeking') && "rotate-90"
+                        )} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-3 pl-2">
+                          {SEEKING_OPTIONS.map(s => (
+                            <div key={s} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`filter-seek-${s}`}
+                                checked={selectedSeeking.includes(s)}
+                                onCheckedChange={() => toggleSeeking(s)}
+                                className="h-5 w-5"
+                              />
+                              <Label htmlFor={`filter-seek-${s}`} className="text-sm cursor-pointer font-normal leading-tight">{s}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex gap-2 px-4 py-3 border-t bg-muted/30">
+                  <Button
+                    onClick={() => setIsFilterSheetOpen(false)}
+                    className="flex-1 h-10"
+                  >
+                    Show {filteredPartners.length} results
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Button
             variant={showFavoritesOnly ? "default" : "outline"}
@@ -437,63 +560,11 @@ function IndustryMobilePage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-background z-50">
-              <SelectItem value="alphabetical">Alphabetical</SelectItem>
-              <SelectItem value="booth">By Booth</SelectItem>
+              <SelectItem value="alphabetical">A-Z</SelectItem>
+              <SelectItem value="reverse">Z-A</SelectItem>
             </SelectContent>
           </Select>
         </div>
-
-        {/* Expandable Inline Filter Panel */}
-        {showFilters && (
-          <Card className="shadow-md border-border/50">
-            <CardContent className="pt-4 pb-4 space-y-4">
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground">Filter by DoD Sponsor</Label>
-                <Select value={selectedDodSponsor || "all"} onValueChange={(val) => setSelectedDodSponsor(val === "all" ? "" : val)}>
-                  <SelectTrigger className="mt-2 h-11 md:h-10">
-                    <SelectValue placeholder="All Sponsors" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
-                    <SelectItem value="all">All Sponsors</SelectItem>
-                    {dodSponsors.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground">Filter by Technology</Label>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                  {TECHNOLOGY_AREAS.map(area => (
-                    <div key={area} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`tech-${area}`}
-                        checked={selectedTechAreas.includes(area)}
-                        onCheckedChange={() => toggleTechArea(area)}
-                        className="h-5 w-5"
-                      />
-                      <Label htmlFor={`tech-${area}`} className="text-sm cursor-pointer font-normal">{area}</Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground">Filter by Seeking</Label>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                  {SEEKING_OPTIONS.map(s => (
-                    <div key={s} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`seek-${s}`}
-                        checked={selectedSeeking.includes(s)}
-                        onCheckedChange={() => toggleSeeking(s)}
-                        className="h-5 w-5"
-                      />
-                      <Label htmlFor={`seek-${s}`} className="text-sm cursor-pointer font-normal">{s}</Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Active filter badges */}
         {hasActiveFilters && (
