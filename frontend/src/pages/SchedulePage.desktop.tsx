@@ -509,7 +509,7 @@ export default function ScheduleDesktopPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="time">Time</SelectItem>
-                <SelectItem value="type">Track</SelectItem>
+                <SelectItem value="type">Session Type</SelectItem>
                 <SelectItem value="capacity">Availability</SelectItem>
               </SelectContent>
             </Select>
@@ -541,7 +541,7 @@ export default function ScheduleDesktopPage() {
           {/* Type Filter */}
           {hasSessionTypes && (
             <div>
-              <Label className="text-sm font-medium mb-3 block">Track</Label>
+              <Label className="text-sm font-medium mb-3 block">Session Type</Label>
               <div className="space-y-2">
                 {SESSION_TYPES.map((type) => (
                   <div key={type.value} className="flex items-center space-x-2">

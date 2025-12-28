@@ -16,11 +16,12 @@ import {
 import { format, parseISO } from "date-fns";
 
 export const SESSION_TYPES = [
-  { value: 'AI/ML', label: 'AI/ML' },
-  { value: 'Cybersecurity', label: 'Cybersecurity' },
-  { value: 'Autonomous Systems', label: 'Autonomous Systems' },
-  { value: 'Data Science', label: 'Data Science' },
-  { value: 'Other', label: 'Other' }
+  { value: 'Featured', label: 'Featured' },
+  { value: 'Panel', label: 'Panel' },
+  { value: 'Meetup', label: 'Meetup' },
+  { value: 'Breakout Session', label: 'Breakout Session' },
+  { value: 'Demo', label: 'Demo' },
+  { value: 'Technologies & Tools Workshop', label: 'Technologies & Tools Workshop' }
 ];
 
 export const TIME_SLOTS = [
@@ -98,7 +99,7 @@ export const ScheduleFiltersPanel = ({
           </SelectTrigger>
           <SelectContent className="bg-background z-50">
             <SelectItem value="time">By Time</SelectItem>
-            <SelectItem value="type">By Type</SelectItem>
+            <SelectItem value="type">By Session Type</SelectItem>
             <SelectItem value="capacity">By Availability</SelectItem>
           </SelectContent>
         </Select>
@@ -137,9 +138,9 @@ export const ScheduleFiltersPanel = ({
           <CardContent className="pt-3 md:pt-6 grid gap-3 md:gap-6 grid-cols-2 sm:grid-cols-3">
             {/* Session Type Filter - only show if sessions have types */}
             {hasSessionTypes && (
-              <div className="space-y-1.5 md:space-y-3">
-                <Label className="text-xs md:text-sm font-semibold">Type</Label>
-                <div className="space-y-1 md:space-y-2">
+              <div className="space-y-1.5 md:space-y-3 col-span-2 sm:col-span-1">
+                <Label className="text-xs md:text-sm font-semibold">Session Type</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-1 gap-1 md:space-y-2">
                   {SESSION_TYPES.map(type => (
                     <div key={type.value} className="flex items-center space-x-1.5 md:space-x-2">
                       <Checkbox
