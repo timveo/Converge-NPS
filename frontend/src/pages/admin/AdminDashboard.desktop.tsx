@@ -5,7 +5,6 @@ import {
   Users,
   Calendar,
   UserCog,
-  Download,
   Database,
   RefreshCw,
   UserCheck,
@@ -47,7 +46,6 @@ import {
   UserManagementModal,
   SessionManagementModal,
   SmartsheetModal,
-  RaisersEdgeExportModal,
   ProjectInterestsModal,
   SessionRsvpsModal,
 } from '@/components/admin/modals';
@@ -58,6 +56,7 @@ interface RecentUser {
   email: string;
   created_at: string;
   roles: string[];
+  participant_type?: string;
 }
 
 interface EventAnalyticsData {
@@ -126,7 +125,6 @@ export default function AdminDashboardDesktop() {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const [smartsheetModalOpen, setSmartsheetModalOpen] = useState(false);
-  const [reExportModalOpen, setReExportModalOpen] = useState(false);
   const [projectInterestsModalOpen, setProjectInterestsModalOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProjectTitle, setSelectedProjectTitle] = useState<string>('');
@@ -148,6 +146,7 @@ export default function AdminDashboardDesktop() {
           email: u.email,
           created_at: u.created_at,
           roles: u.roles || [],
+          participant_type: u.participant_type,
         })));
       }
 
@@ -225,7 +224,6 @@ export default function AdminDashboardDesktop() {
     { title: 'Manage Users', icon: UserCog, color: 'bg-rose-600', onClick: () => setUserModalOpen(true) },
     { title: 'Sessions', icon: Calendar, color: 'bg-blue-900', onClick: () => setSessionModalOpen(true) },
     { title: 'Data Sync', icon: Database, color: 'bg-emerald-600', onClick: () => setSmartsheetModalOpen(true) },
-    { title: 'RE Export', icon: Download, color: 'bg-red-600', onClick: () => setReExportModalOpen(true) },
   ];
 
   return (
@@ -625,7 +623,7 @@ export default function AdminDashboardDesktop() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                           <Badge className="bg-blue-100 text-blue-700 text-xs">
-                            {project.interested} interested
+                            {project.interested} favorites
                           </Badge>
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </div>
@@ -683,20 +681,35 @@ export default function AdminDashboardDesktop() {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{recentUser.full_name}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {recentUser.roles.slice(0, 2).map((role) => (
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          {recentUser.participant_type && (
                             <Badge
-                              key={role}
                               variant="outline"
                               className="text-xs px-1.5 py-0"
                               style={{
-                                borderColor: ROLE_COLORS[role] || '#6b7280',
-                                color: ROLE_COLORS[role] || '#6b7280',
+                                borderColor: ROLE_COLORS[recentUser.participant_type] || '#6b7280',
+                                color: ROLE_COLORS[recentUser.participant_type] || '#6b7280',
                               }}
                             >
-                              {role}
+                              {recentUser.participant_type}
                             </Badge>
-                          ))}
+                          )}
+                          {recentUser.roles
+                            .filter((role) => role === 'admin' || role === 'staff')
+                            .slice(0, 2)
+                            .map((role) => (
+                              <Badge
+                                key={role}
+                                variant="outline"
+                                className="text-xs px-1.5 py-0"
+                                style={{
+                                  borderColor: ROLE_COLORS[role] || '#6b7280',
+                                  color: ROLE_COLORS[role] || '#6b7280',
+                                }}
+                              >
+                                {role}
+                              </Badge>
+                            ))}
                         </div>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -758,7 +771,6 @@ export default function AdminDashboardDesktop() {
       <UserManagementModal open={userModalOpen} onOpenChange={setUserModalOpen} />
       <SessionManagementModal open={sessionModalOpen} onOpenChange={setSessionModalOpen} />
       <SmartsheetModal open={smartsheetModalOpen} onOpenChange={setSmartsheetModalOpen} />
-      <RaisersEdgeExportModal open={reExportModalOpen} onOpenChange={setReExportModalOpen} />
       <ProjectInterestsModal
         open={projectInterestsModalOpen}
         onOpenChange={setProjectInterestsModalOpen}

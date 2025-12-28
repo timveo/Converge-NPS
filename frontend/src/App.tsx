@@ -33,7 +33,6 @@ import Analytics from '@/pages/admin/Analytics';
 import EventAnalytics from '@/pages/admin/EventAnalytics';
 import SmartsheetPage from '@/pages/admin/SmartsheetPage';
 import AuditLogsPage from '@/pages/admin/AuditLogsPage';
-import RaisersEdgeExport from '@/pages/admin/RaisersEdgeExport';
 import ProjectInterestsPage from '@/pages/admin/ProjectInterestsPage';
 import SessionRsvpsPage from '@/pages/admin/SessionRsvpsPage';
 
@@ -141,14 +140,6 @@ function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AuditLogsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/raisers-edge-export"
-          element={
-            <ProtectedRoute requireAdmin>
-              <RaisersEdgeExport />
             </ProtectedRoute>
           }
         />

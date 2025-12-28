@@ -446,26 +446,6 @@ export async function getEventAnalytics(req: Request, res: Response) {
 }
 
 /**
- * GET /v1/admin/export/raisers-edge
- * Export data for Raiser's Edge import
- */
-export async function exportRaisersEdge(req: Request, res: Response) {
-  try {
-    const result = await adminService.exportRaisersEdge();
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
-    res.send(result.csv);
-  } catch (error: any) {
-    console.error('Raiser\'s Edge export error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to export data for Raiser\'s Edge',
-    });
-  }
-}
-
-/**
  * GET /v1/admin/projects/:id/interests
  * Get interests for a project (admin only - bypasses PI restriction)
  */

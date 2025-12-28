@@ -15,8 +15,8 @@ import {
   RefreshCw,
   Zap,
   BarChart3,
-  PieChartIcon,
   Network,
+  Briefcase,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -71,6 +71,7 @@ interface EventAnalyticsData {
     checkInsByMethod: Array<{ method: string; count: number }>;
   };
   demographics: {
+    byParticipantType: Array<{ participantType: string; count: number }>;
     byRole: Array<{ role: string; count: number }>;
     byOrganization: Array<{ organization: string; count: number }>;
   };
@@ -161,17 +162,6 @@ export default function EventAnalytics() {
     </Card>
   );
 
-  const RoleCardSkeleton = () => (
-    <Card className="p-3 md:p-4">
-      <div className="flex items-center justify-between mb-1">
-        <Skeleton className="h-3 w-14" />
-        <Skeleton className="h-3 w-8" />
-      </div>
-      <Skeleton className="h-6 w-12 mb-2" />
-      <Skeleton className="h-1 w-full rounded-full" />
-    </Card>
-  );
-
   const ChartSkeleton = () => (
     <Card className="p-3 md:p-4">
       <Skeleton className="h-4 w-32 mb-3" />
@@ -203,17 +193,34 @@ export default function EventAnalytics() {
 
   const { realTimeMetrics, demographics, sessionAnalytics, networkingEngagement } = data || {
     realTimeMetrics: { totalRegistered: 0, checkedIn: 0, checkInRate: 0, noShows: 0, walkIns: 0, checkInsLastHour: 0, checkInsByMethod: [] },
-    demographics: { byRole: [], byOrganization: [] },
+    demographics: { byParticipantType: [], byRole: [], byOrganization: [] },
     sessionAnalytics: { sessions: [], rsvpsByStatus: [], trackPopularity: [], totalCapacity: 0, totalConfirmed: 0 },
     networkingEngagement: { totalConnections: 0, connectionsLast24h: 0, connectionsByMethod: [], totalMessages: 0, totalConversations: 0, connectionGraph: {}, projectInterest: [] },
   };
 
-  // Prepare chart data
-  const roleChartData = demographics.byRole.map((r) => ({
-    name: r.role ? r.role.charAt(0).toUpperCase() + r.role.slice(1) : 'Unknown',
-    value: r.count,
-    fill: COLORS[r.role as keyof typeof COLORS] || COLORS.none,
-  }));
+  // Prepare chart data - always show all 5 participant types for consistent display
+  const allParticipantTypes = ['student', 'faculty', 'industry', 'alumni', 'guest'] as const;
+  const participantTypeChartData = allParticipantTypes.map((type) => {
+    const found = demographics.byParticipantType.find((p) => p.participantType === type);
+    return {
+      name: type.charAt(0).toUpperCase() + type.slice(1),
+      value: found?.count || 0,
+      fill: COLORS[type],
+    };
+  });
+
+  // Simplify roles to Admin, Staff, and Participants (sum of all others)
+  const adminCount = demographics.byRole.find((r) => r.role === 'admin')?.count || 0;
+  const staffCount = demographics.byRole.find((r) => r.role === 'staff')?.count || 0;
+  const participantCount = demographics.byRole
+    .filter((r) => r.role !== 'admin' && r.role !== 'staff')
+    .reduce((sum, r) => sum + r.count, 0);
+
+  const roleChartData = [
+    { name: 'Admin', value: adminCount, fill: COLORS.admin },
+    { name: 'Staff', value: staffCount, fill: COLORS.staff },
+    { name: 'Participants', value: participantCount, fill: '#3b82f6' },
+  ];
 
   const trackChartData = sessionAnalytics.trackPopularity.map((t, i) => ({
     name: t.track || 'Other',
@@ -363,63 +370,14 @@ export default function EventAnalytics() {
         {/* Demographics Section */}
         <section>
           <div className="flex items-center gap-2 mb-3 md:mb-4">
-            <PieChartIcon className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
+            <Users className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
             <h2 className="text-sm md:text-lg font-semibold text-foreground">Demographics</h2>
           </div>
 
-          {/* Role Distribution - Visual Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3 mb-3 md:mb-4">
-            {loading ? (
-              <>
-                <RoleCardSkeleton />
-                <RoleCardSkeleton />
-                <RoleCardSkeleton />
-                <RoleCardSkeleton />
-                <RoleCardSkeleton />
-              </>
-            ) : (['student', 'faculty', 'industry', 'staff', 'admin'] as const).map((role) => {
-              const roleData = demographics.byRole.find((r) => r.role === role);
-              const count = roleData?.count || 0;
-              const total = demographics.byRole.reduce((sum, r) => sum + r.count, 0);
-              const percentage = total > 0 ? ((count / total) * 100).toFixed(0) : '0';
-              const color = COLORS[role];
-
-              return (
-                <Card
-                  key={role}
-                  className="p-3 md:p-4 relative overflow-hidden"
-                  style={{ borderLeftWidth: '4px', borderLeftColor: color }}
-                >
-                  <div
-                    className="absolute inset-0 opacity-5"
-                    style={{ backgroundColor: color }}
-                  />
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-1">
-                      <span
-                        className="text-[10px] md:text-xs font-semibold uppercase tracking-wide"
-                        style={{ color }}
-                      >
-                        {role}
-                      </span>
-                      <span className="text-[10px] md:text-xs text-muted-foreground">{percentage}%</span>
-                    </div>
-                    <p className="text-lg md:text-2xl font-bold text-foreground">{count}</p>
-                    <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${percentage}%`, backgroundColor: color }}
-                      />
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Role Bar Chart + Organizations */}
+          {/* Charts: Participant Types, Roles, Organizations */}
           {loading ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
+              <ChartSkeleton />
               <ChartSkeleton />
               <Card className="p-3 md:p-4">
                 <Skeleton className="h-4 w-32 mb-3" />
@@ -431,18 +389,19 @@ export default function EventAnalytics() {
               </Card>
             </div>
           ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-            {/* Role Distribution Bar Chart */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
+            {/* Participant Type Distribution Bar Chart */}
             <Card className="p-3 md:p-4">
               <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
-                Role Distribution
+                Participant Types
               </h3>
               <div className="h-48 md:h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={roleChartData}
+                    data={participantTypeChartData}
                     layout="vertical"
                     margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
+                    barSize={20}
                   >
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                     <XAxis type="number" tick={{ fontSize: 11 }} />
@@ -461,13 +420,60 @@ export default function EventAnalytics() {
                       }}
                     />
                     <Bar dataKey="value" name="Count" radius={[0, 4, 4, 0]}>
-                      {roleChartData.map((entry, index) => (
+                      {participantTypeChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+            </Card>
+
+            {/* Role Distribution Bar Chart */}
+            <Card className="p-3 md:p-4">
+              <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
+                User Roles
+              </h3>
+              {roleChartData.some((r) => r.value > 0) ? (
+                <div className="h-48 md:h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={roleChartData}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                      <XAxis type="number" tick={{ fontSize: 11 }} />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        tick={{ fontSize: 11 }}
+                        width={75}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                        }}
+                      />
+                      <Bar dataKey="value" name="Count" radius={[0, 4, 4, 0]}>
+                        {roleChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-48 md:h-56 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs">No role data available</p>
+                  </div>
+                </div>
+              )}
             </Card>
 
             {/* By Organization */}
@@ -558,74 +564,96 @@ export default function EventAnalytics() {
               <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Track Popularity
               </h3>
-              <div className="h-48 md:h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={trackChartData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="value" name="RSVPs" radius={[0, 4, 4, 0]}>
-                      {trackChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {trackChartData.length > 0 ? (
+                <div className="h-48 md:h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={trackChartData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="value" name="RSVPs" radius={[0, 4, 4, 0]}>
+                        {trackChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-48 md:h-56 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs">No track data available</p>
+                  </div>
+                </div>
+              )}
             </Card>
 
             {/* Session Fill Rates */}
             <Card className="p-3 md:p-4">
               <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Session Fill Rates
-                <span className="text-[10px] font-normal text-muted-foreground ml-2">
-                  Tap to view participants
-                </span>
-              </h3>
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {sessionAnalytics.sessions.slice(0, 8).map((session) => (
-                  <div
-                    key={session.id}
-                    className="cursor-pointer active:bg-muted/50 p-1.5 -mx-1.5 rounded-lg transition-colors"
-                    onClick={() => navigate(`/admin/sessions/${session.id}/rsvps`)}
-                  >
-                    <div className="flex justify-between items-center mb-0.5">
-                      <span className="text-xs md:text-sm font-medium text-foreground truncate max-w-[180px]">
-                        {session.title}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-muted-foreground">
-                          {session.confirmed}/{session.capacity || '?'}
-                        </span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </div>
-                    <Progress
-                      value={session.fillRate}
-                      className={`h-2 ${
-                        session.fillRate >= 90
-                          ? '[&>div]:bg-red-500'
-                          : session.fillRate >= 70
-                          ? '[&>div]:bg-amber-500'
-                          : '[&>div]:bg-green-500'
-                      }`}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 pt-3 border-t border-border">
-                <div className="flex justify-between text-xs md:text-sm">
-                  <span className="text-muted-foreground">Total Capacity</span>
-                  <span className="font-medium">{sessionAnalytics.totalCapacity}</span>
-                </div>
-                <div className="flex justify-between text-xs md:text-sm">
-                  <span className="text-muted-foreground">Total Confirmed</span>
-                  <span className="font-medium text-green-600">
-                    {sessionAnalytics.totalConfirmed}
+                {sessionAnalytics.sessions.length > 0 && (
+                  <span className="text-[10px] font-normal text-muted-foreground ml-2">
+                    Tap to view participants
                   </span>
+                )}
+              </h3>
+              {sessionAnalytics.sessions.length > 0 ? (
+                <>
+                  <div className="space-y-2 max-h-56 overflow-y-auto">
+                    {sessionAnalytics.sessions.slice(0, 8).map((session) => (
+                      <div
+                        key={session.id}
+                        className="cursor-pointer active:bg-muted/50 p-1.5 -mx-1.5 rounded-lg transition-colors"
+                        onClick={() => navigate(`/admin/sessions/${session.id}/rsvps`)}
+                      >
+                        <div className="flex justify-between items-center mb-0.5">
+                          <span className="text-xs md:text-sm font-medium text-foreground truncate max-w-[180px]">
+                            {session.title}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-muted-foreground">
+                              {session.confirmed}/{session.capacity || '?'}
+                            </span>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                        <Progress
+                          value={session.fillRate}
+                          className={`h-2 ${
+                            session.fillRate >= 90
+                              ? '[&>div]:bg-red-500'
+                              : session.fillRate >= 70
+                              ? '[&>div]:bg-amber-500'
+                              : '[&>div]:bg-green-500'
+                          }`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <div className="flex justify-between text-xs md:text-sm">
+                      <span className="text-muted-foreground">Total Capacity</span>
+                      <span className="font-medium">{sessionAnalytics.totalCapacity}</span>
+                    </div>
+                    <div className="flex justify-between text-xs md:text-sm">
+                      <span className="text-muted-foreground">Total Confirmed</span>
+                      <span className="font-medium text-green-600">
+                        {sessionAnalytics.totalConfirmed}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="h-48 md:h-56 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs">No sessions scheduled</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </Card>
           </div>
           )}
@@ -703,72 +731,85 @@ export default function EventAnalytics() {
               <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Connection Patterns
               </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[10px] md:text-xs">
-                  <thead>
-                    <tr>
-                      <th className="p-1 text-left text-muted-foreground">From / To</th>
-                      {Object.keys(networkingEngagement.connectionGraph).map((role) => (
-                        <th
-                          key={role}
-                          className="p-1 text-center"
-                          style={{ color: COLORS[role as keyof typeof COLORS] }}
-                        >
-                          {role.charAt(0).toUpperCase()}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(networkingEngagement.connectionGraph).map(([fromRole, toRoles]) => (
-                      <tr key={fromRole}>
-                        <td
-                          className="p-1 font-medium"
-                          style={{ color: COLORS[fromRole as keyof typeof COLORS] }}
-                        >
-                          {fromRole.charAt(0).toUpperCase() + fromRole.slice(1)}
-                        </td>
-                        {Object.entries(toRoles).map(([toRole, count]) => {
-                          const maxVal = Math.max(
-                            ...Object.values(networkingEngagement.connectionGraph).flatMap((r) =>
-                              Object.values(r)
-                            )
-                          );
-                          const intensity = maxVal > 0 ? (count / maxVal) * 100 : 0;
-                          return (
-                            <td
-                              key={toRole}
-                              className="p-1 text-center rounded"
-                              style={{
-                                backgroundColor: `rgba(59, 130, 246, ${intensity / 100})`,
-                                color: intensity > 50 ? 'white' : 'inherit',
-                              }}
+              {Object.keys(networkingEngagement.connectionGraph).length > 0 ? (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[10px] md:text-xs">
+                      <thead>
+                        <tr>
+                          <th className="p-1 text-left text-muted-foreground">From / To</th>
+                          {Object.keys(networkingEngagement.connectionGraph).map((role) => (
+                            <th
+                              key={role}
+                              className="p-1 text-center"
+                              style={{ color: COLORS[role as keyof typeof COLORS] }}
                             >
-                              {count}
+                              {role.charAt(0).toUpperCase()}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(networkingEngagement.connectionGraph).map(([fromRole, toRoles]) => (
+                          <tr key={fromRole}>
+                            <td
+                              className="p-1 font-medium"
+                              style={{ color: COLORS[fromRole as keyof typeof COLORS] }}
+                            >
+                              {fromRole.charAt(0).toUpperCase() + fromRole.slice(1)}
                             </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-2">
-                S=Student, F=Faculty, I=Industry, Al=Alumni, G=Guest
-              </p>
+                            {Object.entries(toRoles).map(([toRole, count]) => {
+                              const maxVal = Math.max(
+                                ...Object.values(networkingEngagement.connectionGraph).flatMap((r) =>
+                                  Object.values(r)
+                                )
+                              );
+                              const intensity = maxVal > 0 ? (count / maxVal) * 100 : 0;
+                              return (
+                                <td
+                                  key={toRole}
+                                  className="p-1 text-center rounded"
+                                  style={{
+                                    backgroundColor: `rgba(59, 130, 246, ${intensity / 100})`,
+                                    color: intensity > 50 ? 'white' : 'inherit',
+                                  }}
+                                >
+                                  {count}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2">
+                    S=Student, F=Faculty, I=Industry, Al=Alumni, G=Guest
+                  </p>
+                </>
+              ) : (
+                <div className="h-48 md:h-56 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <Network className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs">No connection data yet</p>
+                  </div>
+                </div>
+              )}
             </Card>
 
             {/* Project Interest */}
             <Card className="p-3 md:p-4">
               <h3 className="text-xs md:text-sm font-semibold text-foreground mb-3">
                 Top Research Projects
-                <span className="text-[10px] font-normal text-muted-foreground ml-2">
-                  Tap to view participants
-                </span>
+                {networkingEngagement.projectInterest.length > 0 && (
+                  <span className="text-[10px] font-normal text-muted-foreground ml-2">
+                    Tap to view participants
+                  </span>
+                )}
               </h3>
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {networkingEngagement.projectInterest.length > 0 ? (
-                  networkingEngagement.projectInterest.map((project, i) => (
+              {networkingEngagement.projectInterest.length > 0 ? (
+                <div className="space-y-2 max-h-56 overflow-y-auto">
+                  {networkingEngagement.projectInterest.map((project, i) => (
                     <div
                       key={project.id}
                       className="flex items-center justify-between p-2 rounded-lg bg-muted cursor-pointer active:bg-muted/80"
@@ -787,16 +828,21 @@ export default function EventAnalytics() {
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <Badge className="bg-blue-100 text-blue-700 text-xs">
-                          {project.interested} interested
+                          {project.interested} favorites
                         </Badge>
                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-muted-foreground text-center py-4">No project data yet</p>
-                )}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-48 md:h-56 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs">No project interest data yet</p>
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
           </>

@@ -89,7 +89,7 @@ export default function ProjectInterestsPage() {
       }
     } catch (error) {
       console.error('Failed to fetch project interests:', error);
-      toast.error('Failed to load interested participants');
+      toast.error('Failed to load favorites');
     } finally {
       setLoading(false);
     }
@@ -168,7 +168,7 @@ export default function ProjectInterestsPage() {
               <div className="flex-1 min-w-0">
                 <h1 className="text-base font-bold flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  Interested Participants
+                  Participants Who Favorited
                 </h1>
                 {project && (
                   <div className="flex items-center gap-2 mt-0.5">
@@ -188,7 +188,7 @@ export default function ProjectInterestsPage() {
         {/* Count summary */}
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            {interests.length} participant{interests.length !== 1 ? 's' : ''} interested
+            {interests.length} participant{interests.length !== 1 ? 's' : ''} favorited
           </span>
         </div>
 
@@ -272,7 +272,7 @@ export default function ProjectInterestsPage() {
                     )}
 
                     <p className="text-xs text-muted-foreground/70 mt-2">
-                      Expressed interest: {getTimeAgo(interest.createdAt)}
+                      Favorited: {getTimeAgo(interest.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -284,7 +284,7 @@ export default function ProjectInterestsPage() {
             <div className="text-center">
               <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <p className="text-muted-foreground">
-                No participants interested in this project yet
+                No one has favorited this project yet
               </p>
             </div>
           </Card>

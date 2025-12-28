@@ -90,7 +90,7 @@ export function ProjectInterestsModal({
       }
     } catch (error) {
       console.error('Failed to fetch project interests:', error);
-      toast.error('Failed to load interested participants');
+      toast.error('Failed to load favorites');
     } finally {
       setLoading(false);
     }
@@ -123,7 +123,7 @@ export function ProjectInterestsModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
-            Interested Participants
+            Participants Who Favorited
           </DialogTitle>
           {(project || projectTitle) && (
             <div className="flex items-center gap-2 mt-2">
@@ -230,7 +230,7 @@ export function ProjectInterestsModal({
                     )}
 
                     <p className="text-xs text-muted-foreground/70 mt-2">
-                      Expressed interest: {getTimeAgo(interest.createdAt)}
+                      Favorited: {getTimeAgo(interest.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -239,14 +239,14 @@ export function ProjectInterestsModal({
           ) : (
             <div className="text-center py-12">
               <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <p className="text-muted-foreground">No participants interested in this project yet</p>
+              <p className="text-muted-foreground">No one has favorited this project yet</p>
             </div>
           )}
         </ScrollArea>
 
         <div className="flex justify-between items-center pt-4 border-t">
           <span className="text-sm text-muted-foreground">
-            {interests.length} participant{interests.length !== 1 ? 's' : ''} interested
+            {interests.length} participant{interests.length !== 1 ? 's' : ''} favorited
           </span>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close

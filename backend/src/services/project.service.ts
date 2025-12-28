@@ -192,26 +192,32 @@ export async function expressInterest(userId: string, data: {
     throw new Error('Cannot express interest in your own project');
   }
 
-  // Create interest
-  const interest = await prisma.projectInterest.create({
-    data: {
-      userId,
-      projectId: data.projectId,
-      message: data.message,
-    },
-    include: {
-      project: true,
-      user: {
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-          organization: true,
-          role: true,
+  // Create interest and increment counter in a transaction
+  const [interest] = await prisma.$transaction([
+    prisma.projectInterest.create({
+      data: {
+        userId,
+        projectId: data.projectId,
+        message: data.message,
+      },
+      include: {
+        project: true,
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            organization: true,
+            role: true,
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.project.update({
+      where: { id: data.projectId },
+      data: { interestedCount: { increment: 1 } },
+    }),
+  ]);
 
   return interest;
 }
@@ -300,9 +306,16 @@ export async function withdrawInterest(userId: string, interestId: string) {
     throw new Error('Unauthorized to withdraw this interest');
   }
 
-  await prisma.projectInterest.delete({
-    where: { id: interestId },
-  });
+  // Delete interest and decrement counter in a transaction
+  await prisma.$transaction([
+    prisma.projectInterest.delete({
+      where: { id: interestId },
+    }),
+    prisma.project.update({
+      where: { id: interest.projectId },
+      data: { interestedCount: { decrement: 1 } },
+    }),
+  ]);
 
   return { success: true };
 }
