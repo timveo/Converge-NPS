@@ -9,6 +9,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: false // Disable service worker in dev to avoid message channel errors
+      },
       includeAssets: ['favicon-32x32.png', 'apple-touch-icon.png', 'nps-logo.png', 'NPSF-native-app-icon.png'],
       manifest: {
         name: 'NPSF Converge',

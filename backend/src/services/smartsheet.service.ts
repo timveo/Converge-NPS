@@ -1111,6 +1111,40 @@ function parseArray(value: any): string[] {
   return [];
 }
 
+// Standard seeking types that match the frontend filter options
+const STANDARD_SEEKING_TYPES = [
+  'Industry Partnership',
+  'Government Sponsor',
+  'Research Collaboration',
+  'Funding',
+  'Test & Evaluation',
+];
+
+// Helper function to normalize seeking values to standard types
+function normalizeSeekingValues(values: string[]): string[] {
+  return values.map(value => {
+    const lowerValue = value.toLowerCase();
+
+    // Find matching standard type
+    for (const standardType of STANDARD_SEEKING_TYPES) {
+      const lowerStandard = standardType.toLowerCase();
+      // Check if the value contains the standard type or vice versa
+      if (lowerValue.includes(lowerStandard) || lowerStandard.includes(lowerValue)) {
+        return standardType;
+      }
+    }
+
+    // Return original value if no match found
+    return value;
+  }).filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
+}
+
+// Helper function to parse and normalize seeking array
+function parseSeekingArray(value: any): string[] {
+  const parsed = parseArray(value);
+  return normalizeSeekingValues(parsed);
+}
+
 // Helper function to validate email
 function isValidEmail(email: string): boolean {
   if (!email) return false;
@@ -1391,7 +1425,7 @@ export async function importProjects(): Promise<ImportResult> {
         const classification = getCellValue(row, sheet.columns, 'Classification') || getCellValue(row, sheet.columns, 'Project 1 - Classification') || 'Unclassified';
         const keywords = parseArray(getCellValue(row, sheet.columns, 'Keywords') || getCellValue(row, sheet.columns, 'Tags') || getCellValue(row, sheet.columns, 'Technology Focus'));
         const researchAreas = parseArray(getCellValue(row, sheet.columns, 'Research Areas'));
-        const seeking = parseArray(getCellValue(row, sheet.columns, 'Seeking') || getCellValue(row, sheet.columns, 'Looking For'));
+        const seeking = parseSeekingArray(getCellValue(row, sheet.columns, 'Seeking') || getCellValue(row, sheet.columns, 'Looking For'));
         const students = parseArray(getCellValue(row, sheet.columns, 'Students') || getCellValue(row, sheet.columns, 'Team Members') || getCellValue(row, sheet.columns, 'Advisor(s)'));
         const pocFullName = getCellValue(row, sheet.columns, 'POC Full Name') || getCellValue(row, sheet.columns, 'POC Name');
         const { firstName: pocFirstName, lastName: pocLastName } = splitFullName(pocFullName || '');
@@ -1663,7 +1697,7 @@ export async function importPartners(): Promise<ImportResult> {
         const organizationType = getCellValue(row, sheet.columns, 'Organization Type') || getCellValue(row, sheet.columns, 'Type');
         const website = getCellValue(row, sheet.columns, 'Website') || getCellValue(row, sheet.columns, 'Website URL');
         const technologyFocus = parseArray(getCellValue(row, sheet.columns, 'Technology Focus'));
-        const seeking = parseArray(getCellValue(row, sheet.columns, 'Seeking'));
+        const seeking = parseSeekingArray(getCellValue(row, sheet.columns, 'Seeking'));
         const collaborationPitch = getCellValue(row, sheet.columns, 'Collaboration Pitch') || getCellValue(row, sheet.columns, 'Pitch') || getCellValue(row, sheet.columns, 'Collaboration');
         const boothLocation = getCellValue(row, sheet.columns, 'Booth Location') || getCellValue(row, sheet.columns, 'Booth');
         const contactName = getCellValue(row, sheet.columns, 'Contact Name') || getCellValue(row, sheet.columns, 'Primary Contact');

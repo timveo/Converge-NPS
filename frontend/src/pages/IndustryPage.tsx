@@ -662,7 +662,7 @@ function IndustryMobilePage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="shrink-0 h-11 w-11 md:h-10 md:w-10"
+                        className="shrink-0 h-11 w-11 md:h-10 md:w-10 hover:bg-transparent active:bg-transparent"
                         onClick={(e) => { e.stopPropagation(); toggleFavorite(partner.id); }}
                       >
                         <Star className={cn(
