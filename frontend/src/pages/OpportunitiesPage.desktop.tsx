@@ -130,7 +130,7 @@ interface Opportunity {
 type CombinedItem =
   | (Project & { sourceType: 'NPS' })
   | (Opportunity & { sourceType: 'Military/Gov' })
-  | (Opportunity & { sourceType: 'Industry' });
+  | (Opportunity & { sourceType: 'Industry'; isProjectOrigin?: boolean });
 
 export default function OpportunitiesDesktopPage() {
   const navigate = useNavigate();
@@ -297,19 +297,20 @@ export default function OpportunitiesDesktopPage() {
     // }
 
     if (selectedSeeking.length > 0) {
-      filtered = filtered.filter((p) =>
-        p.seeking?.some((s: string) => selectedSeeking.includes(s))
-      );
-    }
-
-    if (sortBy === 'interest') {
-      filtered.sort((a, b) => (b.interested || 0) - (a.interested || 0));
-    } else if (sortBy === 'stage') {
-      filtered.sort((a, b) => PROJECT_STAGES.indexOf(a.stage) - PROJECT_STAGES.indexOf(b.stage));
+      filtered = filtered.filter((p) => {
+        // Handle both snake_case and camelCase from API
+        const seekingArray = p.seeking || (p as any).Seeking || [];
+        return seekingArray.some((s: string) =>
+          selectedSeeking.some(selected =>
+            s.toLowerCase().includes(selected.toLowerCase()) ||
+            selected.toLowerCase().includes(s.toLowerCase())
+          )
+        );
+      });
     }
 
     return filtered;
-  }, [projects, searchQuery, selectedStages, selectedFunding, selectedSeeking, sortBy]);
+  }, [projects, searchQuery, selectedStages, selectedFunding, selectedSeeking]);
 
   // Filter Military/Government opportunities
   const filteredOpportunities = useMemo(() => {
@@ -351,7 +352,7 @@ export default function OpportunitiesDesktopPage() {
     const npsProjects = filteredProjects.filter(p => !isIndustryProject(p));
     
 
-    const mapProjectToOpportunity = (project: Project): Opportunity & { stage?: string } => ({
+    const mapProjectToOpportunity = (project: Project): Opportunity & { stage?: string; isProjectOrigin: boolean } => ({
       id: project.id,
       title: project.title,
       description: project.description,
@@ -364,9 +365,23 @@ export default function OpportunitiesDesktopPage() {
       dod_alignment: project.research_areas || [],
       requirements: project.seeking?.join(', ') || undefined,
       benefits: project.keywords?.join(', ') || undefined,
-      sponsor_contact_id: undefined,
+      sponsor_contact_id: project.poc_user_id || project.pocUserId || undefined,
       created_at: project.created_at,
       stage: project.stage, // Preserve stage for Industry projects
+      // POC fields
+      poc_user_id: project.poc_user_id || project.pocUserId,
+      poc_first_name: project.poc_first_name || project.pocFirstName,
+      poc_last_name: project.poc_last_name || project.pocLastName,
+      poc_email: project.poc_email || project.pocEmail,
+      poc_rank: project.poc_rank || project.pocRank,
+      poc_is_checked_in: project.poc_is_checked_in || project.pocIsCheckedIn,
+      pocUserId: project.pocUserId,
+      pocFirstName: project.pocFirstName,
+      pocLastName: project.pocLastName,
+      pocEmail: project.pocEmail,
+      pocRank: project.pocRank,
+      pocIsCheckedIn: project.pocIsCheckedIn,
+      isProjectOrigin: true, // Mark as originating from a project
     });
 
     const industryProjectOpportunities = industryProjects.map(mapProjectToOpportunity);
@@ -375,41 +390,57 @@ export default function OpportunitiesDesktopPage() {
       ...p,
       sourceType: 'NPS' as const,
     }));
-    const milItems: CombinedItem[] = filteredOpportunities
-      .filter((o) => o.type !== 'Industry')
-      .map((o) => ({
-        ...o,
-        sourceType: 'Military/Gov' as const,
-      }));
+    // When "Seeking" filter is active, hide Military/Gov opportunities since they don't have seeking field
+    const milItems: CombinedItem[] = selectedSeeking.length > 0
+      ? []
+      : filteredOpportunities
+          .filter((o) => o.type?.toLowerCase() !== 'industry')
+          .map((o) => ({
+            ...o,
+            sourceType: 'Military/Gov' as const,
+          }));
+
     const industryItems: CombinedItem[] = [
+      // Real industry opportunities from the opportunities table
       ...filteredOpportunities
-        .filter((o) => o.type === 'Industry')
+        .filter((o) => o.type?.toLowerCase() === 'industry')
         .map((o) => ({
           ...o,
           sourceType: 'Industry' as const,
+          isProjectOrigin: false as const,
         })),
+      // Industry projects converted to opportunity format
       ...industryProjectOpportunities.map((o) => ({
         ...o,
         sourceType: 'Industry' as const,
+        isProjectOrigin: true as const,
       })),
     ];
+
+    // Filter out real Industry opportunities when seeking filter is active
+    const filteredIndustryItems = selectedSeeking.length > 0
+      ? industryItems.filter(item => (item as any).isProjectOrigin === true)
+      : industryItems;
 
     let combined: CombinedItem[] = [];
 
     if (activeTab === 'all') {
-      combined = [...npsItems, ...milItems, ...industryItems];
+      combined = [...npsItems, ...milItems, ...filteredIndustryItems];
     } else if (activeTab === 'nps') {
       combined = npsItems;
     } else if (activeTab === 'military') {
       combined = milItems;
     } else {
-      combined = industryItems;
+      combined = filteredIndustryItems;
     }
 
     // Filter by favorites
     if (showFavoritesOnly) {
       combined = combined.filter(item => {
         if (item.sourceType === 'NPS') {
+          return projectFavorites.has(item.id);
+        } else if (item.sourceType === 'Industry' && (item as any).isProjectOrigin) {
+          // Industry items derived from projects use project bookmarks
           return projectFavorites.has(item.id);
         } else {
           return opportunityFavorites.has(item.id);
@@ -422,6 +453,16 @@ export default function OpportunitiesDesktopPage() {
       combined.sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
+    } else if (sortBy === 'stage') {
+      // Sort by stage - items with stage come first, sorted by PROJECT_STAGES order
+      // Items without stage (Military/Gov opportunities) go to the end
+      combined.sort((a, b) => {
+        const stageA = (a as any).stage;
+        const stageB = (b as any).stage;
+        const indexA = stageA ? PROJECT_STAGES.indexOf(stageA) : PROJECT_STAGES.length;
+        const indexB = stageB ? PROJECT_STAGES.indexOf(stageB) : PROJECT_STAGES.length;
+        return indexA - indexB;
+      });
     }
 
     return {
@@ -429,10 +470,10 @@ export default function OpportunitiesDesktopPage() {
       counts: {
         nps: npsItems.length,
         mil: milItems.length,
-        industry: industryItems.length,
+        industry: filteredIndustryItems.length,
       },
     };
-  }, [filteredProjects, filteredOpportunities, activeTab, sortBy, showFavoritesOnly, projectFavorites, opportunityFavorites]);
+  }, [filteredProjects, filteredOpportunities, activeTab, selectedSeeking, sortBy, showFavoritesOnly, projectFavorites, opportunityFavorites]);
 
   const isNPSItem = (item: CombinedItem): item is Project & { sourceType: 'NPS' } => {
     return item.sourceType === 'NPS';
@@ -503,7 +544,6 @@ export default function OpportunitiesDesktopPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="recent">Most Recent</SelectItem>
-                <SelectItem value="interest">By Interest</SelectItem>
                 <SelectItem value="stage">By Stage</SelectItem>
               </SelectContent>
             </Select>
@@ -733,23 +773,27 @@ export default function OpportunitiesDesktopPage() {
                         <div
                           className={cn(
                             'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                            isNPS ? 'bg-blue-100' : item.sourceType === 'Industry' ? 'bg-orange-100' : 'bg-green-100'
+                            isNPS ? 'bg-blue-100' : item.sourceType === 'Industry' ? 'bg-slate-100' : 'bg-slate-200'
                           )}
                         >
                           {isNPS ? (
                             <GraduationCap className="h-4 w-4 text-blue-600" />
                           ) : item.sourceType === 'Industry' ? (
-                            <Briefcase className="h-4 w-4 text-orange-600" />
+                            <Briefcase className="h-4 w-4 text-slate-600" />
                           ) : (
-                            <Building2 className="h-4 w-4 text-green-700" />
+                            <Building2 className="h-4 w-4 text-slate-700" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start gap-2 mb-0.5">
                             <h4 className="font-medium text-sm flex-1 break-words">{item.title}</h4>
-                            {isFavorite(item.id, isNPS) && (
-                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
-                            )}
+                            {(() => {
+                              // Industry items from projects should use project bookmarks
+                              const useProjectBookmarks = isNPS || (item.sourceType === 'Industry' && (item as any).isProjectOrigin);
+                              return isFavorite(item.id, useProjectBookmarks) ? (
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
+                              ) : null;
+                            })()}
                             {!isNPS && (item as Opportunity).featured && (
                               <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
                             )}
@@ -764,7 +808,7 @@ export default function OpportunitiesDesktopPage() {
                               variant="outline"
                               className={cn(
                                 'text-[10px] py-0 px-1.5',
-                                isNPS ? 'border-blue-200 text-blue-700' : item.sourceType === 'Industry' ? 'border-orange-200 text-orange-700' : 'border-green-200 text-green-700'
+                                isNPS ? 'border-blue-200 text-blue-700' : item.sourceType === 'Industry' ? 'border-slate-200 text-slate-600' : 'border-slate-300 text-slate-700'
                               )}
                             >
                               {isNPS ? (item as Project).stage : item.sourceType === 'Industry' && (item as any).stage ? (item as any).stage : (item as Opportunity).type}
@@ -815,17 +859,23 @@ export default function OpportunitiesDesktopPage() {
           </div>
         </div>
         <div className="flex items-start gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => toggleFavorite(selectedItem.id, isNPSItem(selectedItem))}
-          >
-            <Star className={cn(
-              "w-5 h-5 transition-colors",
-              isFavorite(selectedItem.id, isNPSItem(selectedItem)) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
-            )} />
-          </Button>
+          {(() => {
+            // Industry items from projects should use project bookmarks
+            const useProjectBookmarks = isNPSItem(selectedItem) || (selectedItem.sourceType === 'Industry' && (selectedItem as any).isProjectOrigin);
+            return (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-transparent active:bg-transparent"
+                onClick={() => toggleFavorite(selectedItem.id, useProjectBookmarks)}
+              >
+                <Star className={cn(
+                  "w-5 h-5 transition-colors",
+                  isFavorite(selectedItem.id, useProjectBookmarks) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
+                )} />
+              </Button>
+            );
+          })()}
           <div className="flex flex-col items-end">
             <Button
               size="sm"
@@ -859,13 +909,14 @@ export default function OpportunitiesDesktopPage() {
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center gap-2 mb-2">
           <Badge
+            variant="outline"
             className={cn(
               'text-xs',
               isNPSItem(selectedItem)
-                ? 'bg-blue-600 text-white'
+                ? 'bg-blue-600 text-white border-blue-600'
                 : selectedItem.sourceType === 'Industry'
-                ? 'bg-orange-600 text-white'
-                : 'bg-green-700 text-white'
+                ? 'bg-slate-600 text-white border-slate-600'
+                : 'bg-slate-700 text-white border-slate-700'
             )}
           >
             {isNPSItem(selectedItem) ? (

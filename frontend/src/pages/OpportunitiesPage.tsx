@@ -106,7 +106,7 @@ interface Opportunity {
 type CombinedItem =
   | (Project & { sourceType: 'NPS' })
   | (Opportunity & { sourceType: 'Military/Gov' })
-  | (Opportunity & { sourceType: 'Industry' });
+  | (Opportunity & { sourceType: 'Industry'; isProjectOrigin?: boolean });
 
 function OpportunitiesSkeleton() {
   return (
@@ -341,19 +341,20 @@ function OpportunitiesMobilePage() {
     // }
 
     if (selectedSeeking.length > 0) {
-      filtered = filtered.filter(p =>
-        p.seeking?.some((s: string) => selectedSeeking.includes(s))
-      );
-    }
-
-    if (sortBy === "interest") {
-      filtered.sort((a, b) => (b.interested || 0) - (a.interested || 0));
-    } else if (sortBy === "stage") {
-      filtered.sort((a, b) => PROJECT_STAGES.indexOf(a.stage) - PROJECT_STAGES.indexOf(b.stage));
+      filtered = filtered.filter(p => {
+        // Handle both snake_case and camelCase from API
+        const seekingArray = p.seeking || (p as any).Seeking || [];
+        return seekingArray.some((s: string) =>
+          selectedSeeking.some(selected =>
+            s.toLowerCase().includes(selected.toLowerCase()) ||
+            selected.toLowerCase().includes(s.toLowerCase())
+          )
+        );
+      });
     }
 
     return filtered;
-  }, [projects, searchQuery, selectedStages, selectedFunding, selectedSeeking, sortBy]);
+  }, [projects, searchQuery, selectedStages, selectedFunding, selectedSeeking]);
 
   // Filter Military/Government opportunities
   const filteredOpportunities = useMemo(() => {
@@ -403,7 +404,7 @@ function OpportunitiesMobilePage() {
     const industryProjects = filteredProjects.filter(isIndustryProject);
     const npsProjects = filteredProjects.filter(p => !isIndustryProject(p));
 
-    const mapProjectToOpportunity = (project: Project): Opportunity & { stage?: string } => ({
+    const mapProjectToOpportunity = (project: Project): Opportunity & { stage?: string; isProjectOrigin: boolean } => ({
       id: project.id,
       title: project.title,
       description: project.description,
@@ -429,23 +430,43 @@ function OpportunitiesMobilePage() {
       pocEmail: project.pocEmail,
       pocRank: project.pocRank,
       created_at: project.created_at,
+      isProjectOrigin: true, // Mark as originating from a project
     });
 
-    const industryProjectOpportunities: Opportunity[] = industryProjects.map(mapProjectToOpportunity);
+    const industryProjectOpportunities = industryProjects.map(mapProjectToOpportunity);
 
     const npsItems: CombinedItem[] = npsProjects.map(p => ({ ...p, sourceType: 'NPS' as const }));
 
+    // Real industry opportunities (from opportunities table)
+    const realIndustryOpportunities = filteredOpportunities
+      .filter(o => o.type?.toLowerCase() === 'industry')
+      .map(o => ({ ...o, isProjectOrigin: false as const }));
+
     const industryOpportunities = [
-      ...filteredOpportunities.filter(o => o.type?.toLowerCase() === 'industry'),
+      ...realIndustryOpportunities,
       ...industryProjectOpportunities,
     ];
 
-    const industryItems: CombinedItem[] = industryOpportunities.map(o => ({ ...o, sourceType: 'Industry' as const }));
-    const milItems: CombinedItem[] = filteredOpportunities
-      .filter(o => o.type?.toLowerCase() !== 'industry')
-      .map(o => ({ ...o, sourceType: 'Military/Gov' as const }));
+    const industryItems: CombinedItem[] = industryOpportunities.map(o => ({
+      ...o,
+      sourceType: 'Industry' as const,
+      isProjectOrigin: (o as any).isProjectOrigin ?? false,
+    }));
 
-    let combined = [...npsItems, ...milItems, ...industryItems];
+    // When "Seeking" filter is active, hide Military/Gov opportunities since they don't have seeking field
+    // Also hide real Industry opportunities (non-project origin) since they don't have seeking field
+    const milItems: CombinedItem[] = selectedSeeking.length > 0
+      ? []
+      : filteredOpportunities
+          .filter(o => o.type?.toLowerCase() !== 'industry')
+          .map(o => ({ ...o, sourceType: 'Military/Gov' as const }));
+
+    // Filter out real Industry opportunities when seeking filter is active
+    const filteredIndustryItems = selectedSeeking.length > 0
+      ? industryItems.filter(item => (item as any).isProjectOrigin === true)
+      : industryItems;
+
+    let combined = [...npsItems, ...milItems, ...filteredIndustryItems];
 
     // Filter by organization type
     if (selectedSourceTypes.length > 0) {
@@ -457,6 +478,9 @@ function OpportunitiesMobilePage() {
       combined = combined.filter(item => {
         if (item.sourceType === 'NPS') {
           return projectFavorites.has(item.id);
+        } else if (item.sourceType === 'Industry' && (item as any).isProjectOrigin) {
+          // Industry items derived from projects use project bookmarks
+          return projectFavorites.has(item.id);
         } else {
           return opportunityFavorites.has(item.id);
         }
@@ -466,10 +490,20 @@ function OpportunitiesMobilePage() {
     // Sort
     if (sortBy === "recent") {
       combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } else if (sortBy === "stage") {
+      // Sort by stage - items with stage come first, sorted by PROJECT_STAGES order
+      // Items without stage (Military/Gov opportunities) go to the end
+      combined.sort((a, b) => {
+        const stageA = (a as any).stage;
+        const stageB = (b as any).stage;
+        const indexA = stageA ? PROJECT_STAGES.indexOf(stageA) : PROJECT_STAGES.length;
+        const indexB = stageB ? PROJECT_STAGES.indexOf(stageB) : PROJECT_STAGES.length;
+        return indexA - indexB;
+      });
     }
 
     return combined;
-  }, [filteredProjects, filteredOpportunities, selectedSourceTypes, sortBy, showFavoritesOnly, projectFavorites, opportunityFavorites]);
+  }, [filteredProjects, filteredOpportunities, selectedSourceTypes, selectedSeeking, sortBy, showFavoritesOnly, projectFavorites, opportunityFavorites]);
 
   const renderFilterPanel = () => {
     return (
@@ -683,7 +717,6 @@ function OpportunitiesMobilePage() {
                   </SelectTrigger>
                   <SelectContent className="bg-background z-50">
                     <SelectItem value="recent">Most Recent</SelectItem>
-                    <SelectItem value="interest">By Interest</SelectItem>
                     <SelectItem value="stage">By Stage</SelectItem>
                   </SelectContent>
                 </Select>
@@ -785,7 +818,7 @@ function OpportunitiesMobilePage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="shrink-0 h-9 w-9"
+                          className="shrink-0 h-9 w-9 hover:bg-transparent active:bg-transparent"
                           onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, true); }}
                         >
                           <Star className={cn(
@@ -948,7 +981,7 @@ function OpportunitiesMobilePage() {
                           )}
                         </div>
                         <CollapsibleTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10">
+                          <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 hover:bg-transparent active:bg-transparent">
                             <ChevronDown className={`h-4 w-4 transition-transform ${expandedCards.has(item.id) ? 'rotate-180' : ''}`} />
                           </Button>
                         </CollapsibleTrigger>
@@ -966,27 +999,33 @@ function OpportunitiesMobilePage() {
                       {/* Badge and Star */}
                       <div className="flex items-center justify-between mb-3">
                         {item.sourceType === 'Industry' ? (
-                          <Badge className="bg-orange-600 text-white text-xs">
+                          <Badge variant="outline" className="bg-slate-600 text-white text-xs border-slate-600">
                             <Users className="h-3 w-3 mr-1" />
                             Industry
                           </Badge>
                         ) : (
-                          <Badge className="bg-green-700 text-white text-xs">
+                          <Badge variant="outline" className="bg-slate-700 text-white text-xs border-slate-700">
                             <Building2 className="h-3 w-3 mr-1" />
                             Military/Gov
                           </Badge>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="shrink-0 h-9 w-9"
-                          onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, false); }}
-                        >
-                          <Star className={cn(
-                            "w-5 h-5 transition-colors",
-                            isFavorite(item.id, false) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
-                          )} />
-                        </Button>
+                        {(() => {
+                          // Industry items from projects should use project bookmarks
+                          const isProjectOrigin = item.sourceType === 'Industry' && (item as any).isProjectOrigin;
+                          return (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="shrink-0 h-9 w-9 hover:bg-transparent active:bg-transparent"
+                              onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, isProjectOrigin); }}
+                            >
+                              <Star className={cn(
+                                "w-5 h-5 transition-colors",
+                                isFavorite(item.id, isProjectOrigin) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
+                              )} />
+                            </Button>
+                          );
+                        })()}
                       </div>
 
                       <div className="flex items-start justify-between mb-3">
@@ -1102,7 +1141,7 @@ function OpportunitiesMobilePage() {
                           )}
                         </div>
                         <CollapsibleTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10">
+                          <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 hover:bg-transparent active:bg-transparent">
                             <ChevronDown className={`h-4 w-4 transition-transform ${expandedCards.has(item.id) ? 'rotate-180' : ''}`} />
                           </Button>
                         </CollapsibleTrigger>
