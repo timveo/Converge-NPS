@@ -8,8 +8,6 @@ import {
   Download,
   Upload,
   RefreshCw,
-  CheckCircle,
-  AlertCircle,
   Database,
 } from 'lucide-react';
 import { toast } from 'sonner';
