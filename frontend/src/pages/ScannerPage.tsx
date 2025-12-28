@@ -450,7 +450,6 @@ export default function ScannerPage() {
       }
 
       // Intent selection removed - no reminder or note functionality
-      let reminderTimestamp = null;
 
       if (isOffline) {
         await addToOfflineQueue();
