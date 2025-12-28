@@ -798,11 +798,32 @@ export default function OpportunitiesDesktopPage() {
                               <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {isNPS
-                              ? (item as Project).profiles?.full_name || 'Unknown PI'
-                              : (item as Opportunity).sponsor_organization || 'Unknown Organization'}
-                          </p>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Users className="h-3 w-3 shrink-0" />
+                            <span className="truncate">
+                              {isNPS
+                                ? (() => {
+                                    const project = item as Project;
+                                    const pocRank = project.poc_rank || project.pocRank;
+                                    const pocFirstName = project.poc_first_name || project.pocFirstName;
+                                    const pocLastName = project.poc_last_name || project.pocLastName;
+                                    const pocName = (pocFirstName || pocLastName) 
+                                      ? `${pocFirstName || ''} ${pocLastName || ''}`.trim()
+                                      : project.profiles?.full_name || 'Unknown';
+                                    return pocRank ? `${pocRank} ${pocName}` : pocName;
+                                  })()
+                                : (() => {
+                                    const opp = item as Opportunity;
+                                    const pocRank = opp.poc_rank || opp.pocRank;
+                                    const pocFirstName = opp.poc_first_name || opp.pocFirstName;
+                                    const pocLastName = opp.poc_last_name || opp.pocLastName;
+                                    const pocName = (pocFirstName || pocLastName)
+                                      ? `${pocFirstName || ''} ${pocLastName || ''}`.trim()
+                                      : 'Unknown';
+                                    return pocRank ? `${pocRank} ${pocName}` : pocName;
+                                  })()}
+                            </span>
+                          </div>
                           <div className="flex items-center gap-2 mt-1.5">
                             <Badge
                               variant="outline"
@@ -994,19 +1015,8 @@ export default function OpportunitiesDesktopPage() {
                 </div>
               )}
 
-              {/* PI Info */}
+              {/* Additional Project Info */}
               <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="p-2 rounded-md bg-white border border-gray-200">
-                    <Users className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">Principal Investigator</p>
-                    <p className="font-medium">
-                      {(selectedItem as Project).profiles?.full_name || 'Unknown'}
-                    </p>
-                  </div>
-                </div>
 
                 {(selectedItem as Project).department && (
                   <div className="flex items-center gap-3 text-sm">
