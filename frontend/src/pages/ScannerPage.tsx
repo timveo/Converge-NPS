@@ -494,8 +494,8 @@ export default function ScannerPage() {
 
       await offlineQueue.add(user.id, 'qr_scan', {
         qrCodeData: scannedData.qrCodeData || scannedData.uuid,
-        collaborativeIntents: selectedIntents,
-        notes: note || '',
+        collaborativeIntents: [],
+        notes: '',
       });
 
       toast.success(
@@ -566,38 +566,7 @@ export default function ScannerPage() {
     const profileLinkedin = displayProfile?.linkedin_url || displayProfile?.linkedin || '';
     const profileEmail = displayProfile?.email || '';
 
-    // Check if user has opted out of QR scanning
-    if (profileData && profileData.allow_qr_scan === false) {
-      return (
-        <div className="min-h-screen bg-background/95 backdrop-blur-sm fixed inset-0 z-50 animate-fade-in overflow-y-auto">
-          <div className="container mx-auto px-3 md:px-4 py-3 md:py-6 max-w-lg">
-            <Card className="p-4 md:p-8 text-center space-y-3 md:space-y-4">
-              <Lock className="w-12 h-12 md:w-16 md:h-16 mx-auto text-muted-foreground" />
-
-              <div>
-                <h3 className="text-base md:text-xl font-semibold mb-1 md:mb-2">
-                  Participant #{(profileData.id || scannedData?.uuid || '').slice(0, 4).toUpperCase()}
-                </h3>
-                <p className="text-xs md:text-sm text-muted-foreground">Event Attendee</p>
-              </div>
-
-              <Alert className="py-2 md:py-3">
-                <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                <AlertTitle className="text-sm">Limited Profile</AlertTitle>
-                <AlertDescription className="text-xs md:text-sm">
-                  This participant has opted out of contact sharing.
-                </AlertDescription>
-              </Alert>
-
-              <Button variant="outline" onClick={handleClose} className="w-full h-9 md:h-10 text-sm">
-                ← Back to Scanner
-              </Button>
-            </Card>
-          </div>
-        </div>
-      );
-    }
-
+    
     return (
       <div className="min-h-screen bg-background/95 backdrop-blur-sm fixed inset-0 z-50 animate-fade-in overflow-y-auto">
         <div className="container mx-auto px-3 md:px-4 py-3 md:py-6 max-w-2xl">
@@ -1080,6 +1049,73 @@ export default function ScannerPage() {
               <p className="text-muted-foreground text-[11px] md:text-sm">Clean lens if scan fails</p>
             </div>
           </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+  // Default idle screen
+  return (
+    <div className="min-h-screen bg-background/95 backdrop-blur-sm fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
+      <div className="container mx-auto px-3 md:px-4 max-w-md">
+        <Card className="p-3 md:p-6 text-center shadow-2xl animate-scale-in">
+          <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 md:mb-6 rounded-full bg-green-500/10 flex items-center justify-center">
+            <QrCode className="w-8 h-8 md:w-10 md:h-10 text-green-500" />
+          </div>
+          
+          <h2 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Scan Connection</h2>
+          <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6">
+            Scan someone's QR code to connect
+          </p>
+
+          <Button
+            onClick={handleStartScan}
+            className="w-full mb-3 md:mb-4 gap-2"
+            size="lg"
+          >
+            <Camera className="w-4 h-4 md:w-5 md:h-5" />
+            Start Scanning
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => setShowManualEntry(true)}
+            className="w-full gap-2"
+          >
+            <Keyboard className="w-4 h-4 md:w-5 md:h-5" />
+            Enter Code Manually
+          </Button>
+
+          {showManualEntry && (
+            <div className="mt-4 md:mt-6 space-y-3">
+              <Input
+                placeholder="Enter connection code"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                className="text-center"
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowManualEntry(false);
+                    setManualCode("");
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleManualCodeSubmit}
+                  disabled={!manualCode.trim()}
+                  className="flex-1"
+                >
+                  Connect
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
     </div>
