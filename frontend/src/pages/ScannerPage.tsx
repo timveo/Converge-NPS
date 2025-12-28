@@ -27,29 +27,16 @@ import {
 
 type ScanState = 'idle' | 'success' | 'error';
 type CameraPermission = 'granted' | 'denied' | 'prompt' | 'checking';
-type ScanStage = 'idle' | 'scanning' | 'intent' | 'preview';
-
-// Exactly 5 collaboration types per spec
-const collaborativeIntents = [
-  { id: "collaborative_research", label: "Collaborative Research", description: "Academic partnership" },
-  { id: "brainstorming", label: "Brainstorming", description: "Idea generation session" },
-  { id: "design_sprint", label: "Design Sprint", description: "Rapid prototyping session" },
-  { id: "hackathon", label: "Hackathon", description: "Collaborative coding event" },
-  { id: "funded_research", label: "Funded Research", description: "Joint research project" }
-];
+type ScanStage = 'idle' | 'scanning' | 'preview';
 
 export default function ScannerPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Flow stages: 'idle' -> 'scanning' -> 'intent' -> 'preview'
+  // Flow stages: 'idle' -> 'scanning' -> 'preview'
   const [scanStage, setScanStage] = useState<ScanStage>('idle');
-  const [selectedIntents, setSelectedIntents] = useState<string[]>([]);
-  const [note, setNote] = useState("");
-  const [reminderTime, setReminderTime] = useState<string>("");
   const [scannedData, setScannedData] = useState<any>(null);
   const [profileData, setProfileData] = useState<any>(null);
-  const [isLoadingProfile, _setIsLoadingProfile] = useState(false);
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualCode, setManualCode] = useState("");
@@ -462,25 +449,8 @@ export default function ScannerPage() {
         return;
       }
 
-      // Calculate reminder timestamp if set
+      // Intent selection removed - no reminder or note functionality
       let reminderTimestamp = null;
-      if (reminderTime) {
-        const now = new Date();
-        switch (reminderTime) {
-          case '1hour':
-            reminderTimestamp = new Date(now.getTime() + 60 * 60 * 1000).toISOString();
-            break;
-          case '1day':
-            reminderTimestamp = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
-            break;
-          case '3days':
-            reminderTimestamp = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
-            break;
-          case '1week':
-            reminderTimestamp = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-            break;
-        }
-      }
 
       if (isOffline) {
         await addToOfflineQueue();
@@ -490,13 +460,13 @@ export default function ScannerPage() {
 
       await api.post('/connections/manual', {
         connectedUserId: scannedData.uuid,
-        collaborativeIntents: selectedIntents,
-        notes: note || null,
-        connectionMethod: 'manual_entry',
+        collaborativeIntents: [],
+        notes: null,
+        connectionMethod: 'qr_scan',
       });
 
 
-      toast.success("Connection saved successfully!" + (reminderTimestamp ? " Reminder set." : ""));
+      toast.success("Connection saved successfully!");
 
       // Navigate to connections page to see the new connection
       setTimeout(() => {
@@ -555,9 +525,6 @@ export default function ScannerPage() {
     // Only update state if still mounted
     if (isMountedRef.current) {
       setScanStage('idle');
-      setSelectedIntents([]);
-      setNote("");
-      setReminderTime("");
       setScannedData(null);
       setProfileData(null);
       setScanState('idle');
@@ -778,48 +745,6 @@ export default function ScannerPage() {
                 </p>
               </div>
             </div>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background/95 backdrop-blur-sm fixed inset-0 z-50 animate-fade-in overflow-y-auto">
-      <div className="container mx-auto px-3 md:px-4 py-3 md:py-6 max-w-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3 md:mb-6">
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-              <Check className="h-5 w-5 md:h-6 md:w-6 text-green-500" />
-            </div>
-            <div>
-              <h2 className="text-base md:text-xl font-bold text-foreground">Review Connection</h2>
-              <p className="text-xs md:text-sm text-muted-foreground">Confirm and save</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 md:gap-2">
-            {hasPrivacyLimits && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Badge variant="outline" className="gap-0.5 md:gap-1 text-xs">
-                      <Lock className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                      Limited
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    This participant has limited their profile visibility
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 md:h-10 md:w-10">
-              <X className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
-          </div>
-        </div>
-          </Card>
 
           {/* Offline indicator */}
           {isOffline && (
@@ -872,6 +797,7 @@ export default function ScannerPage() {
               Cancel
             </Button>
           </div>
+          </Card>
         </div>
       </div>
     );
