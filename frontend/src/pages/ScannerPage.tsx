@@ -291,7 +291,7 @@ export default function ScannerPage() {
 
       // Fetch full profile data from backend
       try {
-        const response = await api.get(`/profiles/${userId}`);
+        const response = await api.get(`/users/${userId}`);
         const profile = (response as any).profile;
 
         // Update with fetched profile data
@@ -687,33 +687,7 @@ export default function ScannerPage() {
               </div>
             )}
 
-            {/* Additional Profile Info */}
-            <div className="border-t pt-2.5 md:pt-4">
-              <p className="text-[10px] md:text-xs font-medium text-muted-foreground mb-1.5 md:mb-2">Profile Details</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs md:text-sm">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <span className="text-muted-foreground">QR Scanning:</span>
-                  <span className={profileData?.allow_qr_scan !== false ? "text-green-600" : "text-red-600"}>
-                    {profileData?.allow_qr_scan !== false ? "Enabled" : "Disabled"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <span className="text-muted-foreground">Messaging:</span>
-                  <span className={profileData?.allow_messaging !== false ? "text-green-600" : "text-red-600"}>
-                    {profileData?.allow_messaging !== false ? "Available" : "Unavailable"}
-                  </span>
-                </div>
-              </div>
-              
-              {/* User ID for reference */}
-              <div className="mt-2 pt-2 border-t border-border/50">
-                <p className="text-[10px] text-muted-foreground">
-                  ID: {(profileData?.id || scannedData?.uuid || '').slice(0, 8).toUpperCase()}
-                </p>
-              </div>
-            </div>
+          </Card>
 
           {/* Offline indicator */}
           {isOffline && (
@@ -766,7 +740,6 @@ export default function ScannerPage() {
               Cancel
             </Button>
           </div>
-          </Card>
         </div>
       </div>
     );
@@ -1053,7 +1026,6 @@ export default function ScannerPage() {
       </div>
     </div>
   );
-}
 
   // Default idle screen
   return (
