@@ -8,14 +8,21 @@ export function useSocket() {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      return;
+    }
 
     // Get access token
-    const token = localStorage.getItem('access_token');
-    if (!token) return;
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      return;
+    }
+
+    // Socket.IO connects to the base server URL (not the API path)
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 
     // Initialize socket connection
-    const socket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000', {
+    const socket = io(socketUrl, {
       auth: { token },
       reconnection: true,
       reconnectionDelay: 1000,
@@ -26,17 +33,15 @@ export function useSocket() {
 
     // Connection events
     socket.on('connect', () => {
-      console.log('Socket connected');
       setIsConnected(true);
     });
 
     socket.on('disconnect', () => {
-      console.log('Socket disconnected');
       setIsConnected(false);
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('[useSocket] Socket connection error:', error);
       setIsConnected(false);
     });
 

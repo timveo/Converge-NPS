@@ -12,6 +12,16 @@ interface AuthenticatedSocket extends Socket {
 // Active users map (userId -> socketId[])
 const activeUsers = new Map<string, string[]>();
 
+// Socket.IO server instance (exported for use in controllers)
+let ioInstance: Server | null = null;
+
+/**
+ * Get Socket.IO server instance
+ */
+export function getSocketIO(): Server | null {
+  return ioInstance;
+}
+
 /**
  * Initialize Socket.IO server
  */
@@ -113,13 +123,15 @@ export function initializeSocketServer(httpServer: HTTPServer) {
           where: { conversationId: message.conversationId },
           include: { user: true }
         });
-        
+
         const recipientId = participants.find(p => p.userId !== userId)?.userId;
 
-        io.to(`user:${recipientId}`).emit('message_notification', {
-          conversationId: message.conversationId,
-          message,
-        });
+        if (recipientId) {
+          io.to(`user:${recipientId}`).emit('message_notification', {
+            conversationId: message.conversationId,
+            message,
+          });
+        }
 
         logger.info('Message sent', {
           messageId: message.id,
@@ -219,6 +231,9 @@ export function initializeSocketServer(httpServer: HTTPServer) {
       logger.error('Socket error', { error, userId, socketId: socket.id });
     });
   });
+
+  // Store the io instance for use in controllers
+  ioInstance = io;
 
   logger.info('Socket.IO server initialized');
   return io;
