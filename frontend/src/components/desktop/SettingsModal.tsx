@@ -529,23 +529,25 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-border bg-secondary/20">
-                <div className="flex gap-3">
-                  <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={saving || !hasChanges()} className="flex-1">
-                    {saving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      'Save Changes'
-                    )}
-                  </Button>
+              {hasChanges() && (
+                <div className="px-6 py-4 border-t border-border bg-secondary/20">
+                  <div className="flex gap-3">
+                    <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={saving} className="flex-1">
+                      {saving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </form>
           </motion.div>
         </motion.div>
