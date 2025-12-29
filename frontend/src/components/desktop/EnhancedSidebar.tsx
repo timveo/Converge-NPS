@@ -305,13 +305,14 @@ export function EnhancedSidebar() {
         size="icon"
         onClick={toggleSidebar}
         className={cn(
-          'absolute top-8 z-50',
+          'absolute z-50',
           'w-6 h-6 rounded-full',
           'bg-white border border-gray-300 shadow-sm',
           'hover:bg-gray-100 text-gray-600'
         )}
         style={{
-          left: sidebarCollapsed ? 69 : 253,
+          top: '52px',
+          left: sidebarCollapsed ? 60 : 244,
           transition: 'left 0.2s ease-in-out',
         }}
       >

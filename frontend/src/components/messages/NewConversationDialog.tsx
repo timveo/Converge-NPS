@@ -124,7 +124,7 @@ export function NewConversationDialog({ open, onOpenChange, onConversationCreate
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[calc(100vw-1.5rem)] rounded-lg sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5" />

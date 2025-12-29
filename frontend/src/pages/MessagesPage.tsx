@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MessageCircle, Search, Loader2 } from 'lucide-react';
+import { MessageCircle, Search, Loader2, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
 import { useDevice } from '@/hooks/useDeviceType';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/PageHeader';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { offlineDataCache } from '@/lib/offlineDataCache';
 import { OfflineDataBanner } from '@/components/OfflineDataBanner';
+import { NewConversationDialog } from '@/components/messages/NewConversationDialog';
 
 // Lazy load desktop version
 const MessagesDesktopPage = lazy(() => import('./MessagesPage.desktop'));
@@ -68,6 +70,7 @@ function MessagesMobilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
   
   // Fast path: if we navigated here with a target user id, start/open the conversation and redirect.
   useEffect(() => {
@@ -191,6 +194,21 @@ function MessagesMobilePage() {
           />
         </div>
 
+        {/* New Conversation Section */}
+        <Card className="p-3 md:p-4 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 shadow-md">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium">Start a new conversation</p>
+            <Button
+              onClick={() => setIsNewConversationOpen(true)}
+              size="sm"
+              className="gap-2 shrink-0 h-11 md:h-10"
+            >
+              <Plus className="h-4 w-4" />
+              Message
+            </Button>
+          </div>
+        </Card>
+
         {/* Conversations List */}
         <div className="space-y-2 md:space-y-2">
         {isLoading ? (
@@ -270,6 +288,12 @@ function MessagesMobilePage() {
         )}
         </div>
       </main>
+
+      {/* New Conversation Dialog */}
+      <NewConversationDialog
+        open={isNewConversationOpen}
+        onOpenChange={setIsNewConversationOpen}
+      />
     </div>
   );
 }
