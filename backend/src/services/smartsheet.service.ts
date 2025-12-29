@@ -1742,52 +1742,83 @@ export async function importPartners(): Promise<ImportResult> {
           continue;
         }
 
-        // Check if partner already exists
-        const partner = await prisma.partner.findUnique({
-          where: { name: companyName },
-        });
-
-        // Try to find POC user by email if provided
-        let pocUserId: string | null = null;
-        if (pocEmail) {
-          const pocUser = await prisma.profile.findUnique({
-            where: { email: pocEmail.toLowerCase() },
-          });
-          if (pocUser) {
-            pocUserId = pocUser.id;
-          }
-        }
-
-        const partnerData = {
-          name: companyName,
-          description,
-          organizationType: organizationType,
-          websiteUrl: website,
-          researchAreas: technologyFocus,
-          seeking,
-          collaborationPitch,
-          isFeatured: false,
-          pocUserId,
-          pocFirstName: pocFirstName || null,
-          pocLastName: pocLastName || null,
-          pocEmail: pocEmail || null,
-          pocRank: pocRank || null,
-        };
+        // Filter: Only import partners with Organization Type = "Industry"
+        // Projects from non-Industry partners will still be created as Military/Gov
+        const isIndustryPartner = organizationType?.toLowerCase() === 'industry';
 
         let savedPartner;
-        if (partner) {
-          savedPartner = await prisma.partner.update({
-            where: { id: partner.id },
-            data: partnerData,
+        let pocUserId: string | null = null;
+
+        if (isIndustryPartner) {
+          // Check if partner already exists
+          const partner = await prisma.partner.findUnique({
+            where: { name: companyName },
           });
-          result.updated++;
+
+          // Try to find POC user by email if provided
+          if (pocEmail) {
+            const pocUser = await prisma.profile.findUnique({
+              where: { email: pocEmail.toLowerCase() },
+            });
+            if (pocUser) {
+              pocUserId = pocUser.id;
+            }
+          }
+
+          const partnerData = {
+            name: companyName,
+            description,
+            organizationType: organizationType,
+            websiteUrl: website,
+            researchAreas: technologyFocus,
+            seeking,
+            collaborationPitch,
+            isFeatured: false,
+            pocUserId,
+            pocFirstName: pocFirstName || null,
+            pocLastName: pocLastName || null,
+            pocEmail: pocEmail || null,
+            pocRank: pocRank || null,
+          };
+
+          if (partner) {
+            savedPartner = await prisma.partner.update({
+              where: { id: partner.id },
+              data: partnerData,
+            });
+            result.updated++;
+          } else {
+            savedPartner = await prisma.partner.create({
+              data: partnerData,
+            });
+            result.imported++;
+          }
         } else {
-          savedPartner = await prisma.partner.create({
-            data: partnerData,
-          });
-          result.imported++;
+          // Partner is not Industry type - skip partner creation but still process projects
+          result.skipped++;
+
+          // Create a temporary partner object for project creation context
+          savedPartner = {
+            id: '', // Not needed for project creation
+            name: companyName,
+            description,
+            organizationType: organizationType,
+            websiteUrl: website,
+            researchAreas: technologyFocus,
+            seeking,
+            collaborationPitch,
+            isFeatured: false,
+            pocUserId: null,
+            pocFirstName: pocFirstName || null,
+            pocLastName: pocLastName || null,
+            pocEmail: pocEmail || null,
+            pocRank: pocRank || null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
         }
 
+        // Always process projects (will be classified as Military/Gov for non-Industry partners)
         await upsertIndustryProjects({
           row,
           columns: sheet.columns,
