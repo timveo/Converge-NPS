@@ -887,7 +887,7 @@ export default function ScheduleDesktopPage() {
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center gap-2 mb-2 flex-wrap">
           {getRSVPForSession(selectedSession.id) && (
-            <Badge className="text-xs bg-green-500 hover:bg-green-600">
+            <Badge className="text-xs">
               <CheckCircle2 className="h-3 w-3 mr-1" />
               RSVP'd
             </Badge>
