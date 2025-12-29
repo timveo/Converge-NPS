@@ -362,15 +362,28 @@ function StaffCheckinMobilePage() {
           <CardHeader className="pb-1.5 md:pb-2 px-3 md:px-6 pt-3 md:pt-6">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm md:text-lg">Check-In Statistics</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
+                type="button"
                 onClick={() => { loadStats(); loadRecentCheckIns(); }}
                 disabled={statsLoading}
-                className="h-11 w-11 md:h-10 md:w-10"
+                onTouchStart={(e) => {
+                  // Immediately blur to prevent any focus/hover state on mobile
+                  e.currentTarget.blur();
+                }}
+                onPointerDown={(e) => {
+                  // Prevent focus on mobile touch
+                  if (window.matchMedia('(max-width: 768px)').matches) {
+                    e.preventDefault();
+                  }
+                }}
+                className="inline-flex items-center justify-center h-11 w-11 md:h-10 md:w-10 rounded-md transition-colors disabled:pointer-events-none disabled:opacity-50 md:hover:bg-accent md:hover:text-accent-foreground focus:outline-none"
+                style={{
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation'
+                }}
               >
                 <RefreshCw className={cn("h-3.5 w-3.5 md:h-4 md:w-4", statsLoading && "animate-spin")} />
-              </Button>
+              </button>
             </div>
           </CardHeader>
           <CardContent className="px-3 md:px-6 pb-3 md:pb-6">
