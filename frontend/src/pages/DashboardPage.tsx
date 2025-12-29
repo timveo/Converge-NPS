@@ -206,26 +206,6 @@ function DashboardMobilePage() {
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link to="/messages">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 text-primary-foreground hover:bg-primary/20 relative"
-                      >
-                        <MessageCircle className="h-5 w-5 text-white" />
-                        {unreadCount > 0 && (
-                          <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-destructive rounded-full border border-nps-navy" />
-                        )}
-                      </Button>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Messages</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
                     <Link to="/settings">
                       <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 text-primary-foreground hover:bg-primary/20">
                         <SettingsIcon className="h-5 w-5 md:h-6 md:w-6" />

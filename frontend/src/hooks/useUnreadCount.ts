@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { useSocket } from './useSocket';
 
 // Shared state across all hook instances to avoid duplicate polling
 let globalUnreadCount = 0;
@@ -8,8 +9,8 @@ let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
 const fetchUnreadCount = async () => {
   try {
-    const response = await api.get<{ count: number }>('/messages/unread-count');
-    globalUnreadCount = response.count;
+    const response = await api.get<{ success: boolean; data: { count: number } }>('/messages/unread-count');
+    globalUnreadCount = response.data.count;
     listeners.forEach(listener => listener(globalUnreadCount));
   } catch (error) {
     console.error('Failed to fetch unread count', error);
@@ -22,7 +23,7 @@ const startPolling = () => {
   // Fetch immediately
   fetchUnreadCount();
 
-  // Poll every 30 seconds
+  // Poll every 30 seconds as fallback
   pollingInterval = setInterval(fetchUnreadCount, 30000);
 };
 
@@ -34,11 +35,12 @@ const stopPolling = () => {
 };
 
 /**
- * Hook to get unread message count with shared polling across components
+ * Hook to get unread message count with real-time socket updates and polling fallback
  * Uses a singleton pattern to avoid duplicate API calls
  */
 export function useUnreadCount() {
   const [unreadCount, setUnreadCount] = useState(globalUnreadCount);
+  const { socket, isConnected } = useSocket();
 
   useEffect(() => {
     // Add this component's setter to listeners
@@ -57,6 +59,32 @@ export function useUnreadCount() {
       stopPolling();
     };
   }, []);
+
+  // Listen for socket events for real-time updates
+  useEffect(() => {
+    if (!socket || !isConnected) {
+      return;
+    }
+
+    const handleMessageNotification = () => {
+      // Immediately fetch new unread count when a message is received
+      fetchUnreadCount();
+    };
+
+    const handleNewMessage = () => {
+      // Immediately fetch new unread count when a message is received
+      fetchUnreadCount();
+    };
+
+    // Listen for both events
+    socket.on('message_notification', handleMessageNotification);
+    socket.on('new_message', handleNewMessage);
+
+    return () => {
+      socket.off('message_notification', handleMessageNotification);
+      socket.off('new_message', handleNewMessage);
+    };
+  }, [socket, isConnected]);
 
   // Function to manually refresh the count (e.g., after reading messages)
   const refresh = () => {

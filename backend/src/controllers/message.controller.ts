@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import * as messageService from '../services/message.service';
 import prisma from '../config/database';
+import { getSocketIO } from '../socket';
 
 /**
  * POST /v1/messages
@@ -12,6 +13,29 @@ export async function sendMessage(req: Request, res: Response) {
     const data = messageService.sendMessageSchema.parse(req.body) as any;
 
     const message = await messageService.sendMessage(userId, data);
+
+    // Emit Socket.IO events for real-time notifications
+    const io = getSocketIO();
+    if (io) {
+      // Emit to conversation room
+      io.to(`conversation:${message.conversationId}`).emit('new_message', message);
+
+      // Get conversation participants to find recipient
+      const participants = await prisma.conversationParticipant.findMany({
+        where: { conversationId: message.conversationId },
+        include: { user: true }
+      });
+
+      const recipientId = participants.find(p => p.userId !== userId)?.userId;
+
+      // Emit to recipient's personal room (for notification/unread count)
+      if (recipientId) {
+        io.to(`user:${recipientId}`).emit('message_notification', {
+          conversationId: message.conversationId,
+          message,
+        });
+      }
+    }
 
     res.status(201).json({
       success: true,
