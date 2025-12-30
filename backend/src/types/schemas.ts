@@ -71,6 +71,7 @@ export const UpdateProfileSchema = z.object({
   organization: z.string().max(100).optional().nullable(),
   department: z.string().max(100).optional().nullable(),
   role: z.string().max(100).optional().nullable(),
+  branchOfService: z.string().max(50).optional().nullable(),
   bio: z.string().max(500).optional().nullable(),
   accelerationInterests: z.array(z.string()).optional(),
   linkedinUrl: z.string().max(200).url().optional().nullable(),

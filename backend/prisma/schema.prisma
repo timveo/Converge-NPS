@@ -80,6 +80,7 @@ model Profile {
   organization             String?
   department               String?
   role                     String?
+  branchOfService          String?                   @map("branch_of_service")
   participantType          ParticipantType?          @map("participant_type")
   bio                      String?
   avatarUrl                String?                   @map("avatar_url")

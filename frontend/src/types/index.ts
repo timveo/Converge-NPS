@@ -17,6 +17,7 @@ export interface User {
   organization: string;
   department?: string | null;
   role: string;
+  branchOfService?: string | null;
   participantType?: ParticipantType | null;
   bio?: string | null;
   avatarUrl?: string | null;
