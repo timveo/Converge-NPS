@@ -34,7 +34,7 @@ export default function AuthPage() {
     email: '',
     password: '',
     organization: '',
-    role: '',
+    participantType: '',
   });
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
   const [showSignupPassword, setShowSignupPassword] = useState(false);
@@ -179,8 +179,8 @@ export default function AuthPage() {
     if (!signupData.organization.trim()) {
       errors.organization = 'Organization is required';
     }
-    if (!signupData.role) {
-      errors.role = 'Participant type is required';
+    if (!signupData.participantType) {
+      errors.participantType = 'Participant type is required';
     }
 
     setSignupErrors(errors);
@@ -199,7 +199,7 @@ export default function AuthPage() {
         password: signupData.password,
         fullName,
         organization: signupData.organization,
-        role: signupData.role as any,
+        participantType: signupData.participantType as any,
       });
 
       toast.success('Account created!', {
@@ -461,17 +461,17 @@ export default function AuthPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-role" className="text-sm md:text-base">
+                  <Label htmlFor="signup-participantType" className="text-sm md:text-base">
                     Participant Type *
                   </Label>
                   <Select
-                    value={signupData.role}
-                    onValueChange={(value) => setSignupData({ ...signupData, role: value })}
+                    value={signupData.participantType}
+                    onValueChange={(value) => setSignupData({ ...signupData, participantType: value })}
                     disabled={loading}
                   >
                     <SelectTrigger
-                      id="signup-role"
-                      className={`h-11 md:h-10 text-sm md:text-base ${signupErrors.role ? 'border-destructive' : ''}`}
+                      id="signup-participantType"
+                      className={`h-11 md:h-10 text-sm md:text-base ${signupErrors.participantType ? 'border-destructive' : ''}`}
                     >
                       <SelectValue placeholder="Select participant type" />
                     </SelectTrigger>
@@ -483,8 +483,8 @@ export default function AuthPage() {
                       <SelectItem value="guest">Guest</SelectItem>
                     </SelectContent>
                   </Select>
-                  {signupErrors.role && (
-                    <p className="text-xs md:text-sm text-destructive">{signupErrors.role}</p>
+                  {signupErrors.participantType && (
+                    <p className="text-xs md:text-sm text-destructive">{signupErrors.participantType}</p>
                   )}
                 </div>
                 <div className="space-y-2">

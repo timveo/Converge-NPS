@@ -386,11 +386,14 @@ function buildCellsForAttendeeProfile(profile: any, columns: SmartsheetSheet['co
   // Organization fields (maps to RE "Org Name" field)
   setIfPresent(['Organization', 'Organizations', 'Company', 'Org Name'], profile.organization || '');
 
-  // Department fields (maps to RE "Department" field via BranchOfService column)
-  setIfPresent(['Department', 'Branch of Service', 'Branch', 'Service Branch', 'BranchOfService'], profile.department || '');
+  // Department field
+  setIfPresent(['Department'], profile.department || '');
 
-  // Role/Job Title fields (maps to RE "Job Title" field)
-  setIfPresent(['Role', 'Position', 'Job Title'], profile.role || '');
+  // Branch of Service field (maps to military branch)
+  setIfPresent(['Branch of Service', 'Branch', 'Service Branch', 'BranchOfService'], profile.branchOfService || '');
+
+  // Position/Title field (maps to user's job title)
+  setIfPresent(['Position', 'Job Title'], profile.role || '');
 
   // Participant Type fields (maps to RE "Constituent Type" field)
   setIfPresent(['Participant Type', 'Type', 'ParticipantType', 'Constituent Type'], profile.participantType || '');

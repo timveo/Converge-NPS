@@ -16,6 +16,7 @@ export interface UpdateProfileData {
   organization?: string | null;
   department?: string | null;
   role?: string | null;
+  branchOfService?: string | null;
   bio?: string | null;
   accelerationInterests?: string[];
   linkedinUrl?: string | null;

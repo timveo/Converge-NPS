@@ -62,6 +62,7 @@ export default function SettingsPage() {
     first_name: "",
     last_name: "",
     rank: "",
+    branch_of_service: "",
     role: "",
     department: "",
     organization: "",
@@ -101,6 +102,7 @@ export default function SettingsPage() {
       first_name: firstName,
       last_name: lastName,
       rank: user.rank || "",
+      branch_of_service: user.branchOfService || "",
       role: user.role || "",
       department: user.department || "",
       organization: user.organization || "",
@@ -223,6 +225,7 @@ export default function SettingsPage() {
         organization: normalizedFormData.organization || null,
         department: normalizedFormData.department || null,
         role: normalizedFormData.role || null,
+        branchOfService: normalizedFormData.branch_of_service || null,
         bio: normalizedFormData.bio || null,
         accelerationInterests: interests,
         linkedinUrl: normalizedFormData.linkedin_url || null,
@@ -253,6 +256,7 @@ export default function SettingsPage() {
           organization: normalizedFormData.organization || user?.organization || "",
           department: normalizedFormData.department || null,
           role: normalizedFormData.role || user?.role || "",
+          branchOfService: normalizedFormData.branch_of_service || null,
           bio: normalizedFormData.bio || null,
           accelerationInterests: interests,
           linkedinUrl: normalizedFormData.linkedin_url || null,
@@ -409,6 +413,29 @@ export default function SettingsPage() {
                     </p>
                   </div>
 
+                  {/* Branch of Service field */}
+                  <div className="space-y-1.5 md:space-y-2">
+                    <Label htmlFor="branch_of_service" className="text-xs md:text-sm">Branch of Service</Label>
+                    <Select
+                      value={formData.branch_of_service || undefined}
+                      onValueChange={(value) => setFormData({ ...formData, branch_of_service: value })}
+                    >
+                      <SelectTrigger className="bg-background h-9 md:h-10 text-sm">
+                        <SelectValue placeholder="Select branch (optional)" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="Army" className="text-sm">Army</SelectItem>
+                        <SelectItem value="Navy" className="text-sm">Navy</SelectItem>
+                        <SelectItem value="Air Force" className="text-sm">Air Force</SelectItem>
+                        <SelectItem value="Marine Corps" className="text-sm">Marine Corps</SelectItem>
+                        <SelectItem value="Coast Guard" className="text-sm">Coast Guard</SelectItem>
+                        <SelectItem value="Space Force" className="text-sm">Space Force</SelectItem>
+                        <SelectItem value="Civilian" className="text-sm">Civilian</SelectItem>
+                        <SelectItem value="Other" className="text-sm">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Participant Type field */}
                   <div className="space-y-1.5 md:space-y-2">
                     <Label htmlFor="participantType" className="text-xs md:text-sm">
@@ -466,7 +493,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-1.5 md:space-y-2">
-                    <Label htmlFor="role" className="text-xs md:text-sm">Role / Title</Label>
+                    <Label htmlFor="role" className="text-xs md:text-sm">Title</Label>
                     <Input
                       id="role"
                       value={formData.role}
