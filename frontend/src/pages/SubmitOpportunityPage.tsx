@@ -14,16 +14,16 @@ const submissionOptions = [
   {
     id: "government",
     title: "Military & Government",
-    description: "Military Commands and government organizations interested in highlighting collaborative projects to NPS students/faculty and industry partners or in participating in operational challenge breakout sessions or whiteboard/training sessions should submit this form.",
+    description: "Military Commands and government organizations interested in highlighting collaborative projects to NPS students/faculty and industry partners should submit this form for projects to be included in the app.",
     icon: Building2,
-    formUrl: "https://app.smartsheet.com/b/form/d87ede2a165c48b8b22fac0f3068d22a",
+    formUrl: "https://app.smartsheet.com/b/form/fae81a94e7c843899f4eb59ca919dbde",
   },
   {
     id: "industry",
     title: "Industry Partners",
-    description: "Industry interested in showcasing cutting-edge tech or projects, participating in operational challenge breakout sessions, or leading whiteboard/training sessions should submit this form to be considered for inclusion and to ensure resources are adequately requested. (One form per organization.)",
+    description: "Industry interested in highlighting collaborative projects to NPS students/faculty, military commands, and government agencies should submit this form for projects to be included in the app.",
     icon: Briefcase,
-    formUrl: "https://app.smartsheet.com/b/form/01993ecc522b73aabd8191d9a8e11126",
+    formUrl: "https://app.smartsheet.com/b/form/e0639af0b1ae4086a0793a242d485324",
   },
 ];
 
