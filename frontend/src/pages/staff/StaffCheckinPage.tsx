@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react"
 import { Link } from "react-router-dom";
 import {
   Camera, CheckCircle, XCircle, AlertCircle, UserPlus,
-  RefreshCw, ChevronLeft, Loader2
+  RefreshCw, ChevronLeft, Loader2, Keyboard
 } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { triggerHapticFeedback } from "@/lib/mobileUtils";
@@ -82,6 +82,9 @@ function StaffCheckinMobilePage() {
   });
   const [scanError, setScanError] = useState<string | null>(null);
   const [isProcessingQr, setIsProcessingQr] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [manualCode, setManualCode] = useState("");
+  const [isProcessingManual, setIsProcessingManual] = useState(false);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const isScannerStoppingRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -316,6 +319,66 @@ function StaffCheckinMobilePage() {
     }
   };
 
+  const handleManualCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (manualCode.length < 4) {
+      toast.error('Please enter a valid code (at least 4 characters)');
+      return;
+    }
+
+    setIsProcessingManual(true);
+
+    try {
+      // Look up user by manual code
+      const lookupResponse = await api.post<{ profile: { id: string; fullName?: string } }>(
+        '/connections/manual/lookup',
+        { code: manualCode }
+      );
+
+      const profile = (lookupResponse as any).profile;
+
+      if (!profile?.id) {
+        toast.error('No user found for that code');
+        setIsProcessingManual(false);
+        return;
+      }
+
+      // Now check in the user
+      try {
+        const response = await api.post('/staff/checkin', { userId: profile.id });
+        const data = response as any;
+
+        triggerHapticFeedback('medium');
+        toast.success(`${data.data?.fullName || profile.fullName || 'Attendee'} checked in!`);
+
+        // Reset form and update stats
+        setShowManualEntry(false);
+        setManualCode('');
+        loadStats();
+        loadRecentCheckIns();
+      } catch (error: any) {
+        triggerHapticFeedback('heavy');
+        const errorMessage = error.response?.data?.error?.message || 'Check-in failed';
+        const errorCode = error.response?.data?.error?.code;
+
+        if (errorCode === 'ALREADY_CHECKED_IN') {
+          toast.warning(errorMessage);
+        } else if (errorCode === 'NOT_FOUND') {
+          toast.error('User not found - try walk-in registration');
+        } else {
+          toast.error(errorMessage);
+        }
+      }
+    } catch (error: any) {
+      console.error('Manual code error:', error);
+      const errorMessage = error.response?.data?.error?.message || 'Code not found. Please try again.';
+      toast.error(errorMessage);
+    } finally {
+      setIsProcessingManual(false);
+    }
+  };
+
   // Track mounted state and cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
@@ -464,6 +527,54 @@ function StaffCheckinMobilePage() {
               <Camera className="h-5 w-5 md:h-6 md:w-6 mr-2 md:mr-3" />
               Scan QR Code
             </Button>
+
+            {/* Manual entry button */}
+            <Button
+              variant="outline"
+              className="w-full mt-3 h-11 md:h-10 text-xs md:text-sm"
+              onClick={() => setShowManualEntry(!showManualEntry)}
+            >
+              <Keyboard className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1.5 md:mr-2" />
+              Enter Code Manually
+            </Button>
+
+            {/* Manual entry form */}
+            {showManualEntry && (
+              <Card className="mt-3 text-left">
+                <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
+                  <form onSubmit={handleManualCodeSubmit} className="space-y-3 md:space-y-4">
+                    <div>
+                      <Label htmlFor="manual-code" className="text-xs md:text-sm">Manual Code</Label>
+                      <Input
+                        id="manual-code"
+                        placeholder="A7F3D9C2"
+                        value={manualCode}
+                        onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                        maxLength={36}
+                        className="font-mono text-center text-base md:text-lg h-9 md:h-10"
+                      />
+                      <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
+                        Enter the code below the QR code
+                      </p>
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full h-9 md:h-10 text-sm"
+                      disabled={manualCode.length < 4 || isProcessingManual}
+                    >
+                      {isProcessingManual ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1.5 md:mr-2 animate-spin" />
+                          Checking in...
+                        </>
+                      ) : (
+                        'Submit Code'
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </CardContent>
         </Card>
 
