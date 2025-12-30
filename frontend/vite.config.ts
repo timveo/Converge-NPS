@@ -14,8 +14,8 @@ export default defineConfig({
       },
       includeAssets: ['favicon-32x32.png', 'apple-touch-icon.png', 'nps-logo.png', 'NPSF-native-app-icon.png'],
       manifest: {
-        name: 'NPSF Converge',
-        short_name: 'NPSF',
+        name: 'Converge@NPS',
+        short_name: 'Converge@NPS',
         description: 'NPS Tech Accelerator 2026 Networking Platform',
         theme_color: '#0F172A',
         background_color: '#0F172A',
