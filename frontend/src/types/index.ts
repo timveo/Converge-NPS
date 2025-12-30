@@ -35,6 +35,7 @@ export interface PrivacySettings {
   allowQrScanning: boolean;
   allowMessaging: boolean;
   hideContactInfo: boolean;
+  showProfileAllowConnections: boolean;
 }
 
 export interface AuthTokens {

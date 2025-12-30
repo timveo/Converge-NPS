@@ -82,6 +82,7 @@ export const UpdatePrivacySchema = z.object({
   allowQrScanning: z.boolean().optional(),
   allowMessaging: z.boolean().optional(),
   hideContactInfo: z.boolean().optional(),
+  showProfileAllowConnections: z.boolean().optional(),
 });
 
 export const UpdateOnboardingSchema = z.object({

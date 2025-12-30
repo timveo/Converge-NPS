@@ -56,6 +56,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               allowQrScanning: response.profile.allowQrScanning,
               allowMessaging: response.profile.allowMessaging,
               hideContactInfo: response.profile.hideContactInfo,
+              showProfileAllowConnections: response.profile.showProfileAllowConnections ?? true,
             },
           };
           setUser(userData);
@@ -102,6 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           allowQrScanning: response.user.allowQrScanning,
           allowMessaging: response.user.allowMessaging,
           hideContactInfo: response.user.hideContactInfo,
+          showProfileAllowConnections: response.user.showProfileAllowConnections ?? true,
         },
       };
 
@@ -131,6 +133,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         allowQrScanning: response.user.allowQrScanning,
         allowMessaging: response.user.allowMessaging,
         hideContactInfo: response.user.hideContactInfo,
+        showProfileAllowConnections: response.user.showProfileAllowConnections ?? true,
       },
     };
 

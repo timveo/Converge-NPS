@@ -70,8 +70,7 @@ export default function SettingsPage() {
     website_url: "",
   });
   const [interests, setInterests] = useState<string[]>([]);
-  const [allowQrScan, setAllowQrScan] = useState(true);
-  const [shareEmail, setShareEmail] = useState(true);
+  const [showProfileAllowConnections, setShowProfileAllowConnections] = useState(true);
   const [phone, setPhone] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [email, setEmail] = useState("");
@@ -87,7 +86,7 @@ export default function SettingsPage() {
   const [originalInterests, setOriginalInterests] = useState<string[]>([]);
 
   // Track original privacy settings for change detection
-  const [originalPrivacy, setOriginalPrivacy] = useState({ allowQrScan: true, shareEmail: true });
+  const [originalPrivacy, setOriginalPrivacy] = useState({ showProfileAllowConnections: true });
   const [originalPhone, setOriginalPhone] = useState("");
 
   useEffect(() => {
@@ -111,8 +110,7 @@ export default function SettingsPage() {
     };
 
     const nextInterests = user.accelerationInterests || [];
-    const nextShareEmail = !user.privacy?.hideContactInfo;
-    const nextAllowQrScan = user.privacy?.allowQrScanning !== false;
+    const nextShowProfileAllowConnections = user.privacy?.showProfileAllowConnections !== false;
     const nextPhone = user.phone || "";
 
     setFormData(nextForm);
@@ -122,9 +120,8 @@ export default function SettingsPage() {
     setEmail(user.email || "");
     setPhone(nextPhone);
     setOriginalPhone(nextPhone);
-    setShareEmail(nextShareEmail);
-    setAllowQrScan(nextAllowQrScan);
-    setOriginalPrivacy({ allowQrScan: nextAllowQrScan, shareEmail: nextShareEmail });
+    setShowProfileAllowConnections(nextShowProfileAllowConnections);
+    setOriginalPrivacy({ showProfileAllowConnections: nextShowProfileAllowConnections });
   }, [user]);
 
   const toggleInterest = (interest: string) => {
@@ -148,8 +145,7 @@ export default function SettingsPage() {
     const phoneChanged = phone !== originalPhone;
 
     const privacyChanged =
-      allowQrScan !== originalPrivacy.allowQrScan ||
-      shareEmail !== originalPrivacy.shareEmail;
+      showProfileAllowConnections !== originalPrivacy.showProfileAllowConnections;
 
     return formChanged || interestsChanged || phoneChanged || privacyChanged;
   };
@@ -238,14 +234,12 @@ export default function SettingsPage() {
 
       // Check if privacy settings changed
       const privacyChanged =
-        allowQrScan !== originalPrivacy.allowQrScan ||
-        shareEmail !== originalPrivacy.shareEmail;
+        showProfileAllowConnections !== originalPrivacy.showProfileAllowConnections;
 
       if (privacyChanged) {
         // Update privacy settings separately
         const privacyPayload = {
-          allowQrScanning: allowQrScan,
-          hideContactInfo: !shareEmail,
+          showProfileAllowConnections,
         };
         await api.patch<{ message: string; profile: any }>('/users/me/privacy', privacyPayload);
       }
@@ -265,10 +259,11 @@ export default function SettingsPage() {
           websiteUrl: normalizedFormData.website_url || null,
           privacy: {
             ...user?.privacy,
-            allowQrScanning: allowQrScan,
-            hideContactInfo: !shareEmail,
+            showProfileAllowConnections,
             profileVisibility: user?.privacy?.profileVisibility || 'public',
+            allowQrScanning: user?.privacy?.allowQrScanning ?? true,
             allowMessaging: user?.privacy?.allowMessaging ?? true,
+            hideContactInfo: user?.privacy?.hideContactInfo ?? false,
           },
         });
       }
@@ -279,7 +274,7 @@ export default function SettingsPage() {
       setFormData(normalizedFormData);
       setOriginalInterests([...interests]);
       setOriginalPhone(phone);
-      setOriginalPrivacy({ allowQrScan, shareEmail });
+      setOriginalPrivacy({ showProfileAllowConnections });
 
       toast.success("Profile updated successfully");
     } catch (error: any) {
@@ -614,35 +609,22 @@ export default function SettingsPage() {
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-3 md:pt-4">
                 <div className="space-y-3 md:space-y-4">
-                  <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
-                    Control how your information is shared with other users
-                  </p>
-
-                  <div className="space-y-3">
-                    <label className="flex items-center justify-between p-2.5 md:p-3 rounded-lg border border-border bg-secondary/20 cursor-pointer">
-                      <div className="flex-1">
-                        <span className="text-xs md:text-sm font-medium text-foreground">Share participant information</span>
-                        <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">Allow others to see your profile details and email address</p>
-                      </div>
-                      <Checkbox
-                        checked={shareEmail}
-                        onCheckedChange={(checked) => setShareEmail(checked === true)}
-                        className="h-4 w-4"
-                      />
-                    </label>
-
-                    <label className="flex items-center justify-between p-2.5 md:p-3 rounded-lg border border-border bg-secondary/20 cursor-pointer">
-                      <div className="flex-1">
-                        <span className="text-xs md:text-sm font-medium text-foreground">Allow connections</span>
-                        <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">Let others scan your QR code and send you messages</p>
-                      </div>
-                      <Checkbox
-                        checked={allowQrScan}
-                        onCheckedChange={(checked) => setAllowQrScan(checked === true)}
-                        className="h-4 w-4"
-                      />
-                    </label>
-                  </div>
+                  <label className="flex items-center justify-between p-2.5 md:p-3 rounded-lg border border-border bg-secondary/20 cursor-pointer">
+                    <div className="flex-1 pr-3">
+                      <span className="text-xs md:text-sm font-medium text-foreground">Show Profile & Allow Connections</span>
+                      <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
+                        Allow all other users to see your profile and email and interact with you via messaging and scanning.
+                      </p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
+                        If toggled off, only your current connections will be able to see your profile information and message you. QR code scanning will still work.
+                      </p>
+                    </div>
+                    <Checkbox
+                      checked={showProfileAllowConnections}
+                      onCheckedChange={(checked) => setShowProfileAllowConnections(checked === true)}
+                      className="h-4 w-4"
+                    />
+                  </label>
                 </div>
               </CollapsibleContent>
             </Card>

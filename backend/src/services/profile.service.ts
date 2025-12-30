@@ -27,6 +27,7 @@ export interface UpdatePrivacyData {
   allowQrScanning?: boolean;
   allowMessaging?: boolean;
   hideContactInfo?: boolean;
+  showProfileAllowConnections?: boolean;
 }
 
 export class ProfileService {
