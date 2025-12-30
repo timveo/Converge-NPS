@@ -53,14 +53,13 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     website_url: '',
   });
   const [interests, setInterests] = useState<string[]>([]);
-  const [allowQrScan, setAllowQrScan] = useState(true);
-  const [shareEmail, setShareEmail] = useState(true);
+  const [showProfileAllowConnections, setShowProfileAllowConnections] = useState(true);
   const [phone, setPhone] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [originalFormData, setOriginalFormData] = useState(formData);
   const [originalInterests, setOriginalInterests] = useState<string[]>([]);
-  const [originalPrivacy, setOriginalPrivacy] = useState({ allowQrScan: true, shareEmail: true });
+  const [originalPrivacy, setOriginalPrivacy] = useState({ showProfileAllowConnections: true });
   const [originalPhone, setOriginalPhone] = useState('');
 
   const [profileOpen, setProfileOpen] = useState(true);
@@ -88,8 +87,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     };
 
     const nextInterests = user.accelerationInterests || [];
-    const nextShareEmail = !user.privacy?.hideContactInfo;
-    const nextAllowQrScan = user.privacy?.allowQrScanning !== false;
+    const nextShowProfileAllowConnections = user.privacy?.showProfileAllowConnections !== false;
     const nextPhone = user.phone || '';
 
     setFormData(nextForm);
@@ -98,9 +96,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     setOriginalInterests(nextInterests);
     setPhone(nextPhone);
     setOriginalPhone(nextPhone);
-    setShareEmail(nextShareEmail);
-    setAllowQrScan(nextAllowQrScan);
-    setOriginalPrivacy({ allowQrScan: nextAllowQrScan, shareEmail: nextShareEmail });
+    setShowProfileAllowConnections(nextShowProfileAllowConnections);
+    setOriginalPrivacy({ showProfileAllowConnections: nextShowProfileAllowConnections });
   }, [user, open]);
 
   const toggleInterest = (interest: string) => {
@@ -116,7 +113,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     const interestsChanged =
       interests.length !== originalInterests.length || interests.some((i) => !originalInterests.includes(i));
     const phoneChanged = phone !== originalPhone;
-    const privacyChanged = allowQrScan !== originalPrivacy.allowQrScan || shareEmail !== originalPrivacy.shareEmail;
+    const privacyChanged = showProfileAllowConnections !== originalPrivacy.showProfileAllowConnections;
 
     return formChanged || interestsChanged || phoneChanged || privacyChanged;
   };
@@ -189,10 +186,10 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
 
       const profileResponse = await api.patch<{ message: string; profile: Record<string, unknown> }>('/users/me', profilePayload);
 
-      const privacyChanged = allowQrScan !== originalPrivacy.allowQrScan || shareEmail !== originalPrivacy.shareEmail;
+      const privacyChanged = showProfileAllowConnections !== originalPrivacy.showProfileAllowConnections;
 
       if (privacyChanged) {
-        const privacyPayload = { allowQrScanning: allowQrScan, hideContactInfo: !shareEmail };
+        const privacyPayload = { showProfileAllowConnections };
         await api.patch<{ message: string; profile: Record<string, unknown> }>('/users/me/privacy', privacyPayload);
       }
 
@@ -210,10 +207,11 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
           websiteUrl: normalizedFormData.website_url || null,
           privacy: {
             ...user?.privacy,
-            allowQrScanning: allowQrScan,
-            hideContactInfo: !shareEmail,
+            showProfileAllowConnections,
             profileVisibility: user?.privacy?.profileVisibility || 'public',
+            allowQrScanning: user?.privacy?.allowQrScanning ?? true,
             allowMessaging: user?.privacy?.allowMessaging ?? true,
+            hideContactInfo: user?.privacy?.hideContactInfo ?? false,
           },
         });
       }
@@ -222,7 +220,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       setFormData(normalizedFormData);
       setOriginalInterests([...interests]);
       setOriginalPhone(phone);
-      setOriginalPrivacy({ allowQrScan, shareEmail });
+      setOriginalPrivacy({ showProfileAllowConnections });
 
       toast.success('Settings saved successfully');
     } catch (error: unknown) {
@@ -465,18 +463,16 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                     <CollapsibleContent className="px-4 pb-4">
                       <div className="space-y-2">
                         <label className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/20 cursor-pointer">
-                          <div>
-                            <span className="text-xs font-medium text-foreground">Share participant information</span>
-                            <p className="text-[10px] text-muted-foreground">Allow others to see your profile and email</p>
+                          <div className="flex-1 pr-3">
+                            <span className="text-xs font-medium text-foreground">Show Profile & Allow Connections</span>
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              Allow all other users to see your profile and email and interact with you via messaging and scanning.
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              If toggled off, only your current connections will be able to see your profile information and message you. QR code scanning will still work.
+                            </p>
                           </div>
-                          <Checkbox checked={shareEmail} onCheckedChange={(checked) => setShareEmail(checked === true)} className="h-4 w-4" />
-                        </label>
-                        <label className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/20 cursor-pointer">
-                          <div>
-                            <span className="text-xs font-medium text-foreground">Allow connections</span>
-                            <p className="text-[10px] text-muted-foreground">Let others scan your QR code and message you</p>
-                          </div>
-                          <Checkbox checked={allowQrScan} onCheckedChange={(checked) => setAllowQrScan(checked === true)} className="h-4 w-4" />
+                          <Checkbox checked={showProfileAllowConnections} onCheckedChange={(checked) => setShowProfileAllowConnections(checked === true)} className="h-4 w-4" />
                         </label>
                       </div>
                     </CollapsibleContent>
