@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, QrCode, Calendar, MessageCircle, User } from 'lucide-react';
+import { Home, Calendar, Briefcase, Users, MessageCircle } from 'lucide-react';
 import { useDeviceType } from '@/hooks/useDeviceType';
-import { useFeature } from '@/hooks/useFeature';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { cn } from '@/lib/utils';
 
@@ -9,7 +8,6 @@ interface NavItem {
   path: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  feature?: string;
 }
 
 const navItems: NavItem[] = [
@@ -19,32 +17,30 @@ const navItems: NavItem[] = [
     label: 'Home',
   },
   {
-    path: '/scanner',
-    icon: QrCode,
-    label: 'Scan',
-    feature: 'qrScanner',
-  },
-  {
     path: '/schedule',
     icon: Calendar,
     label: 'Schedule',
+  },
+  {
+    path: '/opportunities',
+    icon: Briefcase,
+    label: 'Opportunities',
+  },
+  {
+    path: '/connections',
+    icon: Users,
+    label: 'Network',
   },
   {
     path: '/messages',
     icon: MessageCircle,
     label: 'Messages',
   },
-  {
-    path: '/profile',
-    icon: User,
-    label: 'Profile',
-  },
 ];
 
 export function BottomNav() {
   const location = useLocation();
   const deviceType = useDeviceType();
-  const isQRAvailable = useFeature('qrScanner');
   const { unreadCount } = useUnreadCount();
 
   // Only show on mobile and tablet
@@ -52,17 +48,10 @@ export function BottomNav() {
     return null;
   }
 
-  const filteredNavItems = navItems.filter(item => {
-    if (item.feature === 'qrScanner') {
-      return isQRAvailable;
-    }
-    return true;
-  });
-
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-card border-t border-border shadow-md safe-bottom">
-      <div className="flex items-center justify-around h-16">
-        {filteredNavItems.map((item) => {
+      <div className="flex items-center justify-evenly h-16 px-2 max-w-lg mx-auto">
+        {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
           const isMessages = item.path === '/messages';
@@ -73,19 +62,19 @@ export function BottomNav() {
               key={item.path}
               to={item.path}
               className={cn(
-                'flex flex-col items-center justify-center flex-1 h-full transition-colors touch-target',
+                'flex flex-col items-center justify-center min-w-[56px] py-2 px-1 transition-colors touch-target rounded-lg',
                 isActive
                   ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-accent'
               )}
             >
               <div className="relative">
-                <Icon className="w-6 h-6 mb-1" />
+                <Icon className="w-5 h-5 mb-1" />
                 {showUnreadDot && (
                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full" />
                 )}
               </div>
-              <span className="text-xs font-medium">{item.label}</span>
+              <span className="text-[10px] font-medium leading-tight">{item.label}</span>
             </Link>
           );
         })}
