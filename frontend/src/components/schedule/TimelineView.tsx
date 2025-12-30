@@ -49,10 +49,13 @@ export const TimelineView = ({
             new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
           );
 
+          // Use the first session's start_time for accurate date formatting
+          const representativeDate = sortedSessions[0]?.start_time || day;
+
           return (
             <div key={day}>
               <h3 className="text-sm md:text-lg font-bold mb-2 md:mb-4 sticky top-0 bg-background py-1.5 md:py-2 border-b z-10">
-                {formatFullDatePT(day)}, {day.split('-')[0]}
+                {formatFullDatePT(representativeDate)}, {day.split('-')[0]}
               </h3>
 
               <div className="space-y-1.5 md:space-y-3">
