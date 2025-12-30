@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Plus, Sparkles, Mail, Phone, Users, ChevronRight } from "lucide-react";
+import { Search, Building2, MapPin, ExternalLink, Filter, Loader2, X, Star, ChevronDown, MessageSquare, Sparkles, Mail, Phone, Users, ChevronRight } from "lucide-react";
 import { useDevice } from "@/hooks/useDeviceType";
 import { PageHeader } from "@/components/PageHeader";
 import { useDismissedRecommendations } from "@/hooks/useDismissedRecommendations";
@@ -599,21 +599,6 @@ function IndustryMobilePage() {
             </Button>
           </div>
         )}
-
-        {/* Submit Industry Partner CTA */}
-        <Card className="p-3 md:p-4 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 shadow-md">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium">Share your project or opportunity</p>
-            <Button
-              onClick={() => navigate('/opportunities/submit', { state: { from: "industry" } })}
-              size="sm"
-              className="gap-2 shrink-0 h-11 md:h-10"
-            >
-              <Plus className="h-4 w-4" />
-              Submit
-            </Button>
-          </div>
-        </Card>
 
         {/* AI Recommendations */}
         {visibleRecommendations.length > 0 && !showFavoritesOnly && (
