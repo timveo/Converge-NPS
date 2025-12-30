@@ -221,4 +221,77 @@ If you didn't request a password reset, you can safely ignore this email.
       text,
     });
   }
+
+  /**
+   * Send walk-in check-in confirmation email
+   */
+  static async sendWalkInCheckinEmail(email: string, fullName: string): Promise<boolean> {
+    const firstName = fullName ? fullName.split(' ')[0] : 'there';
+    const appUrl = 'https://Converge.npsfoundation.org';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="color-scheme" content="light">
+          <meta name="supported-color-schemes" content="light">
+          <title>Welcome to Converge</title>
+          <style>
+            :root { color-scheme: light; supported-color-schemes: light; }
+          </style>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #003770 0%, #104a8e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">Converge NPS</h1>
+          </div>
+          <div style="background: #ffffff; padding: 40px 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Hi ${firstName},</p>
+            <p style="font-size: 16px; margin-bottom: 20px;">You are now checked in for Converge @ NPS! Make the most of this three-day event with the <a href="${appUrl}" style="color: #003770; text-decoration: underline;">Converge @ NPS app</a>.</p>
+            <ul style="font-size: 15px; margin-bottom: 25px; padding-left: 20px; color: #444;">
+              <li style="margin-bottom: 6px;">Connect with other participants and industry partners</li>
+              <li style="margin-bottom: 6px;">View collaborative opportunities or submit your own</li>
+              <li style="margin-bottom: 6px;">RSVP for breakout sessions, panels, demos, workshops and more</li>
+            </ul>
+            <p style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Next Steps:</p>
+            <div style="text-align: center; margin-bottom: 20px;">
+              <a href="${appUrl}" style="display: inline-block; background: #003770; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Download the App</a>
+            </div>
+            <p style="font-size: 14px; color: #636b78; margin-bottom: 20px;">On the login page, select <strong>Forgot Password</strong> and enter the email you used at check-in to create your password.</p>
+            <p style="font-size: 14px; color: #636b78;">Questions? Email <a href="mailto:converge@npsfoundation.org" style="color: #003770;">converge@npsfoundation.org</a></p>
+          </div>
+          <div style="text-align: center; padding: 20px; color: #636b78; font-size: 12px;">
+            <p>Naval Postgraduate School - Converge Conference</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const text = `Hi ${firstName},
+
+You are now checked in for Converge @ NPS! Make the most of this three-day event with the Converge @ NPS app (${appUrl}).
+
+- Connect with other participants and industry partners
+- View collaborative opportunities or submit your own
+- RSVP for breakout sessions, panels, demos, workshops and more
+
+Next Steps:
+
+1. Download the App: ${appUrl}
+2. On the login page, select "Forgot Password" and use the email you used at check in
+3. Follow the instructions to create a new password
+4. Log in and create your profile
+
+Questions? Email converge@npsfoundation.org
+
+- Converge NPS`;
+
+    return this.send({
+      to: email,
+      subject: 'Converge NPS - Set up your account',
+      html,
+      text,
+    });
+  }
 }

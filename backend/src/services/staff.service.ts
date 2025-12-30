@@ -9,6 +9,7 @@ import { NotFoundError, ConflictError } from '../middleware/errorHandler';
 import { AppRole, ParticipantType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID, randomBytes } from 'crypto';
+import { EmailService } from './email.service';
 
 /**
  * Check in an attendee (updates Profile.isCheckedIn)
@@ -190,6 +191,11 @@ export async function registerWalkIn(
     });
 
     return profile;
+  });
+
+  // Send walk-in check-in confirmation email
+  EmailService.sendWalkInCheckinEmail(result.email, result.fullName).catch((err) => {
+    console.error('Failed to send walk-in check-in email:', err);
   });
 
   return {
