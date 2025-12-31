@@ -311,8 +311,6 @@ export default function IndustryDesktopPage() {
 
     if (sortBy === 'alphabetical') {
       filtered.sort((a, b) => a.company_name.localeCompare(b.company_name));
-    } else if (sortBy === 'booth') {
-      filtered.sort((a, b) => (a.booth_location || '').localeCompare(b.booth_location || ''));
     }
 
     return filtered;
@@ -403,7 +401,6 @@ export default function IndustryDesktopPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="alphabetical">Alphabetical</SelectItem>
-                <SelectItem value="booth">By Booth</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -749,8 +749,8 @@ export default function ConnectionsDesktopPage() {
                           exit={{ opacity: 0, x: 10 }}
                           layout
                         >
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
+                          <div className="flex items-center gap-3 h-[52px]">
+                            <Avatar className="h-10 w-10 shrink-0">
                               <AvatarFallback className="text-white text-sm bg-gradient-to-br from-primary to-primary/80">
                                 {participant.fullName
                                   .split(' ')
@@ -779,27 +779,29 @@ export default function ConnectionsDesktopPage() {
                                 )}
                               </p>
                             </div>
-                            {/* Badges stacked vertically with uniform size */}
-                            <div className="flex flex-col gap-1 shrink-0 w-[85px]">
-                              {participant.isConnected && (
-                                <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-green-500 hover:bg-green-600 flex items-center justify-center">
-                                  <CheckCircle2 className="h-3 w-3 mr-0.5" />
-                                  Connected
-                                </Badge>
-                              )}
-                              {participant.isCheckedIn && (
-                                <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center">
-                                  <MapPin className="h-3 w-3 mr-0.5" />
-                                  At Event
-                                </Badge>
-                              )}
+                            {/* Badges and arrow - fixed width container for consistent alignment */}
+                            <div className="flex items-start gap-2 shrink-0 h-[44px] pt-1">
+                              <div className="flex flex-col gap-1 w-[85px]">
+                                {participant.isConnected && (
+                                  <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-green-500 hover:bg-green-600 flex items-center justify-center">
+                                    <CheckCircle2 className="h-3 w-3 mr-0.5" />
+                                    Connected
+                                  </Badge>
+                                )}
+                                {participant.isCheckedIn && (
+                                  <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center">
+                                    <MapPin className="h-3 w-3 mr-0.5" />
+                                    At Event
+                                  </Badge>
+                                )}
+                              </div>
+                              <ChevronRight
+                                className={cn(
+                                  'h-4 w-4 mt-0.5',
+                                  isSelected ? 'text-gray-400' : 'text-muted-foreground'
+                                )}
+                              />
                             </div>
-                            <ChevronRight
-                              className={cn(
-                                'h-4 w-4 shrink-0',
-                                isSelected ? 'text-gray-400' : 'text-muted-foreground'
-                              )}
-                            />
                           </div>
                         </motion.button>
                       );
@@ -861,8 +863,8 @@ export default function ConnectionsDesktopPage() {
                       exit={{ opacity: 0, x: 10 }}
                       layout
                     >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
+                      <div className="flex items-center gap-3 h-[52px]">
+                        <Avatar className="h-10 w-10 shrink-0">
                           <AvatarFallback className="bg-gradient-navy text-primary-foreground text-sm">
                             {profile?.full_name
                               ? profile.full_name
@@ -887,25 +889,27 @@ export default function ConnectionsDesktopPage() {
                             {profile?.organization && ` at ${profile.organization}`}
                           </p>
                         </div>
-                        {/* Badges stacked vertically with uniform size */}
-                        <div className="flex flex-col gap-1 shrink-0 w-[85px]">
-                          <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-green-500 hover:bg-green-600 flex items-center justify-center">
-                            <CheckCircle2 className="h-3 w-3 mr-0.5" />
-                            Connected
-                          </Badge>
-                          {profile?.is_checked_in && (
-                            <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center">
-                              <MapPin className="h-3 w-3 mr-0.5" />
-                              At Event
+                        {/* Badges and arrow - fixed width container for consistent alignment */}
+                        <div className="flex items-start gap-2 shrink-0 h-[44px] pt-1">
+                          <div className="flex flex-col gap-1 w-[85px]">
+                            <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-green-500 hover:bg-green-600 flex items-center justify-center">
+                              <CheckCircle2 className="h-3 w-3 mr-0.5" />
+                              Connected
                             </Badge>
-                          )}
+                            {profile?.is_checked_in && (
+                              <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center">
+                                <MapPin className="h-3 w-3 mr-0.5" />
+                                At Event
+                              </Badge>
+                            )}
+                          </div>
+                          <ChevronRight
+                            className={cn(
+                              'h-4 w-4 mt-0.5',
+                              isSelected ? 'text-gray-400' : 'text-muted-foreground'
+                            )}
+                          />
                         </div>
-                        <ChevronRight
-                          className={cn(
-                            'h-4 w-4 shrink-0',
-                            isSelected ? 'text-gray-400' : 'text-muted-foreground'
-                          )}
-                        />
                       </div>
                     </motion.button>
                   );
