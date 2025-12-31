@@ -889,15 +889,14 @@ export default function OpportunitiesDesktopPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-1.5">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                'text-[10px] py-0 px-1.5',
-                                isNPS ? 'border-blue-200 text-blue-700' : item.sourceType === 'Industry' ? 'border-slate-200 text-slate-600' : 'border-slate-300 text-slate-700'
-                              )}
-                            >
-                              {isNPS ? (item as Project).stage : item.sourceType === 'Industry' && (item as any).stage ? (item as any).stage : (item as Opportunity).type}
-                            </Badge>
+                            {(isNPS ? (item as Project).stage : (item as any).stage) && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] py-0 px-1.5 border-blue-200 text-blue-700"
+                              >
+                                {isNPS ? (item as Project).stage : (item as any).stage}
+                              </Badge>
+                            )}
                             {isNPS && (item as Project).funding_status && (
                               <Badge variant="outline" className="text-[10px] py-0 px-1.5">
                                 {(item as Project).funding_status}

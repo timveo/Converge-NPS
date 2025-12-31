@@ -262,6 +262,7 @@ export class ProfileService {
     page?: number;
     limit?: number;
     requesterId?: string;
+    checkedInOnly?: boolean;
   }): Promise<{
     participants: Array<Partial<Profile> & { isConnected?: boolean }>;
     total: number;
@@ -269,7 +270,7 @@ export class ProfileService {
     totalPages: number;
     privateProfileMatch?: boolean;
   }> {
-    const { search, page = 1, limit = 20, requesterId } = query;
+    const { search, page = 1, limit = 20, requesterId, checkedInOnly = false } = query;
 
     // Get IDs of users already connected to the requester
     let connectedUserIds: string[] = [];
@@ -283,10 +284,11 @@ export class ProfileService {
 
     // NPS Community shows:
     // 1. Registered users with public profiles who allow connections
-    // 2. No check-in requirement - registered users should be discoverable
+    // 2. If checkedInOnly is true, only show checked-in users (for Event Participants widget)
     const where: any = {
       profileVisibility: 'public',
       showProfileAllowConnections: true, // Only show users who allow profile visibility
+      ...(checkedInOnly && { isCheckedIn: true }),
     };
 
     // Exclude only self (connected users are now included with a flag)

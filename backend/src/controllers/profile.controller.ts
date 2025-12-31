@@ -253,13 +253,14 @@ export class ProfileController {
         });
       }
 
-      const { search, page, limit } = req.query;
+      const { search, page, limit, checkedInOnly } = req.query;
 
       const result = await ProfileService.getCheckedInParticipants({
         search: search as string | undefined,
         page: page ? parseInt(page as string) : undefined,
         limit: limit ? parseInt(limit as string) : undefined,
         requesterId: req.user.id,
+        checkedInOnly: checkedInOnly === 'true',
       });
 
       res.status(200).json({
