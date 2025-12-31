@@ -256,7 +256,7 @@ If you didn't request a password reset, you can safely ignore this email.
             </ul>
             <p style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Next Steps:</p>
             <div style="text-align: center; margin-bottom: 20px;">
-              <a href="${appUrl}" style="display: inline-block; background: #003770; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Download the App</a>
+              <a href="${appUrl}" style="display: inline-block; background: #003770; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Go to App</a>
             </div>
             <p style="font-size: 14px; color: #636b78; margin-bottom: 20px;">On the login page, select <strong>Forgot Password</strong> and enter the email you used at check-in to create your password.</p>
             <p style="font-size: 14px; color: #636b78;">Questions? Email <a href="mailto:converge@npsfoundation.org" style="color: #003770;">converge@npsfoundation.org</a></p>
@@ -278,7 +278,7 @@ You are now checked in for Converge @ NPS! Make the most of this three-day event
 
 Next Steps:
 
-1. Download the App: ${appUrl}
+1. Go to App: ${appUrl}
 2. On the login page, select "Forgot Password" and use the email you used at check in
 3. Follow the instructions to create a new password
 4. Log in and create your profile
