@@ -262,8 +262,10 @@ export default function ConnectionsDesktopPage() {
     try {
       await api.post('/connections', { connectedUserId: participantId });
       toast.success('Connection added successfully');
-      // Remove from participants list and refresh connections
-      setParticipants((prev) => prev.filter((p) => p.id !== participantId));
+      // Update participant's connected status instead of removing them
+      setParticipants((prev) => prev.map((p) =>
+        p.id === participantId ? { ...p, isConnected: true } : p
+      ));
       setSelectedParticipant(null);
       setActiveTab('all');
       fetchConnections();
