@@ -1029,7 +1029,7 @@ function OpportunitiesMobilePage() {
                             Industry
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-slate-700 text-white text-xs border-slate-700">
+                          <Badge variant="outline" className="bg-sky-800 text-white text-xs border-sky-800">
                             <Building2 className="h-3 w-3 mr-1" />
                             Military/Gov
                           </Badge>
