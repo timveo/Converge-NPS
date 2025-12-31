@@ -1068,9 +1068,11 @@ function OpportunitiesMobilePage() {
                             <p className="text-sm text-primary font-medium">{item.sponsor_organization}</p>
                           )}
                         </div>
-                        <Badge variant="secondary" className="ml-3 shrink-0 capitalize text-xs">
-                          {item.sourceType === 'Industry' && (item as any).stage ? (item as any).stage : item.type}
-                        </Badge>
+                        {(item as any).stage && (
+                          <Badge variant="secondary" className="ml-3 shrink-0 capitalize text-xs">
+                            {(item as any).stage}
+                          </Badge>
+                        )}
                       </div>
 
                       {item.description && (

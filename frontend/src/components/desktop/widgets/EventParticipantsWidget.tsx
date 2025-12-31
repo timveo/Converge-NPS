@@ -34,7 +34,7 @@ export function EventParticipantsWidget() {
   useEffect(() => {
     async function fetchParticipants() {
       try {
-        const response = await api.get<ParticipantsResponse>('/users/participants?limit=10');
+        const response = await api.get<ParticipantsResponse>('/users/participants?limit=10&checkedInOnly=true');
         if (response.success && response.data) {
           setParticipants(response.data);
           setTotal(response.total || response.data.length);
