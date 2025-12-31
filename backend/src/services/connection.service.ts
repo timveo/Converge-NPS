@@ -246,6 +246,7 @@ export class ConnectionService {
               hideContactInfo: true,
               isCheckedIn: true,
               accelerationInterests: true,
+              participantType: true,
             },
           },
         },

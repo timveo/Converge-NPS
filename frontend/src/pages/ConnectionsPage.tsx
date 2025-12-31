@@ -59,6 +59,7 @@ interface Connection {
     organization: string | null;
     acceleration_interests: string[] | null;
     is_checked_in?: boolean;
+    participant_type?: string | null;
   } | null;
 }
 
@@ -84,6 +85,7 @@ interface Participant {
   accelerationInterests?: string[];
   isConnected?: boolean;
   isCheckedIn?: boolean;
+  participantType?: string;
 }
 
 const COLLABORATION_TYPES = [
@@ -94,11 +96,12 @@ const COLLABORATION_TYPES = [
   { value: 'funded_research', label: 'Funded Research' }
 ];
 
-const USER_TYPES = [
-  { value: 'industry', label: 'Industry Partner' },
+const PARTICIPANT_TYPES = [
   { value: 'student', label: 'Student' },
   { value: 'faculty', label: 'Faculty' },
-  { value: 'staff', label: 'Staff' }
+  { value: 'industry', label: 'Industry' },
+  { value: 'alumni', label: 'Alumni' },
+  { value: 'guest', label: 'Guest' },
 ];
 
 export default function ConnectionsPage() {
@@ -125,11 +128,11 @@ function ConnectionsMobilePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<{
-    userTypes: string[];
+    participantTypes: string[];
     sortBy: string;
     eventAttendeesOnly: boolean;
   }>({
-    userTypes: [],
+    participantTypes: [],
     sortBy: 'recent',
     eventAttendeesOnly: false
   });
@@ -161,7 +164,7 @@ function ConnectionsMobilePage() {
   const fetchParticipants = async (): Promise<Participant[]> => {
     setParticipantsLoading(true);
     try {
-      const response = await api.get('/users/participants');
+      const response = await api.get('/users/participants?limit=1000');
       const data = (response as any).data || [];
       setPrivateProfileMatch((response as any).privateProfileMatch || false);
       const mapped: Participant[] = data.map((p: any) => ({
@@ -173,7 +176,8 @@ function ConnectionsMobilePage() {
         avatarUrl: p.avatarUrl,
         accelerationInterests: p.accelerationInterests || p.acceleration_interests || [],
         isConnected: p.isConnected || p.is_connected || false,
-        isCheckedIn: true, // All participants from this endpoint are checked-in users
+        isCheckedIn: p.isCheckedIn || p.is_checked_in || false,
+        participantType: p.participantType || p.participant_type || null,
       }));
       setParticipants(mapped);
       return mapped;
@@ -278,7 +282,8 @@ function ConnectionsMobilePage() {
           role: conn.connectedUser?.role || conn.profile?.role,
           organization: conn.connectedUser?.organization || conn.profile?.organization,
           acceleration_interests: conn.connectedUser?.accelerationInterests || conn.profile?.acceleration_interests || [],
-          is_checked_in: conn.connectedUser?.isCheckedIn || conn.profile?.is_checked_in || false
+          is_checked_in: conn.connectedUser?.isCheckedIn || conn.profile?.is_checked_in || false,
+          participant_type: conn.connectedUser?.participantType || conn.profile?.participant_type || null
         } : null
       }));
       setConnections(mappedConnections);
@@ -322,10 +327,10 @@ function ConnectionsMobilePage() {
       });
     }
 
-    if (filters.userTypes.length > 0) {
+    if (filters.participantTypes.length > 0) {
       result = result.filter(conn => {
-        const role = conn.profile?.role?.toLowerCase();
-        return filters.userTypes.some(type => role?.includes(type));
+        const pType = (conn.profile as any)?.participant_type?.toLowerCase();
+        return filters.participantTypes.some((type: string) => pType === type);
       });
     }
 
@@ -365,12 +370,17 @@ function ConnectionsMobilePage() {
       });
     }
 
-    // Apply user type filter
-    if (filters.userTypes.length > 0) {
+    // Apply participant type filter
+    if (filters.participantTypes.length > 0) {
       result = result.filter(p => {
-        const role = p.role?.toLowerCase();
-        return filters.userTypes.some(type => role?.includes(type));
+        const pType = (p as any).participantType?.toLowerCase();
+        return filters.participantTypes.some((type: string) => pType === type);
       });
+    }
+
+    // Apply "At Event" filter
+    if (filters.eventAttendeesOnly) {
+      result = result.filter(p => p.isCheckedIn === true);
     }
 
     // Apply sorting
@@ -479,7 +489,7 @@ function ConnectionsMobilePage() {
   };
 
   const clearFilters = () => {
-    setFilters({ userTypes: [], sortBy: 'recent', eventAttendeesOnly: false });
+    setFilters({ participantTypes: [], sortBy: 'recent', eventAttendeesOnly: false });
     setSearchQuery('');
   };
 
@@ -511,7 +521,7 @@ function ConnectionsMobilePage() {
     return `${diffDays}d`;
   };
 
-  const activeFilterCount = filters.userTypes.length + (filters.eventAttendeesOnly ? 1 : 0);
+  const activeFilterCount = filters.participantTypes.length + (filters.eventAttendeesOnly ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-gradient-subtle pb-24">
@@ -615,21 +625,21 @@ function ConnectionsMobilePage() {
                 </Label>
               </div>
 
-              {/* User Type Filter */}
+              {/* Participant Type Filter */}
               <div className="space-y-1.5 md:space-y-2 pt-2 border-t border-border/50">
-                <Label className="text-xs md:text-sm font-semibold">Filter by User Type</Label>
+                <Label className="text-xs md:text-sm font-semibold">Filter by Participant Type</Label>
                 <div className="grid grid-cols-2 gap-1.5 md:gap-2">
-                  {USER_TYPES.map(type => (
+                  {PARTICIPANT_TYPES.map(type => (
                     <div key={type.value} className="flex items-center space-x-1.5 md:space-x-2">
                       <Checkbox
                         id={`type-${type.value}`}
-                        checked={filters.userTypes.includes(type.value)}
+                        checked={filters.participantTypes.includes(type.value)}
                         onCheckedChange={(checked) => {
                           setFilters(prev => ({
                             ...prev,
-                            userTypes: checked
-                              ? [...prev.userTypes, type.value]
-                              : prev.userTypes.filter(t => t !== type.value)
+                            participantTypes: checked
+                              ? [...prev.participantTypes, type.value]
+                              : prev.participantTypes.filter((t: string) => t !== type.value)
                           }));
                         }}
                         className="h-3.5 w-3.5 md:h-4 md:w-4"
@@ -660,8 +670,8 @@ function ConnectionsMobilePage() {
         {activeFilterCount > 0 && (
           <div className="flex flex-wrap gap-2 items-center">
             <span className="text-sm text-muted-foreground">Active:</span>
-            {filters.userTypes.map(type => {
-              const typeLabel = USER_TYPES.find(t => t.value === type)?.label;
+            {filters.participantTypes.map(type => {
+              const typeLabel = PARTICIPANT_TYPES.find(t => t.value === type)?.label;
               return (
                 <Badge key={type} variant="secondary" className="gap-1 pr-1">
                   {typeLabel}
@@ -669,7 +679,7 @@ function ConnectionsMobilePage() {
                     className="ml-1 hover:bg-muted rounded-full p-0.5"
                     onClick={() => setFilters(prev => ({
                       ...prev,
-                      userTypes: prev.userTypes.filter(t => t !== type)
+                      participantTypes: prev.participantTypes.filter((t: string) => t !== type)
                     }))}
                   >
                     <X className="w-3 h-3" />
@@ -815,12 +825,12 @@ function ConnectionsMobilePage() {
                 <Users className="h-7 w-7 md:h-10 md:w-10 text-muted-foreground" />
               </div>
               <h3 className="text-sm md:text-lg font-semibold text-foreground mb-1.5 md:mb-2">
-                {searchQuery || filters.userTypes.length > 0
+                {searchQuery || filters.participantTypes.length > 0
                   ? 'No Matching Participants'
                   : 'No Participants Yet'}
               </h3>
               <p className="text-xs md:text-sm text-muted-foreground mb-4 md:mb-6">
-                {searchQuery || filters.userTypes.length > 0
+                {searchQuery || filters.participantTypes.length > 0
                   ? 'Try adjusting your search or filters'
                   : 'Participants will appear here as they check in to the event'}
               </p>

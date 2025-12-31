@@ -76,6 +76,7 @@ interface Connection {
     organization: string | null;
     acceleration_interests: string[] | null;
     is_checked_in?: boolean;
+    participant_type?: string | null;
   } | null;
 }
 
@@ -101,6 +102,7 @@ interface Participant {
   accelerationInterests?: string[];
   isConnected?: boolean;
   isCheckedIn?: boolean;
+  participantType?: string;
 }
 
 const COLLABORATION_TYPES = [
@@ -111,11 +113,12 @@ const COLLABORATION_TYPES = [
   { value: 'funded_research', label: 'Funded Research' },
 ];
 
-const USER_TYPES = [
-  { value: 'industry', label: 'Industry Partner' },
+const PARTICIPANT_TYPES = [
   { value: 'student', label: 'Student' },
   { value: 'faculty', label: 'Faculty' },
-  { value: 'staff', label: 'Staff' },
+  { value: 'industry', label: 'Industry' },
+  { value: 'alumni', label: 'Alumni' },
+  { value: 'guest', label: 'Guest' },
 ];
 
 export default function ConnectionsDesktopPage() {
@@ -124,13 +127,11 @@ export default function ConnectionsDesktopPage() {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<{
-    intents: string[];
-    userTypes: string[];
+    participantTypes: string[];
     sortBy: string;
     eventAttendeesOnly: boolean;
   }>({
-    intents: [],
-    userTypes: [],
+    participantTypes: [],
     sortBy: 'recent',
     eventAttendeesOnly: false,
   });
@@ -195,7 +196,7 @@ export default function ConnectionsDesktopPage() {
   const fetchParticipants = async (): Promise<Participant[]> => {
     setParticipantsLoading(true);
     try {
-      const response = await api.get('/users/participants');
+      const response = await api.get('/users/participants?limit=1000');
       const data = (response as any).data || [];
       setPrivateProfileMatch((response as any).privateProfileMatch || false);
       const mapped: Participant[] = data.map((p: any) => ({
@@ -207,7 +208,8 @@ export default function ConnectionsDesktopPage() {
         avatarUrl: p.avatarUrl,
         accelerationInterests: p.accelerationInterests || p.acceleration_interests || [],
         isConnected: p.isConnected || p.is_connected || false,
-        isCheckedIn: true, // All participants from this endpoint are checked-in users
+        isCheckedIn: p.isCheckedIn || p.is_checked_in || false,
+        participantType: p.participantType || p.participant_type || null,
       }));
       setParticipants(mapped);
       return mapped;
@@ -234,7 +236,7 @@ export default function ConnectionsDesktopPage() {
         mutualConnections: rec.mutualConnections || 0,
         sameOrganization: rec.sameOrganization || false,
       }));
-      setRecommendations(mapped.slice(0, 5));
+      setRecommendations(mapped.slice(0, 3));
     } catch (error) {
       console.error('Error fetching recommendations:', error);
     }
@@ -301,6 +303,7 @@ export default function ConnectionsDesktopPage() {
                 conn.profile?.acceleration_interests ||
                 [],
               is_checked_in: conn.connectedUser?.isCheckedIn || conn.profile?.is_checked_in || false,
+              participant_type: conn.connectedUser?.participantType || conn.profile?.participant_type || null,
             }
           : null,
       }));
@@ -334,16 +337,10 @@ export default function ConnectionsDesktopPage() {
       });
     }
 
-    if (filters.intents.length > 0) {
+    if (filters.participantTypes.length > 0) {
       result = result.filter((conn) => {
-        return filters.intents.some((intent) => conn.collaborative_intents?.includes(intent));
-      });
-    }
-
-    if (filters.userTypes.length > 0) {
-      result = result.filter((conn) => {
-        const role = conn.profile?.role?.toLowerCase();
-        return filters.userTypes.some((type) => role?.includes(type));
+        const participantType = conn.profile?.participant_type?.toLowerCase();
+        return filters.participantTypes.some((type: string) => participantType === type);
       });
     }
 
@@ -371,6 +368,33 @@ export default function ConnectionsDesktopPage() {
 
     return result;
   }, [connections, searchQuery, filters, activeTab]);
+
+  // Filter participants by search query and filters
+  const filteredParticipants = useMemo(() => {
+    let result = [...participants];
+
+    if (searchQuery.trim()) {
+      const searchLower = searchQuery.toLowerCase();
+      result = result.filter((p) => {
+        const nameMatch = p.fullName?.toLowerCase().includes(searchLower);
+        const orgMatch = p.organization?.toLowerCase().includes(searchLower);
+        return nameMatch || orgMatch;
+      });
+    }
+
+    if (filters.participantTypes.length > 0) {
+      result = result.filter((p) => {
+        const pType = p.participantType?.toLowerCase();
+        return filters.participantTypes.some((type: string) => pType === type);
+      });
+    }
+
+    if (filters.eventAttendeesOnly) {
+      result = result.filter((p) => p.isCheckedIn === true);
+    }
+
+    return result;
+  }, [participants, searchQuery, filters]);
 
   const handleDeleteConnection = async (connectionId: string) => {
     try {
@@ -418,16 +442,16 @@ export default function ConnectionsDesktopPage() {
   };
 
   const clearFilters = () => {
-    setFilters({ intents: [], userTypes: [], sortBy: 'recent', eventAttendeesOnly: false });
+    setFilters({ participantTypes: [], sortBy: 'recent', eventAttendeesOnly: false });
     setSearchQuery('');
   };
 
   const toggleArrayFilter = useCallback(
-    (key: 'intents' | 'userTypes', value: string) => {
+    (key: 'participantTypes', value: string) => {
       setFilters((prev) => {
         const current = prev[key];
         const updated = current.includes(value)
-          ? current.filter((v) => v !== value)
+          ? current.filter((v: string) => v !== value)
           : [...current, value];
         return { ...prev, [key]: updated };
       });
@@ -435,7 +459,7 @@ export default function ConnectionsDesktopPage() {
     []
   );
 
-  const activeFilterCount = filters.intents.length + filters.userTypes.length + (filters.eventAttendeesOnly ? 1 : 0);
+  const activeFilterCount = filters.participantTypes.length + (filters.eventAttendeesOnly ? 1 : 0);
 
   const visibleRecommendations = recommendations
     .filter((r) => !isRecommendationDismissed(r.id))
@@ -526,17 +550,17 @@ export default function ConnectionsDesktopPage() {
 
           <Separator />
 
-          {/* User Type Filters */}
+          {/* Participant Type Filters */}
           <div>
-            <Label className="text-sm font-medium mb-3 block">User Type</Label>
+            <Label className="text-sm font-medium mb-3 block">Participant Type</Label>
             <div className="space-y-2">
-              {USER_TYPES.map((type) => (
+              {PARTICIPANT_TYPES.map((type) => (
                 <div key={type.value} className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     id={`type-${type.value}`}
-                    checked={filters.userTypes.includes(type.value)}
-                    onChange={() => toggleArrayFilter('userTypes', type.value)}
+                    checked={filters.participantTypes.includes(type.value)}
+                    onChange={() => toggleArrayFilter('participantTypes', type.value)}
                     className="h-4 w-4 rounded border-gray-300"
                   />
                   <Label htmlFor={`type-${type.value}`} className="cursor-pointer text-sm">
@@ -673,15 +697,26 @@ export default function ConnectionsDesktopPage() {
                     </div>
                   ))}
                 </div>
-              ) : participants.length === 0 ? (
+              ) : filteredParticipants.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Users className="h-8 w-8 text-primary/70" />
                   </div>
-                  <p className="font-medium text-sm">No participants yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Participants will appear here as they check in
-                  </p>
+                  {participants.length === 0 ? (
+                    <>
+                      <p className="font-medium text-sm">No participants yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Participants will appear here as they register
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-medium text-sm">No matching participants</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Try adjusting your search or filters
+                      </p>
+                    </>
+                  )}
                   {privateProfileMatch && searchQuery && (
                     <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                       <p className="text-xs text-amber-800 dark:text-amber-200">
@@ -693,7 +728,7 @@ export default function ConnectionsDesktopPage() {
               ) : (
                 <div className="space-y-1 pr-0">
                   <AnimatePresence mode="popLayout">
-                    {participants.map((participant) => {
+                    {filteredParticipants.map((participant) => {
                       const isSelected = selectedParticipant?.id === participant.id;
 
                       return (

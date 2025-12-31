@@ -281,8 +281,10 @@ export class ProfileService {
       connectedUserIds = existingConnections.map(c => c.connectedUserId);
     }
 
+    // NPS Community shows:
+    // 1. Registered users with public profiles who allow connections
+    // 2. No check-in requirement - registered users should be discoverable
     const where: any = {
-      isCheckedIn: true,
       profileVisibility: 'public',
       showProfileAllowConnections: true, // Only show users who allow profile visibility
     };
@@ -300,7 +302,6 @@ export class ProfileService {
       // Check if there's a private profile that matches the exact search
       const privateMatch = await prisma.profile.findFirst({
         where: {
-          isCheckedIn: true,
           fullName: { equals: search, mode: 'insensitive' },
           OR: [
             { profileVisibility: 'private' },
@@ -317,7 +318,6 @@ export class ProfileService {
       ];
       // Keep other conditions when searching
       where.AND = [
-        { isCheckedIn: true },
         { profileVisibility: 'public' },
         { showProfileAllowConnections: true },
       ];
@@ -329,7 +329,6 @@ export class ProfileService {
           },
         });
       }
-      delete where.isCheckedIn;
       delete where.profileVisibility;
       delete where.showProfileAllowConnections;
       delete where.id;
@@ -354,6 +353,7 @@ export class ProfileService {
           linkedinUrl: true,
           websiteUrl: true,
           isCheckedIn: true,
+          participantType: true,
         },
       }),
       prisma.profile.count({ where }),
