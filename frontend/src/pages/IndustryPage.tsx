@@ -869,8 +869,8 @@ function IndustryMobilePage() {
                     </CollapsibleContent>
 
                     {/* Always visible footer with Message button and expand arrow */}
-                    <div className="flex items-center gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex-1 flex flex-col items-center">
+                    <div className="flex items-start gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex-1 flex flex-col">
                         <Button
                           className={cn(
                             "w-full h-11 md:h-10 text-sm gap-2",
@@ -891,14 +891,14 @@ function IndustryMobilePage() {
                         ) : null}
                       </div>
                       {partner.website_url && (
-                        <Button variant="outline" size="icon" className="h-11 w-11 md:h-10 md:w-10" asChild>
+                        <Button variant="outline" size="icon" className="h-11 w-11 md:h-10 md:w-10 shrink-0" asChild>
                           <a href={partner.website_url} target="_blank" rel="noopener noreferrer">
                             <ExternalLink className="h-4 w-4" />
                           </a>
                         </Button>
                       )}
                       <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10">
+                        <Button variant="outline" size="icon" className="h-11 w-11 md:h-10 md:w-10 shrink-0">
                           <ChevronDown className={cn(
                             "h-5 w-5 text-muted-foreground transition-transform duration-200",
                             isExpanded && "rotate-180"

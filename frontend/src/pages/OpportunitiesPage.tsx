@@ -702,8 +702,8 @@ function OpportunitiesMobilePage() {
                   className={cn(
                     "h-11 md:h-10 text-sm",
                     showFilters
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "bg-white border-primary/30 text-foreground hover:bg-primary/10 hover:text-foreground active:bg-primary active:text-primary-foreground"
+                      ? "bg-primary text-primary-foreground [@media(hover:hover)]:hover:bg-primary/90"
+                      : "bg-white border-primary/30 text-foreground [@media(hover:hover)]:hover:bg-primary/10 [@media(hover:hover)]:hover:text-foreground active:bg-primary active:text-primary-foreground"
                   )}
                 >
                   <SlidersHorizontal className="w-4 h-4 mr-2" />
@@ -838,12 +838,12 @@ function OpportunitiesMobilePage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="shrink-0 h-9 w-9 hover:bg-transparent active:bg-transparent"
+                          className="shrink-0 h-9 w-9 [@media(hover:hover)]:hover:bg-transparent active:bg-transparent"
                           onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, true); }}
                         >
                           <Star className={cn(
                             "w-5 h-5 transition-colors",
-                            isFavorite(item.id, true) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
+                            isFavorite(item.id, true) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground [@media(hover:hover)]:hover:text-yellow-400"
                           )} />
                         </Button>
                       </div>
@@ -981,14 +981,14 @@ function OpportunitiesMobilePage() {
                       </CollapsibleContent>
 
                       {/* Footer with Message button and expand arrow */}
-                      <div className="flex items-center gap-2 mt-3">
-                        <div className="flex-1 flex flex-col items-center">
+                      <div className="flex items-start gap-2 mt-3">
+                        <div className="flex-1 flex flex-col">
                           <Button
                             className={cn(
                               "w-full h-11 md:h-10 text-sm gap-2",
                               (item.pocUserId || item.poc_user_id || item.pi_id)
-                                ? "bg-primary hover:bg-primary/90"
-                                : "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                                ? "bg-primary [@media(hover:hover)]:hover:bg-primary/90"
+                                : "bg-gray-400 cursor-not-allowed"
                             )}
                             onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.pi_id)}
                             disabled={!(item.pocUserId || item.poc_user_id || item.pi_id)}
@@ -1003,8 +1003,11 @@ function OpportunitiesMobilePage() {
                           ) : null}
                         </div>
                         <CollapsibleTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 hover:bg-transparent active:bg-transparent">
-                            <ChevronDown className={`h-4 w-4 transition-transform ${expandedCards.has(item.id) ? 'rotate-180' : ''}`} />
+                          <Button variant="outline" size="icon" className="h-11 w-11 md:h-10 md:w-10 shrink-0">
+                            <ChevronDown className={cn(
+                              "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                              expandedCards.has(item.id) && "rotate-180"
+                            )} />
                           </Button>
                         </CollapsibleTrigger>
                       </div>
@@ -1038,12 +1041,12 @@ function OpportunitiesMobilePage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="shrink-0 h-9 w-9 hover:bg-transparent active:bg-transparent"
+                              className="shrink-0 h-9 w-9 [@media(hover:hover)]:hover:bg-transparent active:bg-transparent"
                               onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, isProjectOrigin); }}
                             >
                               <Star className={cn(
                                 "w-5 h-5 transition-colors",
-                                isFavorite(item.id, isProjectOrigin) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
+                                isFavorite(item.id, isProjectOrigin) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground [@media(hover:hover)]:hover:text-yellow-400"
                               )} />
                             </Button>
                           );
@@ -1143,14 +1146,14 @@ function OpportunitiesMobilePage() {
                       </CollapsibleContent>
 
                       {/* Footer with Message button and expand arrow */}
-                      <div className="flex items-center gap-2 mt-3">
-                        <div className="flex-1 flex flex-col items-center">
+                      <div className="flex items-start gap-2 mt-3">
+                        <div className="flex-1 flex flex-col">
                           <Button
                             className={cn(
                               "w-full h-11 md:h-10 text-sm gap-2",
                               (item.pocUserId || item.poc_user_id || item.sponsor_contact_id)
-                                ? "bg-primary hover:bg-primary/90"
-                                : "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                                ? "bg-primary [@media(hover:hover)]:hover:bg-primary/90"
+                                : "bg-gray-400 cursor-not-allowed"
                             )}
                             onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.sponsor_contact_id)}
                             disabled={!(item.pocUserId || item.poc_user_id || item.sponsor_contact_id)}
@@ -1165,8 +1168,11 @@ function OpportunitiesMobilePage() {
                           ) : null}
                         </div>
                         <CollapsibleTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 hover:bg-transparent active:bg-transparent">
-                            <ChevronDown className={`h-4 w-4 transition-transform ${expandedCards.has(item.id) ? 'rotate-180' : ''}`} />
+                          <Button variant="outline" size="icon" className="h-11 w-11 md:h-10 md:w-10 shrink-0">
+                            <ChevronDown className={cn(
+                              "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                              expandedCards.has(item.id) && "rotate-180"
+                            )} />
                           </Button>
                         </CollapsibleTrigger>
                       </div>

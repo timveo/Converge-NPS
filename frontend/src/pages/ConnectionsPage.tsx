@@ -565,8 +565,8 @@ function ConnectionsMobilePage() {
                 className={cn(
                   "flex-1 sm:flex-none h-11 md:h-11 px-4 md:px-4 text-sm md:text-sm transition-colors",
                   showFilters
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-white border-primary/30 text-foreground hover:bg-primary/10 hover:text-foreground active:bg-primary active:text-primary-foreground"
+                    ? "bg-primary text-primary-foreground [@media(hover:hover)]:hover:bg-primary/90"
+                    : "bg-white border-primary/30 text-foreground [@media(hover:hover)]:hover:bg-primary/10 [@media(hover:hover)]:hover:text-foreground active:bg-primary active:text-primary-foreground"
                 )}
               >
                 <SlidersHorizontal className="w-4 h-4 md:w-4 md:h-4 mr-2 md:mr-2" />
@@ -678,7 +678,7 @@ function ConnectionsMobilePage() {
                 <Badge key={type} variant="secondary" className="gap-1 pr-1">
                   {typeLabel}
                   <button
-                    className="ml-1 hover:bg-muted rounded-full p-0.5"
+                    className="ml-1 [@media(hover:hover)]:hover:bg-muted rounded-full p-0.5"
                     onClick={() => setFilters(prev => ({
                       ...prev,
                       participantTypes: prev.participantTypes.filter((t: string) => t !== type)
@@ -693,7 +693,7 @@ function ConnectionsMobilePage() {
               <Badge variant="secondary" className="gap-1 pr-1">
                 At Event
                 <button
-                  className="ml-1 hover:bg-muted rounded-full p-0.5"
+                  className="ml-1 [@media(hover:hover)]:hover:bg-muted rounded-full p-0.5"
                   onClick={() => setFilters(prev => ({
                     ...prev,
                     eventAttendeesOnly: false
@@ -771,7 +771,7 @@ function ConnectionsMobilePage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-1 right-1 h-4 w-4 md:h-5 md:w-5 text-muted-foreground hover:text-foreground hover:bg-muted"
+                    className="absolute top-1 right-1 h-4 w-4 md:h-5 md:w-5 text-muted-foreground [@media(hover:hover)]:hover:text-foreground [@media(hover:hover)]:hover:bg-muted"
                     onClick={(e) => { e.stopPropagation(); dismissRecommendation(rec.id); }}
                     aria-label="Dismiss recommendation"
                   >
@@ -907,8 +907,8 @@ function ConnectionsMobilePage() {
 
                     {/* Expand/Collapse Control */}
                     <Button
-                      variant="ghost"
-                      className="w-full h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                      variant="outline"
+                      className="w-full h-8 text-xs text-muted-foreground [@media(hover:hover)]:hover:text-foreground transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleCardExpansion(`participant-${participant.id}`);
@@ -1119,8 +1119,8 @@ function ConnectionsMobilePage() {
 
                   {/* Expand/Collapse Control */}
                   <Button
-                    variant="ghost"
-                    className="w-full h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                    variant="outline"
+                    className="w-full h-8 text-xs text-muted-foreground [@media(hover:hover)]:hover:text-foreground transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleCardExpansion(connection.id);
@@ -1266,7 +1266,7 @@ function ConnectionsMobilePage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-10 w-10 text-orange-600 dark:text-orange-400 hover:bg-orange-500/10"
+                          className="h-10 w-10 text-orange-600 dark:text-orange-400 [@media(hover:hover)]:hover:bg-orange-500/10"
                           onClick={() => handleRemoveReminder(connection.id)}
                           title="Remove reminder"
                         >
@@ -1276,7 +1276,7 @@ function ConnectionsMobilePage() {
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-10 w-10 text-destructive hover:bg-destructive/10"
+                        className="h-10 w-10 text-destructive [@media(hover:hover)]:hover:bg-destructive/10"
                         onClick={() => handleDeleteConnection(connection.id)}
                         title="Delete connection"
                       >
