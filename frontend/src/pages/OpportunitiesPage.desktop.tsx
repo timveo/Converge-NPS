@@ -1012,7 +1012,7 @@ export default function OpportunitiesDesktopPage() {
                 ? 'bg-blue-600 text-white border-blue-600'
                 : selectedItem.sourceType === 'Industry'
                 ? 'bg-slate-600 text-white border-slate-600'
-                : 'bg-slate-700 text-white border-slate-700'
+                : 'bg-sky-800 text-white border-sky-800'
             )}
           >
             {isNPSItem(selectedItem) ? (
