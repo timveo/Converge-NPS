@@ -1272,15 +1272,16 @@ async function upsertIndustryProjects(context: IndustryProjectContext) {
       pocRank: context.pocRank,
     };
 
+    // Find existing project by title and department (not classification, since it may change)
     const existing = await prisma.project.findFirst({
       where: {
         title,
-        classification,
         department: context.partner.name,
       },
     });
 
     if (existing) {
+      // Update existing project (classification may have changed)
       await prisma.project.update({
         where: { id: existing.id },
         data: projectData,

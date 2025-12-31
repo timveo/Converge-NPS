@@ -385,9 +385,15 @@ export default function OpportunitiesDesktopPage() {
 
   // Combined and filtered items with counts
   const { combinedItems, counts } = useMemo(() => {
+    // Separate projects by classification
     const industryProjects = filteredProjects.filter(isIndustryProject);
-    const npsProjects = filteredProjects.filter(p => !isIndustryProject(p));
-    
+    const militaryGovProjects = filteredProjects.filter(p =>
+      (p.classification || '').toLowerCase() === 'military/gov'
+    );
+    const npsProjects = filteredProjects.filter(p =>
+      !isIndustryProject(p) && (p.classification || '').toLowerCase() !== 'military/gov'
+    );
+
 
     const mapProjectToOpportunity = (project: Project): Opportunity & { stage?: string; isProjectOrigin: boolean } => ({
       id: project.id,
@@ -423,19 +429,40 @@ export default function OpportunitiesDesktopPage() {
 
     const industryProjectOpportunities = industryProjects.map(mapProjectToOpportunity);
 
+    // Convert Military/Gov projects to opportunity format
+    const militaryGovProjectOpportunities = militaryGovProjects.map(project => ({
+      ...mapProjectToOpportunity(project),
+      type: 'Military/Gov' as any,
+      sponsor_organization: project.department || 'Military/Government',
+    }));
+
     const npsItems: CombinedItem[] = npsProjects.map((p) => ({
       ...p,
       sourceType: 'NPS' as const,
     }));
-    // When "Seeking" filter is active, hide Military/Gov opportunities since they don't have seeking field
+
+    // Combine Military/Gov opportunities from both sources
+    const realMilitaryGovOpportunities = filteredOpportunities
+      .filter((o) => o.type?.toLowerCase() !== 'industry')
+      .map((o) => ({
+        ...o,
+        sourceType: 'Military/Gov' as const,
+        isProjectOrigin: false,
+      }));
+
+    const militaryGovItems = [
+      ...realMilitaryGovOpportunities,
+      ...militaryGovProjectOpportunities.map((o) => ({
+        ...o,
+        sourceType: 'Military/Gov' as const,
+        isProjectOrigin: true,
+      })),
+    ];
+
+    // When "Seeking" filter is active, only show Military/Gov items that originated from projects
     const milItems: CombinedItem[] = selectedSeeking.length > 0
-      ? []
-      : filteredOpportunities
-          .filter((o) => o.type?.toLowerCase() !== 'industry')
-          .map((o) => ({
-            ...o,
-            sourceType: 'Military/Gov' as const,
-          }));
+      ? militaryGovItems.filter(item => (item as any).isProjectOrigin === true)
+      : militaryGovItems;
 
     const industryItems: CombinedItem[] = [
       // Real industry opportunities from the opportunities table
