@@ -874,19 +874,21 @@ function IndustryMobilePage() {
                         <Button
                           className={cn(
                             "w-full h-11 md:h-10 text-sm gap-2",
-                            (partner.poc_is_checked_in || partner.pocIsCheckedIn)
+                            (partner.poc_user_id || partner.pocUserId)
                               ? "bg-primary hover:bg-primary/90"
                               : "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
                           )}
                           onClick={() => handleContact(partner)}
-                          disabled={!(partner.poc_is_checked_in || partner.pocIsCheckedIn)}
+                          disabled={!(partner.poc_user_id || partner.pocUserId)}
                         >
                           <MessageSquare className="h-4 w-4" />
                           Message
                         </Button>
-                        {!(partner.poc_is_checked_in || partner.pocIsCheckedIn) && (
-                          <span className="text-[10px] text-muted-foreground mt-1">POC is not at the Event</span>
-                        )}
+                        {!(partner.poc_user_id || partner.pocUserId) ? (
+                          <span className="text-[10px] text-muted-foreground mt-1">POC is not registered</span>
+                        ) : !(partner.poc_is_checked_in || partner.pocIsCheckedIn) ? (
+                          <span className="text-[10px] text-amber-600 mt-1">POC registered but not at event</span>
+                        ) : null}
                       </div>
                       {partner.website_url && (
                         <Button variant="outline" size="icon" className="h-11 w-11 md:h-10 md:w-10" asChild>

@@ -1,6 +1,21 @@
 import prisma from '../config/database';
 import { z } from 'zod';
 
+/**
+ * Check if two users are connected
+ */
+export async function areUsersConnected(userId1: string, userId2: string): Promise<boolean> {
+  const connection = await prisma.connection.findFirst({
+    where: {
+      OR: [
+        { userId: userId1, connectedUserId: userId2 },
+        { userId: userId2, connectedUserId: userId1 },
+      ],
+    },
+  });
+  return !!connection;
+}
+
 // Validation schemas
 export const sendMessageSchema = z.object({
   conversationId: z.string().uuid().optional(),
@@ -19,19 +34,33 @@ export const updateMessageStatusSchema = z.object({
 
 /**
  * Get or create conversation between two users
+ * Messaging rules:
+ * - Always enabled between connections
+ * - Enabled for Participants in My Network (checked-in users with showProfileAllowConnections: true)
+ * - Blocked for users with showProfileAllowConnections: false (unless they are connections)
  */
 export async function getOrCreateConversation(userId1: string, userId2: string) {
   // Check if conversation already exists between these two users
-  const existingConversation = await prisma.conversation.findFirst({
+  // We need to find a conversation where BOTH users are participants and there are exactly 2 participants
+  const existingConversations = await prisma.conversation.findMany({
     where: {
       isGroup: false,
-      participants: {
-        every: {
-          userId: {
-            in: [userId1, userId2]
-          }
-        }
-      }
+      AND: [
+        {
+          participants: {
+            some: {
+              userId: userId1,
+            },
+          },
+        },
+        {
+          participants: {
+            some: {
+              userId: userId2,
+            },
+          },
+        },
+      ],
     },
     include: {
       participants: {
@@ -49,23 +78,43 @@ export async function getOrCreateConversation(userId1: string, userId2: string) 
     },
   });
 
-  // Filter for conversations with exactly these two participants
-  const conversation = existingConversation?.participants.length === 2 
-    ? existingConversation 
-    : null;
+  // Find conversation with exactly these two participants (no more, no less)
+  const conversation = existingConversations.find(
+    (conv) => conv.participants.length === 2
+  );
 
   if (conversation) {
     return conversation;
   }
 
-  // Check if recipient allows messaging
+  // Check if users are already connected - messaging is always enabled between connections
+  const connected = await areUsersConnected(userId1, userId2);
+
+  // Get recipient's privacy settings
   const recipient = await prisma.profile.findUnique({
     where: { id: userId2 },
-    select: { allowMessaging: true },
+    select: {
+      allowMessaging: true,
+      showProfileAllowConnections: true,
+      isCheckedIn: true,
+    },
   });
 
-  if (!recipient || !recipient.allowMessaging) {
-    throw new Error('Recipient does not allow messaging');
+  if (!recipient) {
+    throw new Error('Recipient not found');
+  }
+
+  // If users are connected, always allow messaging (bypass privacy checks)
+  if (!connected) {
+    // Check if recipient allows messaging
+    if (!recipient.allowMessaging) {
+      throw new Error('Recipient does not allow messaging');
+    }
+
+    // Check if recipient has disabled profile visibility for non-connections
+    if (!recipient.showProfileAllowConnections) {
+      throw new Error('This person has messaging disabled for non-connections');
+    }
   }
 
   // Create new conversation

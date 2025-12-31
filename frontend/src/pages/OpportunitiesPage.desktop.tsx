@@ -902,7 +902,10 @@ export default function OpportunitiesDesktopPage() {
               size="sm"
               className={cn(
                 "h-8 text-xs",
-                (selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn)
+                (selectedItem.pocUserId || selectedItem.poc_user_id ||
+                  (isNPSItem(selectedItem)
+                    ? (selectedItem as Project).pi_id
+                    : (selectedItem as Opportunity).sponsor_contact_id))
                   ? "bg-primary hover:bg-primary/90"
                   : "bg-gray-400 hover:bg-gray-400"
               )}
@@ -914,14 +917,22 @@ export default function OpportunitiesDesktopPage() {
                   : (selectedItem as Opportunity).sponsor_contact_id)
               )
             }
-            disabled={!(selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn)}
+            disabled={!(selectedItem.pocUserId || selectedItem.poc_user_id ||
+              (isNPSItem(selectedItem)
+                ? (selectedItem as Project).pi_id
+                : (selectedItem as Opportunity).sponsor_contact_id))}
           >
             <MessageSquare className="h-3 w-3 mr-1" />
             Message
           </Button>
-            {!(selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn) && (
-              <span className="text-[9px] text-muted-foreground mt-0.5">POC is not at the Event</span>
-            )}
+            {!(selectedItem.pocUserId || selectedItem.poc_user_id ||
+              (isNPSItem(selectedItem)
+                ? (selectedItem as Project).pi_id
+                : (selectedItem as Opportunity).sponsor_contact_id)) ? (
+              <span className="text-[9px] text-muted-foreground mt-0.5">POC is not registered</span>
+            ) : !(selectedItem.pocIsCheckedIn || selectedItem.poc_is_checked_in) ? (
+              <span className="text-[9px] text-amber-600 mt-0.5">POC registered but not at event</span>
+            ) : null}
           </div>
         </div>
       </div>

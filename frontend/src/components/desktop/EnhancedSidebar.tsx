@@ -32,7 +32,7 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { title: 'Home', href: '/', icon: Home },
   { title: 'Schedule', href: '/schedule', icon: Calendar },
-  { title: 'Connections', href: '/connections', icon: Users },
+  { title: 'Network', href: '/connections', icon: Users },
   { title: 'Messages', href: '/messages', icon: MessageCircle },
   { title: 'Opportunities', href: '/opportunities', icon: Lightbulb },
   { title: 'Industry', href: '/industry', icon: Building2 },

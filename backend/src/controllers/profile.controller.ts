@@ -243,6 +243,7 @@ export class ProfileController {
   /**
    * GET /users/participants
    * Get checked-in event participants (public profiles only)
+   * Excludes users already connected to the requester
    */
   static async getParticipants(req: Request, res: Response, next: NextFunction) {
     try {
@@ -258,6 +259,7 @@ export class ProfileController {
         search: search as string | undefined,
         page: page ? parseInt(page as string) : undefined,
         limit: limit ? parseInt(limit as string) : undefined,
+        requesterId: req.user.id,
       });
 
       res.status(200).json({
@@ -266,6 +268,7 @@ export class ProfileController {
         total: result.total,
         page: result.page,
         totalPages: result.totalPages,
+        privateProfileMatch: result.privateProfileMatch,
       });
     } catch (error) {
       next(error);

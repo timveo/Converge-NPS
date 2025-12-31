@@ -784,19 +784,21 @@ export default function IndustryDesktopPage() {
               size="sm"
               className={cn(
                 "h-8 text-xs",
-                selectedPartner.poc_is_checked_in
+                selectedPartner.poc_user_id
                   ? "bg-primary hover:bg-primary/90"
                   : "bg-gray-400 hover:bg-gray-400"
               )}
               onClick={() => handleContact(selectedPartner, true)}
-              disabled={!selectedPartner.poc_is_checked_in}
+              disabled={!selectedPartner.poc_user_id}
             >
               <MessageSquare className="h-3 w-3 mr-1" />
               Message
             </Button>
-            {!selectedPartner.poc_is_checked_in && (
-              <span className="text-[9px] text-muted-foreground mt-0.5">POC is not at the Event</span>
-            )}
+            {!selectedPartner.poc_user_id ? (
+              <span className="text-[9px] text-muted-foreground mt-0.5">POC is not registered</span>
+            ) : !selectedPartner.poc_is_checked_in ? (
+              <span className="text-[9px] text-amber-600 mt-0.5">POC registered but not at event</span>
+            ) : null}
           </div>
         </div>
       </div>

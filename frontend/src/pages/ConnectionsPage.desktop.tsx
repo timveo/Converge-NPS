@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
-  MessageSquare,
   CheckCircle2,
   Loader2,
   Trash2,
@@ -23,6 +22,7 @@ import {
   Tag,
   Clock,
   Filter,
+  MapPin,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -75,6 +75,7 @@ interface Connection {
     role: string | null;
     organization: string | null;
     acceleration_interests: string[] | null;
+    is_checked_in?: boolean;
   } | null;
 }
 
@@ -98,6 +99,8 @@ interface Participant {
   role?: string;
   avatarUrl?: string;
   accelerationInterests?: string[];
+  isConnected?: boolean;
+  isCheckedIn?: boolean;
 }
 
 const COLLABORATION_TYPES = [
@@ -124,10 +127,12 @@ export default function ConnectionsDesktopPage() {
     intents: string[];
     userTypes: string[];
     sortBy: string;
+    eventAttendeesOnly: boolean;
   }>({
     intents: [],
     userTypes: [],
     sortBy: 'recent',
+    eventAttendeesOnly: false,
   });
   const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null);
   const [editingNote, setEditingNote] = useState(false);
@@ -143,7 +148,6 @@ export default function ConnectionsDesktopPage() {
     isDismissed: isRecommendationDismissed,
   } = useDismissedRecommendations('connections');
 
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
@@ -186,11 +190,14 @@ export default function ConnectionsDesktopPage() {
     }
   }, [searchParams]);
 
+  const [privateProfileMatch, setPrivateProfileMatch] = useState(false);
+
   const fetchParticipants = async (): Promise<Participant[]> => {
     setParticipantsLoading(true);
     try {
       const response = await api.get('/users/participants');
       const data = (response as any).data || [];
+      setPrivateProfileMatch((response as any).privateProfileMatch || false);
       const mapped: Participant[] = data.map((p: any) => ({
         id: p.id,
         fullName: p.fullName || p.full_name || 'Unknown',
@@ -199,6 +206,8 @@ export default function ConnectionsDesktopPage() {
         role: p.role,
         avatarUrl: p.avatarUrl,
         accelerationInterests: p.accelerationInterests || p.acceleration_interests || [],
+        isConnected: p.isConnected || p.is_connected || false,
+        isCheckedIn: true, // All participants from this endpoint are checked-in users
       }));
       setParticipants(mapped);
       return mapped;
@@ -291,6 +300,7 @@ export default function ConnectionsDesktopPage() {
                 conn.connectedUser?.accelerationInterests ||
                 conn.profile?.acceleration_interests ||
                 [],
+              is_checked_in: conn.connectedUser?.isCheckedIn || conn.profile?.is_checked_in || false,
             }
           : null,
       }));
@@ -337,6 +347,10 @@ export default function ConnectionsDesktopPage() {
       });
     }
 
+    if (filters.eventAttendeesOnly) {
+      result = result.filter((conn) => conn.profile?.is_checked_in === true);
+    }
+
     switch (filters.sortBy) {
       case 'recent':
         result.sort(
@@ -372,16 +386,6 @@ export default function ConnectionsDesktopPage() {
     }
   };
 
-  const handleStartMessage = async (userId: string) => {
-    try {
-      await api.post('/messages/conversations', { recipientId: userId });
-      navigate('/messages');
-    } catch (error: any) {
-      const message = error.response?.data?.error || 'Failed to start conversation';
-      toast.error(message);
-    }
-  };
-
   const handleSaveNote = async () => {
     if (!selectedConnection) return;
     setSavingNote(true);
@@ -414,7 +418,7 @@ export default function ConnectionsDesktopPage() {
   };
 
   const clearFilters = () => {
-    setFilters({ intents: [], userTypes: [], sortBy: 'recent' });
+    setFilters({ intents: [], userTypes: [], sortBy: 'recent', eventAttendeesOnly: false });
     setSearchQuery('');
   };
 
@@ -431,7 +435,7 @@ export default function ConnectionsDesktopPage() {
     []
   );
 
-  const activeFilterCount = filters.intents.length + filters.userTypes.length;
+  const activeFilterCount = filters.intents.length + filters.userTypes.length + (filters.eventAttendeesOnly ? 1 : 0);
 
   const visibleRecommendations = recommendations
     .filter((r) => !isRecommendationDismissed(r.id))
@@ -504,24 +508,19 @@ export default function ConnectionsDesktopPage() {
 
           <Separator />
 
-          {/* Intent Filters */}
+          {/* At Event Filter */}
           <div>
-            <Label className="text-sm font-medium mb-3 block">Collaboration Intent</Label>
-            <div className="space-y-2">
-              {COLLABORATION_TYPES.map((type) => (
-                <div key={type.value} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id={`intent-${type.value}`}
-                    checked={filters.intents.includes(type.value)}
-                    onChange={() => toggleArrayFilter('intents', type.value)}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label htmlFor={`intent-${type.value}`} className="cursor-pointer text-sm">
-                    {type.label}
-                  </Label>
-                </div>
-              ))}
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="at-event-filter"
+                checked={filters.eventAttendeesOnly}
+                onChange={(e) => setFilters(prev => ({ ...prev, eventAttendeesOnly: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="at-event-filter" className="cursor-pointer text-sm font-medium">
+                At Event
+              </Label>
             </div>
           </div>
 
@@ -562,8 +561,8 @@ export default function ConnectionsDesktopPage() {
             <Users className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="font-semibold text-lg">Connections</h2>
-            <p className="text-sm text-muted-foreground">Your network</p>
+            <h2 className="font-semibold text-lg">My Network</h2>
+            <p className="text-sm text-muted-foreground">Your connections</p>
           </div>
         </div>
       </div>
@@ -588,7 +587,7 @@ export default function ConnectionsDesktopPage() {
             </TabsTrigger>
             <TabsTrigger value="participants" className="flex-1 text-sm">
               <Users className="h-3 w-3 mr-1" />
-              Participants
+              NPS Community
               <Badge variant="secondary" className="ml-2 text-xs">
                 {participants.length}
               </Badge>
@@ -683,6 +682,13 @@ export default function ConnectionsDesktopPage() {
                   <p className="text-xs text-muted-foreground mt-1">
                     Participants will appear here as they check in
                   </p>
+                  {privateProfileMatch && searchQuery && (
+                    <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <p className="text-xs text-amber-800 dark:text-amber-200">
+                        A participant matching "{searchQuery}" has a private profile. Connect in person using QR code.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-1 pr-0">
@@ -710,7 +716,7 @@ export default function ConnectionsDesktopPage() {
                         >
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10">
-                              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-white text-sm">
+                              <AvatarFallback className="text-white text-sm bg-gradient-to-br from-primary to-primary/80">
                                 {participant.fullName
                                   .split(' ')
                                   .map((n) => n[0])
@@ -737,6 +743,21 @@ export default function ConnectionsDesktopPage() {
                                   </>
                                 )}
                               </p>
+                            </div>
+                            {/* Badges stacked vertically with uniform size */}
+                            <div className="flex flex-col gap-1 shrink-0 w-[85px]">
+                              {participant.isConnected && (
+                                <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-green-500 hover:bg-green-600 flex items-center justify-center">
+                                  <CheckCircle2 className="h-3 w-3 mr-0.5" />
+                                  Connected
+                                </Badge>
+                              )}
+                              {participant.isCheckedIn && (
+                                <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center">
+                                  <MapPin className="h-3 w-3 mr-0.5" />
+                                  At Event
+                                </Badge>
+                              )}
                             </div>
                             <ChevronRight
                               className={cn(
@@ -831,6 +852,19 @@ export default function ConnectionsDesktopPage() {
                             {profile?.organization && ` at ${profile.organization}`}
                           </p>
                         </div>
+                        {/* Badges stacked vertically with uniform size */}
+                        <div className="flex flex-col gap-1 shrink-0 w-[85px]">
+                          <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-green-500 hover:bg-green-600 flex items-center justify-center">
+                            <CheckCircle2 className="h-3 w-3 mr-0.5" />
+                            Connected
+                          </Badge>
+                          {profile?.is_checked_in && (
+                            <Badge variant="default" className="text-[9px] px-1.5 py-0.5 h-5 w-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center">
+                              <MapPin className="h-3 w-3 mr-0.5" />
+                              At Event
+                            </Badge>
+                          )}
+                        </div>
                         <ChevronRight
                           className={cn(
                             'h-4 w-4 shrink-0',
@@ -853,7 +887,7 @@ export default function ConnectionsDesktopPage() {
   const ConnectionDetailPanel = selectedConnection ? (
     <div className="h-full flex flex-col bg-gray-100 border-l border-gray-200">
       {/* Header */}
-      <div className="h-[72px] px-4 flex items-center justify-between border-b border-gray-200 bg-gray-100">
+      <div className="h-[72px] px-4 flex items-center border-b border-gray-200 bg-gray-100">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <Clock className="h-5 w-5 text-primary" />
@@ -863,15 +897,6 @@ export default function ConnectionsDesktopPage() {
             <p className="text-sm text-muted-foreground">View and manage</p>
           </div>
         </div>
-        {/* Message Button in header */}
-        <Button
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => handleStartMessage(selectedConnection.other_user_id)}
-        >
-          <MessageSquare className="h-3 w-3 mr-1" />
-          Message
-        </Button>
       </div>
 
       {/* Profile Info */}
@@ -898,13 +923,19 @@ export default function ConnectionsDesktopPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge className="text-xs bg-green-500 hover:bg-green-600">
+        <div className="flex flex-col gap-2">
+          {selectedConnection.profile?.is_checked_in && (
+            <Badge className="text-xs bg-blue-500 hover:bg-blue-600 w-fit">
+              <MapPin className="h-3 w-3 mr-1" />
+              At Event
+            </Badge>
+          )}
+          <Badge className="text-xs bg-green-500 hover:bg-green-600 w-fit">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Connected
           </Badge>
           {selectedConnection.follow_up_reminder && !selectedConnection.reminder_sent && (
-            <Badge variant="outline" className="text-xs text-orange-600 border-orange-300 bg-orange-50">
+            <Badge variant="outline" className="text-xs text-orange-600 border-orange-300 bg-orange-50 w-fit">
               <Bell className="h-3 w-3 mr-1" />
               Reminder set
             </Badge>
@@ -1117,41 +1148,27 @@ export default function ConnectionsDesktopPage() {
     </div>
   );
 
-  // Right Panel - Participant Detail (not yet connected)
+  // Right Panel - Participant Detail (matches Connection Detail layout)
   const ParticipantDetailPanel = selectedParticipant ? (
     <div className="h-full flex flex-col bg-gray-100 border-l border-gray-200">
       {/* Header */}
-      <div className="h-[72px] px-4 flex items-center justify-between border-b border-gray-200 bg-gray-100">
+      <div className="h-[72px] px-4 flex items-center border-b border-gray-200 bg-gray-100">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Users className="h-5 w-5 text-primary" />
+            <Clock className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="font-semibold text-lg">Participant Details</h2>
-            <p className="text-sm text-muted-foreground">Event attendee</p>
+            <h2 className="font-semibold text-lg">Profile Details</h2>
+            <p className="text-sm text-muted-foreground">View and connect</p>
           </div>
         </div>
-        {/* Connect Button in header */}
-        <Button
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => handleConnectParticipant(selectedParticipant.id)}
-          disabled={connectingUser === selectedParticipant.id}
-        >
-          {connectingUser === selectedParticipant.id ? (
-            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-          ) : (
-            <UserPlus className="h-3 w-3 mr-1" />
-          )}
-          Connect
-        </Button>
       </div>
 
-      {/* Profile Info */}
+      {/* Profile Info - Same layout as Connection Detail */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-start gap-4 mb-3">
           <Avatar className="h-14 w-14">
-            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-white text-lg">
+            <AvatarFallback className="bg-gradient-navy text-primary-foreground text-lg">
               {selectedParticipant.fullName
                 .split(' ')
                 .map((n) => n[0])
@@ -1169,17 +1186,25 @@ export default function ConnectionsDesktopPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="text-xs">
-            <Users className="h-3 w-3 mr-1" />
-            Event Participant
-          </Badge>
+        <div className="flex flex-col gap-2">
+          {selectedParticipant.isCheckedIn && (
+            <Badge className="text-xs bg-blue-500 hover:bg-blue-600 w-fit">
+              <MapPin className="h-3 w-3 mr-1" />
+              At Event
+            </Badge>
+          )}
+          {selectedParticipant.isConnected && (
+            <Badge className="text-xs bg-green-500 hover:bg-green-600 w-fit">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Connected
+            </Badge>
+          )}
         </div>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
-          {/* Participant Info */}
+          {/* Profile Info */}
           <div className="space-y-3">
             {selectedParticipant.organization && (
               <div className="flex items-center gap-3 text-sm">
@@ -1206,52 +1231,48 @@ export default function ConnectionsDesktopPage() {
             )}
           </div>
 
+          <Separator />
+
           {/* Technology Interests */}
           {selectedParticipant.accelerationInterests &&
             selectedParticipant.accelerationInterests.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <Label className="text-sm font-medium flex items-center gap-2 mb-3">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                    Technology Interests
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedParticipant.accelerationInterests.map((interest) => (
-                      <Badge key={interest} variant="secondary" className="text-xs">
-                        {interest}
-                      </Badge>
-                    ))}
-                  </div>
+              <div>
+                <Label className="text-sm font-medium flex items-center gap-2 mb-3">
+                  <BookOpen className="h-4 w-4 text-primary" />
+                  Technology Interests
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {selectedParticipant.accelerationInterests.map((interest) => (
+                    <Badge key={interest} variant="secondary" className="text-xs">
+                      {interest}
+                    </Badge>
+                  ))}
                 </div>
-              </>
+              </div>
             )}
 
-          <Separator />
-
-          {/* Call to Action */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <p className="text-sm text-center text-muted-foreground mb-3">
-              Connect with {selectedParticipant.fullName.split(' ')[0]} to start networking and collaborate
-            </p>
-            <Button
-              className="w-full"
-              onClick={() => handleConnectParticipant(selectedParticipant.id)}
-              disabled={connectingUser === selectedParticipant.id}
-            >
-              {connectingUser === selectedParticipant.id ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Adding Connection...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add to My Connections
-                </>
-              )}
-            </Button>
-          </div>
+          {/* Connect Button - Only show for non-connected users */}
+          {!selectedParticipant.isConnected && (
+            <div className="pt-2">
+              <Button
+                className="w-full"
+                onClick={() => handleConnectParticipant(selectedParticipant.id)}
+                disabled={connectingUser === selectedParticipant.id}
+              >
+                {connectingUser === selectedParticipant.id ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Connect
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>
@@ -1264,8 +1285,8 @@ export default function ConnectionsDesktopPage() {
             <Users className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="font-semibold text-lg">Participant Details</h2>
-            <p className="text-sm text-muted-foreground">Event attendee</p>
+            <h2 className="font-semibold text-lg">NPS Community</h2>
+            <p className="text-sm text-muted-foreground">User details</p>
           </div>
         </div>
       </div>
@@ -1274,9 +1295,9 @@ export default function ConnectionsDesktopPage() {
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Users className="h-8 w-8 text-primary/70" />
           </div>
-          <p className="font-medium">Select a participant</p>
+          <p className="font-medium">Select a community member</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Click on a participant to view their details
+            Click on a user to view their details
           </p>
         </div>
       </div>
@@ -1291,7 +1312,7 @@ export default function ConnectionsDesktopPage() {
       <div className="h-full flex flex-col">
         {/* Page Title */}
         <div className="px-6 py-4 border-b border-gray-200 bg-background flex-shrink-0">
-          <h1 className="text-2xl font-bold">My Network</h1>
+          <h1 className="text-2xl font-bold">Network</h1>
         </div>
 
         <div className="flex-1 overflow-hidden">

@@ -41,7 +41,14 @@ describe('Message Service', () => {
 
     it('should create new conversation if none exists', async () => {
       (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(null);
-      (prisma.profile.findUnique as jest.Mock).mockResolvedValue({ allowMessaging: true });
+      // Mock connection check - users are not connected
+      (prisma.connection.findFirst as jest.Mock).mockResolvedValue(null);
+      // Mock recipient with all privacy settings enabled
+      (prisma.profile.findUnique as jest.Mock).mockResolvedValue({
+        allowMessaging: true,
+        showProfileAllowConnections: true,
+        isCheckedIn: true,
+      });
       (prisma.conversation.create as jest.Mock).mockResolvedValue({
         id: 'new-conversation',
         isGroup: false,
@@ -66,7 +73,13 @@ describe('Message Service', () => {
 
     it('should throw error if recipient does not allow messaging', async () => {
       (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(null);
-      (prisma.profile.findUnique as jest.Mock).mockResolvedValue({ allowMessaging: false });
+      // Mock connection check - users are not connected
+      (prisma.connection.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.profile.findUnique as jest.Mock).mockResolvedValue({
+        allowMessaging: false,
+        showProfileAllowConnections: true,
+        isCheckedIn: true,
+      });
 
       await expect(getOrCreateConversation('user-1', 'user-2')).rejects.toThrow(
         'Recipient does not allow messaging'
@@ -75,10 +88,12 @@ describe('Message Service', () => {
 
     it('should throw error if recipient not found', async () => {
       (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(null);
+      // Mock connection check - users are not connected
+      (prisma.connection.findFirst as jest.Mock).mockResolvedValue(null);
       (prisma.profile.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(getOrCreateConversation('user-1', 'user-2')).rejects.toThrow(
-        'Recipient does not allow messaging'
+        'Recipient not found'
       );
     });
   });
