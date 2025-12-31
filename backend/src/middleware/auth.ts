@@ -44,7 +44,24 @@ export async function authenticateToken(
     }
 
     // Verify JWT token
-    const decoded = verifyAccessToken(token);
+    let decoded;
+    try {
+      decoded = verifyAccessToken(token);
+    } catch (error: any) {
+      // Log token verification failures at debug level (normal auth flow)
+      logger.debug('Token verification failed', {
+        path: req.path,
+        reason: error.message || 'Invalid or expired token',
+      });
+      res.status(401).json({
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Invalid or expired token',
+          timestamp: new Date().toISOString(),
+        },
+      });
+      return;
+    }
 
     // Fetch user roles from database (for fresh role data)
     let roles: AppRole[] = [];
@@ -77,11 +94,12 @@ export async function authenticateToken(
 
     next();
   } catch (error: any) {
-    logger.error('Authentication error:', error);
+    // Log unexpected errors at error level
+    logger.error('Unexpected authentication error:', error);
     res.status(401).json({
       error: {
         code: 'UNAUTHORIZED',
-        message: error.message || 'Invalid or expired token',
+        message: 'Authentication failed',
         timestamp: new Date().toISOString(),
       },
     });
