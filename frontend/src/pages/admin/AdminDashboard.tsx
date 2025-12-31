@@ -9,6 +9,7 @@ import {
   Settings,
   Database,
   BarChart3,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -83,12 +84,16 @@ function AdminDashboardMobile() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
 
   // Fetch recent users
-  const fetchRecentUsers = useCallback(async () => {
+  const fetchRecentUsers = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    }
     try {
       const usersResponse = await api.get<AdminUsersResponse>('/admin/users?limit=10&sort=created_at&order=desc');
       if (usersResponse.success) {
@@ -101,12 +106,23 @@ function AdminDashboardMobile() {
           participant_type: u.participant_type,
         })));
       }
+      if (isRefresh) {
+        toast.success('Data refreshed');
+      }
     } catch (error) {
       console.error('Failed to fetch recent users:', error);
+      if (isRefresh) {
+        toast.error('Failed to refresh data');
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
+
+  const handleRefresh = () => {
+    fetchRecentUsers(true);
+  };
 
   // Check admin access
   useEffect(() => {
@@ -203,6 +219,15 @@ function AdminDashboardMobile() {
                 <h1 className="text-lg md:text-xl font-bold">Admin Dashboard</h1>
                 <p className="text-sm md:text-base text-blue-200">System Overview</p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20 h-11 w-11"
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
           </div>
         </header>

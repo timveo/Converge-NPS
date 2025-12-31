@@ -966,19 +966,21 @@ function OpportunitiesMobilePage() {
                           <Button
                             className={cn(
                               "w-full h-11 md:h-10 text-sm gap-2",
-                              (item.poc_is_checked_in || item.pocIsCheckedIn)
+                              (item.pocUserId || item.poc_user_id || item.pi_id)
                                 ? "bg-primary hover:bg-primary/90"
                                 : "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
                             )}
                             onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.pi_id)}
-                            disabled={!(item.poc_is_checked_in || item.pocIsCheckedIn)}
+                            disabled={!(item.pocUserId || item.poc_user_id || item.pi_id)}
                           >
                             <MessageSquare className="h-4 w-4" />
                             Message
                           </Button>
-                          {!(item.poc_is_checked_in || item.pocIsCheckedIn) && (
-                            <span className="text-[10px] text-muted-foreground mt-1">POC is not at the Event</span>
-                          )}
+                          {!(item.pocUserId || item.poc_user_id || item.pi_id) ? (
+                            <span className="text-[10px] text-muted-foreground mt-1">POC is not registered</span>
+                          ) : !(item.pocIsCheckedIn || item.poc_is_checked_in) ? (
+                            <span className="text-[10px] text-amber-600 mt-1">POC registered but not at event</span>
+                          ) : null}
                         </div>
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 hover:bg-transparent active:bg-transparent">
@@ -1126,19 +1128,21 @@ function OpportunitiesMobilePage() {
                           <Button
                             className={cn(
                               "w-full h-11 md:h-10 text-sm gap-2",
-                              (item.poc_is_checked_in || item.pocIsCheckedIn)
+                              (item.pocUserId || item.poc_user_id || item.sponsor_contact_id)
                                 ? "bg-primary hover:bg-primary/90"
                                 : "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
                             )}
                             onClick={(e) => handleContact(e, item.pocUserId || item.poc_user_id || item.sponsor_contact_id)}
-                            disabled={!(item.poc_is_checked_in || item.pocIsCheckedIn)}
+                            disabled={!(item.pocUserId || item.poc_user_id || item.sponsor_contact_id)}
                           >
                             <MessageSquare className="h-4 w-4" />
                             Message
                           </Button>
-                          {!(item.poc_is_checked_in || item.pocIsCheckedIn) && (
-                            <span className="text-[10px] text-muted-foreground mt-1">POC is not at the Event</span>
-                          )}
+                          {!(item.pocUserId || item.poc_user_id || item.sponsor_contact_id) ? (
+                            <span className="text-[10px] text-muted-foreground mt-1">POC is not registered</span>
+                          ) : !(item.pocIsCheckedIn || item.poc_is_checked_in) ? (
+                            <span className="text-[10px] text-amber-600 mt-1">POC registered but not at event</span>
+                          ) : null}
                         </div>
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-11 w-11 md:h-10 md:w-10 hover:bg-transparent active:bg-transparent">

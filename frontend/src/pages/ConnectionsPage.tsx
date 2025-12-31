@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { MessageSquare, CheckCircle2, Loader2, Trash2, Users, QrCode, Sparkles, FileText, Bell, BellOff, Search, X, SlidersHorizontal, Lock, Edit, Save, BookOpen, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
+import { MessageSquare, CheckCircle2, Loader2, Trash2, Users, QrCode, Sparkles, FileText, Bell, BellOff, Search, X, SlidersHorizontal, Lock, Edit, Save, BookOpen, ChevronDown, ChevronUp, UserPlus, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
@@ -58,6 +58,8 @@ interface Connection {
     role: string | null;
     organization: string | null;
     acceleration_interests: string[] | null;
+    is_checked_in?: boolean;
+    participant_type?: string | null;
   } | null;
 }
 
@@ -81,6 +83,9 @@ interface Participant {
   role?: string;
   avatarUrl?: string;
   accelerationInterests?: string[];
+  isConnected?: boolean;
+  isCheckedIn?: boolean;
+  participantType?: string;
 }
 
 const COLLABORATION_TYPES = [
@@ -91,11 +96,12 @@ const COLLABORATION_TYPES = [
   { value: 'funded_research', label: 'Funded Research' }
 ];
 
-const USER_TYPES = [
-  { value: 'industry', label: 'Industry Partner' },
+const PARTICIPANT_TYPES = [
   { value: 'student', label: 'Student' },
   { value: 'faculty', label: 'Faculty' },
-  { value: 'staff', label: 'Staff' }
+  { value: 'industry', label: 'Industry' },
+  { value: 'alumni', label: 'Alumni' },
+  { value: 'guest', label: 'Guest' },
 ];
 
 export default function ConnectionsPage() {
@@ -122,13 +128,13 @@ function ConnectionsMobilePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<{
-    intents: string[];
-    userTypes: string[];
+    participantTypes: string[];
     sortBy: string;
+    eventAttendeesOnly: boolean;
   }>({
-    intents: [],
-    userTypes: [],
-    sortBy: 'recent'
+    participantTypes: [],
+    sortBy: 'recent',
+    eventAttendeesOnly: false
   });
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editedNote, setEditedNote] = useState('');
@@ -153,11 +159,14 @@ function ConnectionsMobilePage() {
     }
   }, [connections]);
 
+  const [privateProfileMatch, setPrivateProfileMatch] = useState(false);
+
   const fetchParticipants = async (): Promise<Participant[]> => {
     setParticipantsLoading(true);
     try {
-      const response = await api.get('/users/participants');
+      const response = await api.get('/users/participants?limit=1000');
       const data = (response as any).data || [];
+      setPrivateProfileMatch((response as any).privateProfileMatch || false);
       const mapped: Participant[] = data.map((p: any) => ({
         id: p.id,
         fullName: p.fullName || p.full_name || 'Unknown',
@@ -166,6 +175,9 @@ function ConnectionsMobilePage() {
         role: p.role,
         avatarUrl: p.avatarUrl,
         accelerationInterests: p.accelerationInterests || p.acceleration_interests || [],
+        isConnected: p.isConnected || p.is_connected || false,
+        isCheckedIn: p.isCheckedIn || p.is_checked_in || false,
+        participantType: p.participantType || p.participant_type || null,
       }));
       setParticipants(mapped);
       return mapped;
@@ -269,7 +281,9 @@ function ConnectionsMobilePage() {
           full_name: conn.connectedUser?.fullName || conn.profile?.full_name || conn.profile?.fullName || 'Unknown',
           role: conn.connectedUser?.role || conn.profile?.role,
           organization: conn.connectedUser?.organization || conn.profile?.organization,
-          acceleration_interests: conn.connectedUser?.accelerationInterests || conn.profile?.acceleration_interests || []
+          acceleration_interests: conn.connectedUser?.accelerationInterests || conn.profile?.acceleration_interests || [],
+          is_checked_in: conn.connectedUser?.isCheckedIn || conn.profile?.is_checked_in || false,
+          participant_type: conn.connectedUser?.participantType || conn.profile?.participant_type || null
         } : null
       }));
       setConnections(mappedConnections);
@@ -313,19 +327,15 @@ function ConnectionsMobilePage() {
       });
     }
 
-    if (filters.intents.length > 0) {
+    if (filters.participantTypes.length > 0) {
       result = result.filter(conn => {
-        return filters.intents.some(intent =>
-          conn.collaborative_intents?.includes(intent)
-        );
+        const pType = (conn.profile as any)?.participant_type?.toLowerCase();
+        return filters.participantTypes.some((type: string) => pType === type);
       });
     }
 
-    if (filters.userTypes.length > 0) {
-      result = result.filter(conn => {
-        const role = conn.profile?.role?.toLowerCase();
-        return filters.userTypes.some(type => role?.includes(type));
-      });
+    if (filters.eventAttendeesOnly) {
+      result = result.filter(conn => conn.profile?.is_checked_in === true);
     }
 
     switch (filters.sortBy) {
@@ -360,12 +370,17 @@ function ConnectionsMobilePage() {
       });
     }
 
-    // Apply user type filter
-    if (filters.userTypes.length > 0) {
+    // Apply participant type filter
+    if (filters.participantTypes.length > 0) {
       result = result.filter(p => {
-        const role = p.role?.toLowerCase();
-        return filters.userTypes.some(type => role?.includes(type));
+        const pType = (p as any).participantType?.toLowerCase();
+        return filters.participantTypes.some((type: string) => pType === type);
       });
+    }
+
+    // Apply "At Event" filter
+    if (filters.eventAttendeesOnly) {
+      result = result.filter(p => p.isCheckedIn === true);
     }
 
     // Apply sorting
@@ -474,7 +489,7 @@ function ConnectionsMobilePage() {
   };
 
   const clearFilters = () => {
-    setFilters({ intents: [], userTypes: [], sortBy: 'recent' });
+    setFilters({ participantTypes: [], sortBy: 'recent', eventAttendeesOnly: false });
     setSearchQuery('');
   };
 
@@ -506,12 +521,12 @@ function ConnectionsMobilePage() {
     return `${diffDays}d`;
   };
 
-  const activeFilterCount = filters.intents.length + filters.userTypes.length;
+  const activeFilterCount = filters.participantTypes.length + (filters.eventAttendeesOnly ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-gradient-subtle pb-24">
       <PageHeader
-        title="My Connections"
+        title="My Network"
         subtitle={`${connections.length} connections made`}
       />
 
@@ -592,48 +607,39 @@ function ConnectionsMobilePage() {
         <Collapsible open={showFilters} onOpenChange={setShowFilters}>
           <CollapsibleContent>
             <Card className="p-3 md:p-4 space-y-3 md:space-y-4">
-              {/* Intent Filter */}
-              <div className="space-y-1.5 md:space-y-2">
-                <Label className="text-xs md:text-sm font-semibold">Filter by Intent</Label>
-                <div className="grid grid-cols-2 gap-1.5 md:gap-2">
-                  {COLLABORATION_TYPES.map(type => (
-                    <div key={type.value} className="flex items-center space-x-1.5 md:space-x-2">
-                      <Checkbox
-                        id={`intent-${type.value}`}
-                        checked={filters.intents.includes(type.value)}
-                        onCheckedChange={(checked) => {
-                          setFilters(prev => ({
-                            ...prev,
-                            intents: checked
-                              ? [...prev.intents, type.value]
-                              : prev.intents.filter(i => i !== type.value)
-                          }));
-                        }}
-                        className="h-3.5 w-3.5 md:h-4 md:w-4"
-                      />
-                      <Label htmlFor={`intent-${type.value}`} className="cursor-pointer text-xs md:text-sm">
-                        {type.label}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+              {/* At Event Filter */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="event-attendees-only"
+                  checked={filters.eventAttendeesOnly}
+                  onCheckedChange={(checked) => {
+                    setFilters(prev => ({
+                      ...prev,
+                      eventAttendeesOnly: checked === true
+                    }));
+                  }}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="event-attendees-only" className="cursor-pointer text-xs md:text-sm font-medium">
+                  At Event
+                </Label>
               </div>
 
-              {/* User Type Filter */}
-              <div className="space-y-1.5 md:space-y-2">
-                <Label className="text-xs md:text-sm font-semibold">Filter by User Type</Label>
+              {/* Participant Type Filter */}
+              <div className="space-y-1.5 md:space-y-2 pt-2 border-t border-border/50">
+                <Label className="text-xs md:text-sm font-semibold">Filter by Participant Type</Label>
                 <div className="grid grid-cols-2 gap-1.5 md:gap-2">
-                  {USER_TYPES.map(type => (
+                  {PARTICIPANT_TYPES.map(type => (
                     <div key={type.value} className="flex items-center space-x-1.5 md:space-x-2">
                       <Checkbox
                         id={`type-${type.value}`}
-                        checked={filters.userTypes.includes(type.value)}
+                        checked={filters.participantTypes.includes(type.value)}
                         onCheckedChange={(checked) => {
                           setFilters(prev => ({
                             ...prev,
-                            userTypes: checked
-                              ? [...prev.userTypes, type.value]
-                              : prev.userTypes.filter(t => t !== type.value)
+                            participantTypes: checked
+                              ? [...prev.participantTypes, type.value]
+                              : prev.participantTypes.filter((t: string) => t !== type.value)
                           }));
                         }}
                         className="h-3.5 w-3.5 md:h-4 md:w-4"
@@ -664,25 +670,8 @@ function ConnectionsMobilePage() {
         {activeFilterCount > 0 && (
           <div className="flex flex-wrap gap-2 items-center">
             <span className="text-sm text-muted-foreground">Active:</span>
-            {filters.intents.map(intent => {
-              const intentLabel = COLLABORATION_TYPES.find(t => t.value === intent)?.label;
-              return (
-                <Badge key={intent} variant="secondary" className="gap-1 pr-1">
-                  {intentLabel}
-                  <button
-                    className="ml-1 hover:bg-muted rounded-full p-0.5"
-                    onClick={() => setFilters(prev => ({
-                      ...prev,
-                      intents: prev.intents.filter(i => i !== intent)
-                    }))}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              );
-            })}
-            {filters.userTypes.map(type => {
-              const typeLabel = USER_TYPES.find(t => t.value === type)?.label;
+            {filters.participantTypes.map(type => {
+              const typeLabel = PARTICIPANT_TYPES.find(t => t.value === type)?.label;
               return (
                 <Badge key={type} variant="secondary" className="gap-1 pr-1">
                   {typeLabel}
@@ -690,7 +679,7 @@ function ConnectionsMobilePage() {
                     className="ml-1 hover:bg-muted rounded-full p-0.5"
                     onClick={() => setFilters(prev => ({
                       ...prev,
-                      userTypes: prev.userTypes.filter(t => t !== type)
+                      participantTypes: prev.participantTypes.filter((t: string) => t !== type)
                     }))}
                   >
                     <X className="w-3 h-3" />
@@ -698,6 +687,20 @@ function ConnectionsMobilePage() {
                 </Badge>
               );
             })}
+            {filters.eventAttendeesOnly && (
+              <Badge variant="secondary" className="gap-1 pr-1">
+                At Event
+                <button
+                  className="ml-1 hover:bg-muted rounded-full p-0.5"
+                  onClick={() => setFilters(prev => ({
+                    ...prev,
+                    eventAttendeesOnly: false
+                  }))}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -789,7 +792,7 @@ function ConnectionsMobilePage() {
             </TabsTrigger>
             <TabsTrigger value="participants" className="text-xs md:text-sm">
               <Users className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
-              Participants
+              NPS Community
               <Badge variant="secondary" className="ml-1.5 text-[10px] md:text-xs px-1.5 py-0">
                 {participants.length}
               </Badge>
@@ -822,76 +825,184 @@ function ConnectionsMobilePage() {
                 <Users className="h-7 w-7 md:h-10 md:w-10 text-muted-foreground" />
               </div>
               <h3 className="text-sm md:text-lg font-semibold text-foreground mb-1.5 md:mb-2">
-                {searchQuery || filters.userTypes.length > 0
+                {searchQuery || filters.participantTypes.length > 0
                   ? 'No Matching Participants'
                   : 'No Participants Yet'}
               </h3>
               <p className="text-xs md:text-sm text-muted-foreground mb-4 md:mb-6">
-                {searchQuery || filters.userTypes.length > 0
+                {searchQuery || filters.participantTypes.length > 0
                   ? 'Try adjusting your search or filters'
                   : 'Participants will appear here as they check in to the event'}
               </p>
+              {/* Private Profile Placeholder */}
+              {privateProfileMatch && searchQuery && (
+                <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-xs md:text-sm text-amber-800 dark:text-amber-200">
+                    A participant matching "{searchQuery}" has a private profile. You can connect with them in person using QR code scanning.
+                  </p>
+                </div>
+              )}
             </Card>
           ) : (
-            filteredParticipants.map((participant) => (
-              <Card key={participant.id} className="p-4 md:p-5 shadow-md border-border/50 hover:shadow-lg transition-all duration-300">
-                <div className="flex items-start gap-3 md:gap-4">
-                  {/* Avatar */}
-                  <Avatar className="w-12 h-12 md:w-14 md:h-14">
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm md:text-base">
-                      {participant.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  {/* Main Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <h3 className="font-semibold text-foreground text-base md:text-lg">
-                        {participant.fullName}
-                      </h3>
-                      {participant.role && (
-                        <Badge variant="outline" className="text-[10px] md:text-xs px-1.5 py-0">
-                          {participant.role}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm md:text-sm text-muted-foreground">
-                      {participant.organization || 'Organization not specified'}
-                    </p>
-                    {participant.accelerationInterests && participant.accelerationInterests.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {participant.accelerationInterests.slice(0, 2).map((interest) => (
-                          <Badge key={interest} variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {interest}
-                          </Badge>
-                        ))}
-                        {participant.accelerationInterests.length > 2 && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            +{participant.accelerationInterests.length - 2}
-                          </Badge>
-                        )}
+            <>
+              {/* Private Profile Notice */}
+              {privateProfileMatch && searchQuery && (
+                <Card className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <p className="text-xs md:text-sm text-amber-800 dark:text-amber-200">
+                    A participant matching "{searchQuery}" has a private profile. You can connect with them in person using QR code scanning.
+                  </p>
+                </Card>
+              )}
+              {filteredParticipants.map((participant) => (
+                <Card key={participant.id} className="p-4 md:p-5 shadow-md border-border/50 hover:shadow-lg transition-all duration-300">
+                  {/* Collapsed View */}
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 md:gap-4">
+                      {/* Avatar */}
+                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-navy flex items-center justify-center text-primary-foreground font-semibold flex-shrink-0 text-sm md:text-base">
+                        {participant.fullName.split(' ').map(n => n[0]).join('').slice(0, 2)}
                       </div>
-                    )}
+
+                      {/* Main Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h3 className="font-semibold text-foreground text-base md:text-lg">
+                            {participant.fullName}
+                          </h3>
+                          {/* Badges stacked vertically with uniform size */}
+                          <div className="flex flex-col gap-1 shrink-0">
+                            {participant.isConnected && (
+                              <Badge variant="default" className="text-[10px] md:text-xs px-2 py-0.5 h-6 bg-green-500 hover:bg-green-600 flex items-center">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Connected
+                              </Badge>
+                            )}
+                            {participant.isCheckedIn && (
+                              <Badge variant="default" className="text-[10px] md:text-xs px-2 py-0.5 h-6 bg-blue-500 hover:bg-blue-600 flex items-center">
+                                <MapPin className="h-3 w-3 mr-1" />
+                                At Event
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm md:text-sm text-muted-foreground">
+                          {participant.role || 'Role not specified'}
+                          {participant.organization && ` • ${participant.organization}`}
+                        </p>
+                      </div>
+
+                      {/* Message Button - Show on all cards with consistent blue style */}
+                      <Button
+                        className="gap-2 h-10 px-3"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartMessage(e, participant.id);
+                        }}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Expand/Collapse Control */}
+                    <Button
+                      variant="ghost"
+                      className="w-full h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCardExpansion(`participant-${participant.id}`);
+                      }}
+                    >
+                      {expandedCards.has(`participant-${participant.id}`) ? (
+                        <>
+                          <span>Show Less</span>
+                          <ChevronUp className="h-4 w-4 ml-1" />
+                        </>
+                      ) : (
+                        <>
+                          <span>Show More Details</span>
+                          <ChevronDown className="h-4 w-4 ml-1" />
+                        </>
+                      )}
+                    </Button>
                   </div>
 
-                  {/* Connect Button */}
-                  <Button
-                    className="gap-2 h-10 px-4"
-                    onClick={() => handleConnectParticipant(participant.id)}
-                    disabled={connectingUser === participant.id}
-                  >
-                    {connectingUser === participant.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <UserPlus className="h-4 w-4" />
-                        <span className="hidden sm:inline">Connect</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </Card>
-            ))
+                  {/* Expanded View */}
+                  {expandedCards.has(`participant-${participant.id}`) && (
+                    <div className="mt-4 pt-4 border-t border-border space-y-4" onClick={(e) => e.stopPropagation()}>
+                      {/* Organization */}
+                      {participant.organization && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-1">Organization</p>
+                          <p className="text-sm text-foreground">{participant.organization}</p>
+                        </div>
+                      )}
+
+                      {/* Department */}
+                      {participant.department && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-1">Department</p>
+                          <p className="text-sm text-foreground">{participant.department}</p>
+                        </div>
+                      )}
+
+                      {/* Technology Interests */}
+                      {participant.accelerationInterests && participant.accelerationInterests.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Technology Interests</p>
+                          <div className="flex flex-wrap gap-2">
+                            {participant.accelerationInterests.map((interest) => (
+                              <Badge key={interest} variant="secondary" className="text-xs">
+                                {interest}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Connect Button - Only show for non-connected users in expanded view */}
+                      {!participant.isConnected && (
+                        <div className="pt-2">
+                          <Button
+                            className="w-full gap-2 h-10"
+                            onClick={() => handleConnectParticipant(participant.id)}
+                            disabled={connectingUser === participant.id}
+                          >
+                            {connectingUser === participant.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <UserPlus className="h-4 w-4" />
+                                Connect
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Connect Button - Only show for non-connected users when collapsed */}
+                  {!participant.isConnected && !expandedCards.has(`participant-${participant.id}`) && (
+                    <div className="mt-3 pt-3 border-t border-border/30">
+                      <Button
+                        className="w-full gap-2 h-10"
+                        onClick={() => handleConnectParticipant(participant.id)}
+                        disabled={connectingUser === participant.id}
+                      >
+                        {connectingUser === participant.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <UserPlus className="h-4 w-4" />
+                            Connect
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </>
           )
         )}
 
@@ -954,16 +1065,31 @@ function ConnectionsMobilePage() {
 
                     {/* Main Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="font-semibold text-foreground text-base md:text-lg">
-                          {profile?.full_name || 'Unknown User'}
-                        </h3>
-                        {connection.notes && (
-                          <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                            <FileText className="w-3 h-3 mr-1" />
-                            Note
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <h3 className="font-semibold text-foreground text-base md:text-lg">
+                            {profile?.full_name || 'Unknown User'}
+                          </h3>
+                          {connection.notes && (
+                            <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                              <FileText className="w-3 h-3 mr-1" />
+                              Note
+                            </Badge>
+                          )}
+                        </div>
+                        {/* Badges stacked vertically */}
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <Badge variant="default" className="text-[10px] md:text-xs px-1.5 py-0.5 bg-green-500 hover:bg-green-600">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Connected
                           </Badge>
-                        )}
+                          {profile?.is_checked_in && (
+                            <Badge variant="default" className="text-[10px] md:text-xs px-1.5 py-0.5 bg-blue-500 hover:bg-blue-600">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              At Event
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       <p className="text-sm md:text-sm text-muted-foreground">
                         {profile?.role || 'Role not specified'}
@@ -1015,19 +1141,23 @@ function ConnectionsMobilePage() {
                 {/* Expanded View */}
                 {expandedCards.has(connection.id) && (
                   <div className="mt-4 pt-4 border-t border-border space-y-4" onClick={(e) => e.stopPropagation()}>
-                    {/* Badges Section */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-1 bg-accent/10 text-accent px-2 py-1 rounded-md text-xs font-medium">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Connected
-                      </div>
-                      {connection.follow_up_reminder && !connection.reminder_sent && (
+                    {/* Reminder Badge */}
+                    {connection.follow_up_reminder && !connection.reminder_sent && (
+                      <div className="flex items-center gap-2 flex-wrap">
                         <div className="flex items-center gap-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 py-1 rounded-md text-xs font-medium">
                           <Bell className="h-3 w-3" />
-                          {getTimeUntil(connection.follow_up_reminder)}
+                          Reminder: {getTimeUntil(connection.follow_up_reminder)}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* Organization */}
+                    {profile?.organization && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-1">Organization</p>
+                        <p className="text-sm text-foreground">{profile.organization}</p>
+                      </div>
+                    )}
 
                     {/* Technology Interests */}
                     {profile?.acceleration_interests && profile.acceleration_interests.length > 0 && (

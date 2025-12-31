@@ -34,6 +34,10 @@ jest.mock('../../src/config/database', () => ({
       findUnique: jest.fn(),
       findMany: jest.fn(),
     },
+    connection: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
     $on: jest.fn(),
     $disconnect: jest.fn(),
   },
@@ -506,10 +510,19 @@ describe('Message Controller', () => {
     it('should search users with sanitized query and limit', async () => {
       mockReq.query = { q: '  Jane  ', limit: '10' };
       const mockUsers = [{ id: 'user-1', fullName: 'Jane Doe' }];
+      // Mock connection lookup first (returns user's connections)
+      (prismaMock.connection.findMany as jest.Mock).mockResolvedValue([{ connectedUserId: 'connected-user-1' }]);
       (prismaMock.profile.findMany as jest.Mock).mockResolvedValue(mockUsers);
 
       await messageController.searchUsersForMessaging(mockReq as Request, mockRes as Response);
 
+      // First call should be to get connections
+      expect(prismaMock.connection.findMany).toHaveBeenCalledWith({
+        where: { userId: 'current-user' },
+        select: { connectedUserId: true },
+      });
+
+      // Second call should be profile search with privacy filtering
       expect(prismaMock.profile.findMany).toHaveBeenCalledWith({
         where: {
           AND: [
@@ -519,6 +532,12 @@ describe('Message Controller', () => {
                 { fullName: { contains: 'Jane', mode: 'insensitive' } },
                 { email: { contains: 'Jane', mode: 'insensitive' } },
                 { organization: { contains: 'Jane', mode: 'insensitive' } },
+              ],
+            },
+            {
+              OR: [
+                { id: { in: ['connected-user-1'] } },
+                { showProfileAllowConnections: true },
               ],
             },
           ],
@@ -541,6 +560,8 @@ describe('Message Controller', () => {
 
     it('should cap limit at 50', async () => {
       mockReq.query = { q: 'Jane', limit: '500' };
+      // Mock connection lookup first
+      (prismaMock.connection.findMany as jest.Mock).mockResolvedValue([]);
       (prismaMock.profile.findMany as jest.Mock).mockResolvedValue([]);
 
       await messageController.searchUsersForMessaging(mockReq as Request, mockRes as Response);
@@ -554,6 +575,12 @@ describe('Message Controller', () => {
                 { fullName: { contains: 'Jane', mode: 'insensitive' } },
                 { email: { contains: 'Jane', mode: 'insensitive' } },
                 { organization: { contains: 'Jane', mode: 'insensitive' } },
+              ],
+            },
+            {
+              OR: [
+                { id: { in: [] } },
+                { showProfileAllowConnections: true },
               ],
             },
           ],

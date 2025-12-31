@@ -21,6 +21,7 @@ import {
   DollarSign,
   Mail,
   Star,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,12 +38,45 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { DesktopShell } from '@/components/desktop/DesktopShell';
 import { ThreePanelLayout } from '@/components/desktop/layouts/ThreePanelLayout';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+
+// Submission options for the modal
+const SUBMISSION_OPTIONS = [
+  {
+    id: 'nps',
+    title: 'NPS Students & Faculty',
+    description: 'Current NPS students and faculty who are interested in pitching their work to industry partners and government/military sponsors for collaboration, funding, and other partnership opportunities.',
+    icon: GraduationCap,
+    formUrl: 'https://app.smartsheet.com/b/form/01993eccfea176fab7e2c17dbca32749',
+  },
+  {
+    id: 'government',
+    title: 'Military & Government',
+    description: 'Military Commands and government organizations interested in highlighting collaborative projects to NPS students/faculty and industry partners should submit this form for projects to be included in the app.',
+    icon: Building2,
+    formUrl: 'https://app.smartsheet.com/b/form/fae81a94e7c843899f4eb59ca919dbde',
+  },
+  {
+    id: 'industry',
+    title: 'Industry Partners',
+    description: 'Industry interested in highlighting collaborative projects to NPS students/faculty, military commands, and government agencies should submit this form for projects to be included in the app.',
+    icon: Briefcase,
+    formUrl: 'https://app.smartsheet.com/b/form/e0639af0b1ae4086a0793a242d485324',
+  },
+];
 
 // NPS Projects filters - match backend enum values
 const PROJECT_STAGES = ['concept', 'prototype', 'pilot_ready', 'deployed'];
@@ -155,6 +189,9 @@ export default function OpportunitiesDesktopPage() {
   const [projectFavorites, setProjectFavorites] = useState<Set<string>>(new Set());
   const [opportunityFavorites, setOpportunityFavorites] = useState<Set<string>>(new Set());
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // Submit modal state
+  const [submitModalOpen, setSubmitModalOpen] = useState(false);
 
   const toggleFavorite = async (id: string, isProject: boolean) => {
     const favorites = isProject ? projectFavorites : opportunityFavorites;
@@ -655,7 +692,7 @@ export default function OpportunitiesDesktopPage() {
             <p className="text-sm text-muted-foreground">Discover collaborations</p>
           </div>
         </div>
-        <Button size="sm" className="h-8 text-xs" onClick={() => navigate('/opportunities/submit')}>
+        <Button size="sm" className="h-8 text-xs" onClick={() => setSubmitModalOpen(true)}>
           <Plus className="h-3 w-3 mr-1" />
           Submit
         </Button>
@@ -902,7 +939,10 @@ export default function OpportunitiesDesktopPage() {
               size="sm"
               className={cn(
                 "h-8 text-xs",
-                (selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn)
+                (selectedItem.pocUserId || selectedItem.poc_user_id ||
+                  (isNPSItem(selectedItem)
+                    ? (selectedItem as Project).pi_id
+                    : (selectedItem as Opportunity).sponsor_contact_id))
                   ? "bg-primary hover:bg-primary/90"
                   : "bg-gray-400 hover:bg-gray-400"
               )}
@@ -914,14 +954,22 @@ export default function OpportunitiesDesktopPage() {
                   : (selectedItem as Opportunity).sponsor_contact_id)
               )
             }
-            disabled={!(selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn)}
+            disabled={!(selectedItem.pocUserId || selectedItem.poc_user_id ||
+              (isNPSItem(selectedItem)
+                ? (selectedItem as Project).pi_id
+                : (selectedItem as Opportunity).sponsor_contact_id))}
           >
             <MessageSquare className="h-3 w-3 mr-1" />
             Message
           </Button>
-            {!(selectedItem.poc_is_checked_in || selectedItem.pocIsCheckedIn) && (
-              <span className="text-[9px] text-muted-foreground mt-0.5">POC is not at the Event</span>
-            )}
+            {!(selectedItem.pocUserId || selectedItem.poc_user_id ||
+              (isNPSItem(selectedItem)
+                ? (selectedItem as Project).pi_id
+                : (selectedItem as Opportunity).sponsor_contact_id)) ? (
+              <span className="text-[9px] text-muted-foreground mt-0.5">POC is not registered</span>
+            ) : !(selectedItem.pocIsCheckedIn || selectedItem.poc_is_checked_in) ? (
+              <span className="text-[9px] text-amber-600 mt-0.5">POC registered but not at event</span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1305,6 +1353,49 @@ export default function OpportunitiesDesktopPage() {
           />
         </div>
       </div>
+
+      {/* Submit Opportunity Modal */}
+      <Dialog open={submitModalOpen} onOpenChange={setSubmitModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Submit for Participation</DialogTitle>
+            <DialogDescription>
+              Choose your submission type to get started
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {SUBMISSION_OPTIONS.map((option) => {
+              const Icon = option.icon;
+              return (
+                <Card key={option.id} className="shadow-sm">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <CardTitle className="text-base">{option.title}</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-3">
+                    <CardDescription className="text-sm leading-relaxed">
+                      {option.description}
+                    </CardDescription>
+                  </CardContent>
+                  <CardFooter className="pt-0">
+                    <Button
+                      onClick={() => window.open(option.formUrl, '_blank', 'noopener,noreferrer')}
+                      className="w-full gap-2"
+                    >
+                      Apply
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </DesktopShell>
   );
 }

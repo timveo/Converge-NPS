@@ -135,6 +135,29 @@ export class ConnectionController {
       const connectedUserId = qrResult.userId;
       const connectionMethod = 'qr_scan';
 
+      // Check if trying to connect to self
+      if (userId === connectedUserId) {
+        return res.status(400).json({
+          error: { code: 'SELF_CONNECTION', message: 'Cannot connect to yourself' },
+        });
+      }
+
+      // Check if connection already exists (either direction)
+      const existingConnection = await prisma.connection.findFirst({
+        where: {
+          OR: [
+            { userId, connectedUserId },
+            { userId: connectedUserId, connectedUserId: userId },
+          ],
+        },
+      });
+
+      if (existingConnection) {
+        return res.status(409).json({
+          error: { code: 'CONNECTION_EXISTS', message: 'You are already connected with this user' },
+        });
+      }
+
       // Create bidirectional connections
       const [connection] = await Promise.all([
         // Connection from user to connected user
@@ -217,6 +240,29 @@ export class ConnectionController {
 
       const data = CreateConnectionSchema.parse(req.body) as any;
 
+      // Check if trying to connect to self
+      if (req.user.id === data.connectedUserId) {
+        return res.status(400).json({
+          error: { code: 'SELF_CONNECTION', message: 'Cannot connect to yourself' },
+        });
+      }
+
+      // Check if connection already exists (either direction)
+      const existingConnection = await prisma.connection.findFirst({
+        where: {
+          OR: [
+            { userId: req.user.id, connectedUserId: data.connectedUserId },
+            { userId: data.connectedUserId, connectedUserId: req.user.id },
+          ],
+        },
+      });
+
+      if (existingConnection) {
+        return res.status(409).json({
+          error: { code: 'CONNECTION_EXISTS', message: 'You are already connected with this user' },
+        });
+      }
+
       // Create bidirectional connections
       const [connection] = await Promise.all([
         // Connection from user to connected user
@@ -293,6 +339,29 @@ export class ConnectionController {
       if (!connectedUserId) {
         return res.status(400).json({
           error: { code: 'INVALID_REQUEST', message: 'connectedUserId is required' },
+        });
+      }
+
+      // Check if trying to connect to self
+      if (req.user.id === connectedUserId) {
+        return res.status(400).json({
+          error: { code: 'SELF_CONNECTION', message: 'Cannot connect to yourself' },
+        });
+      }
+
+      // Check if connection already exists (either direction)
+      const existingConnection = await prisma.connection.findFirst({
+        where: {
+          OR: [
+            { userId: req.user.id, connectedUserId },
+            { userId: connectedUserId, connectedUserId: req.user.id },
+          ],
+        },
+      });
+
+      if (existingConnection) {
+        return res.status(409).json({
+          error: { code: 'CONNECTION_EXISTS', message: 'You are already connected with this user' },
         });
       }
 

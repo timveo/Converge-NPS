@@ -244,6 +244,9 @@ export class ConnectionService {
               linkedinUrl: true,
               websiteUrl: true,
               hideContactInfo: true,
+              isCheckedIn: true,
+              accelerationInterests: true,
+              participantType: true,
             },
           },
         },
@@ -451,6 +454,7 @@ export class ConnectionService {
   /**
    * Get connection recommendations for a user
    * Based on shared interests, organization, department, etc.
+   * Only pulls from Participants (checked-in users) who allow connections
    */
   static async getRecommendations(userId: string, limit: number = 10) {
     // Get user's profile and existing connections
@@ -479,36 +483,46 @@ export class ConnectionService {
     const connectedUserIds = existingConnections.map(c => c.connectedUserId);
 
     // Find recommended users based on:
-    // 1. Same organization or department
-    // 2. Shared acceleration interests
-    // 3. Different roles (for diversity)
-    const recommendations = await prisma.profile.findMany({
-      where: {
-        id: {
-          not: userId,
-          notIn: connectedUserIds,
+    // 1. Must be checked in (Participants only)
+    // 2. Must have showProfileAllowConnections enabled
+    // 3. Same organization or department
+    // 4. Shared acceleration interests
+
+    // Build OR conditions, filtering out empty ones
+    const orConditions: any[] = [];
+    if (currentUser.organization) {
+      orConditions.push({ organization: currentUser.organization });
+    }
+    if (currentUser.department) {
+      orConditions.push({ department: currentUser.department });
+    }
+    if (currentUser.accelerationInterests.length > 0) {
+      orConditions.push({
+        accelerationInterests: {
+          hasSome: currentUser.accelerationInterests,
         },
-        profileVisibility: 'public',
-        allowQrScanning: true,
-        OR: [
-          // Same organization
-          currentUser.organization
-            ? { organization: currentUser.organization }
-            : {},
-          // Same department
-          currentUser.department
-            ? { department: currentUser.department }
-            : {},
-          // Shared interests
-          currentUser.accelerationInterests.length > 0
-            ? {
-                accelerationInterests: {
-                  hasSome: currentUser.accelerationInterests,
-                },
-              }
-            : {},
-        ],
+      });
+    }
+
+    // Base where clause - always require checked-in participants
+    const whereClause: any = {
+      id: {
+        not: userId,
+        notIn: connectedUserIds,
       },
+      profileVisibility: 'public',
+      allowQrScanning: true,
+      isCheckedIn: true, // Only recommend Participants (checked-in users)
+      showProfileAllowConnections: true, // Respect privacy setting
+    };
+
+    // Only add OR clause if there are valid conditions
+    if (orConditions.length > 0) {
+      whereClause.OR = orConditions;
+    }
+
+    const recommendations = await prisma.profile.findMany({
+      where: whereClause,
       select: {
         id: true,
         fullName: true,

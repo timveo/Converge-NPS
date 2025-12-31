@@ -292,6 +292,9 @@ export async function getUnreadCount(req: Request, res: Response) {
 /**
  * GET /v1/messages/users/search
  * Search users to start a conversation with
+ * Respects privacy settings - only shows:
+ * - Users who are already connections (can always message)
+ * - Users with showProfileAllowConnections: true
  */
 export async function searchUsersForMessaging(req: Request, res: Response) {
   try {
@@ -308,6 +311,14 @@ export async function searchUsersForMessaging(req: Request, res: Response) {
     const searchTerm = q.trim();
     const limitNum = Math.min(parseInt(limit as string) || 20, 50);
 
+    // Get user's existing connections (can always message connections)
+    const connections = await prisma.connection.findMany({
+      where: { userId },
+      select: { connectedUserId: true },
+    });
+    const connectedUserIds = connections.map(c => c.connectedUserId);
+
+    // Search for users - include connections OR users with showProfileAllowConnections: true
     const users = await prisma.profile.findMany({
       where: {
         AND: [
@@ -317,6 +328,14 @@ export async function searchUsersForMessaging(req: Request, res: Response) {
               { fullName: { contains: searchTerm, mode: 'insensitive' } },
               { email: { contains: searchTerm, mode: 'insensitive' } },
               { organization: { contains: searchTerm, mode: 'insensitive' } },
+            ],
+          },
+          {
+            OR: [
+              // Always include connections
+              { id: { in: connectedUserIds } },
+              // Include users who allow connections/discovery
+              { showProfileAllowConnections: true },
             ],
           },
         ],

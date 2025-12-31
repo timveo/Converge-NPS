@@ -34,6 +34,7 @@ export interface UpdatePrivacyData {
 export class ProfileService {
   /**
    * Get profile by ID (respects privacy settings)
+   * Connections always see full profile regardless of hideContactInfo
    */
   static async getProfile(profileId: string, requesterId: string): Promise<Partial<Profile>> {
     const profile = await prisma.profile.findUnique({
@@ -61,10 +62,20 @@ export class ProfileService {
       }
     }
 
-    // Hide contact info if requested
+    // Check if users are connected - connections always see full profile
+    const isConnected = await prisma.connection.findFirst({
+      where: {
+        OR: [
+          { userId: requesterId, connectedUserId: profileId },
+          { userId: profileId, connectedUserId: requesterId },
+        ],
+      },
+    });
+
+    // Hide contact info if requested, UNLESS they are connected
     const safeProfile: any = { ...profile };
 
-    if (profile.hideContactInfo && profile.id !== requesterId) {
+    if (profile.hideContactInfo && profile.id !== requesterId && !isConnected) {
       safeProfile.email = null;
       safeProfile.phone = null;
       safeProfile.linkedinUrl = null;
@@ -242,32 +253,85 @@ export class ProfileService {
   }
 
   /**
-   * Get checked-in participants (public profiles only)
+   * Get checked-in participants (public profiles only, respects showProfileAllowConnections)
+   * Includes connected users with isConnected flag, excludes only self
+   * Also checks for private profiles matching exact search to show placeholder
    */
   static async getCheckedInParticipants(query: {
     search?: string;
     page?: number;
     limit?: number;
-  }): Promise<{ participants: Partial<Profile>[]; total: number; page: number; totalPages: number }> {
-    const { search, page = 1, limit = 20 } = query;
+    requesterId?: string;
+  }): Promise<{
+    participants: Array<Partial<Profile> & { isConnected?: boolean }>;
+    total: number;
+    page: number;
+    totalPages: number;
+    privateProfileMatch?: boolean;
+  }> {
+    const { search, page = 1, limit = 20, requesterId } = query;
 
+    // Get IDs of users already connected to the requester
+    let connectedUserIds: string[] = [];
+    if (requesterId) {
+      const existingConnections = await prisma.connection.findMany({
+        where: { userId: requesterId },
+        select: { connectedUserId: true },
+      });
+      connectedUserIds = existingConnections.map(c => c.connectedUserId);
+    }
+
+    // NPS Community shows:
+    // 1. Registered users with public profiles who allow connections
+    // 2. No check-in requirement - registered users should be discoverable
     const where: any = {
-      isCheckedIn: true,
       profileVisibility: 'public',
+      showProfileAllowConnections: true, // Only show users who allow profile visibility
     };
 
+    // Exclude only self (connected users are now included with a flag)
+    if (requesterId) {
+      where.id = {
+        not: requesterId,
+      };
+    }
+
+    // Check for private profile match when searching
+    let privateProfileMatch = false;
     if (search) {
+      // Check if there's a private profile that matches the exact search
+      const privateMatch = await prisma.profile.findFirst({
+        where: {
+          fullName: { equals: search, mode: 'insensitive' },
+          OR: [
+            { profileVisibility: 'private' },
+            { showProfileAllowConnections: false },
+          ],
+        },
+        select: { id: true },
+      });
+      privateProfileMatch = !!privateMatch;
+
       where.OR = [
         { fullName: { contains: search, mode: 'insensitive' } },
         { organization: { contains: search, mode: 'insensitive' } },
       ];
       // Keep other conditions when searching
       where.AND = [
-        { isCheckedIn: true },
         { profileVisibility: 'public' },
+        { showProfileAllowConnections: true },
       ];
-      delete where.isCheckedIn;
+      // Preserve the id exclusion when searching
+      if (requesterId) {
+        where.AND.push({
+          id: {
+            not: requesterId,
+          },
+        });
+      }
       delete where.profileVisibility;
+      delete where.showProfileAllowConnections;
+      delete where.id;
     }
 
     const [profiles, total] = await Promise.all([
@@ -288,26 +352,31 @@ export class ProfileService {
           hideContactInfo: true,
           linkedinUrl: true,
           websiteUrl: true,
+          isCheckedIn: true,
+          participantType: true,
         },
       }),
       prisma.profile.count({ where }),
     ]);
 
-    // Respect hideContactInfo setting
+    // Respect hideContactInfo setting and add isConnected flag
     const participants = profiles.map((p) => {
+      const isConnected = connectedUserIds.includes(p.id);
+      const result: any = {
+        ...p,
+        isConnected,
+      };
       if (p.hideContactInfo) {
-        return {
-          ...p,
-          linkedinUrl: null,
-          websiteUrl: null,
-        };
+        result.linkedinUrl = null;
+        result.websiteUrl = null;
       }
-      return p;
+      return result;
     });
 
     return {
       participants,
       total,
+      privateProfileMatch,
       page,
       totalPages: Math.ceil(total / limit),
     };
