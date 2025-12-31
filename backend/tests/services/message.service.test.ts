@@ -31,7 +31,8 @@ describe('Message Service', () => {
         ],
       };
 
-      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(mockConversation);
+      // Service uses findMany then filters to find exact 2-participant conversation
+      (prisma.conversation.findMany as jest.Mock).mockResolvedValue([mockConversation]);
 
       const result = await getOrCreateConversation('user-1', 'user-2');
 
@@ -40,7 +41,8 @@ describe('Message Service', () => {
     });
 
     it('should create new conversation if none exists', async () => {
-      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(null);
+      // Service uses findMany - return empty array to indicate no existing conversation
+      (prisma.conversation.findMany as jest.Mock).mockResolvedValue([]);
       // Mock connection check - users are not connected
       (prisma.connection.findFirst as jest.Mock).mockResolvedValue(null);
       // Mock recipient with all privacy settings enabled
@@ -72,7 +74,8 @@ describe('Message Service', () => {
     });
 
     it('should throw error if recipient does not allow messaging', async () => {
-      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(null);
+      // Service uses findMany - return empty array to indicate no existing conversation
+      (prisma.conversation.findMany as jest.Mock).mockResolvedValue([]);
       // Mock connection check - users are not connected
       (prisma.connection.findFirst as jest.Mock).mockResolvedValue(null);
       (prisma.profile.findUnique as jest.Mock).mockResolvedValue({
@@ -87,7 +90,8 @@ describe('Message Service', () => {
     });
 
     it('should throw error if recipient not found', async () => {
-      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(null);
+      // Service uses findMany - return empty array to indicate no existing conversation
+      (prisma.conversation.findMany as jest.Mock).mockResolvedValue([]);
       // Mock connection check - users are not connected
       (prisma.connection.findFirst as jest.Mock).mockResolvedValue(null);
       (prisma.profile.findUnique as jest.Mock).mockResolvedValue(null);
@@ -123,14 +127,14 @@ describe('Message Service', () => {
     });
 
     it('should send message with recipientId and create conversation', async () => {
-      // Mock getOrCreateConversation
-      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue({
+      // Mock getOrCreateConversation - service uses findMany
+      (prisma.conversation.findMany as jest.Mock).mockResolvedValue([{
         id: 'conversation-1',
         participants: [
           { userId: 'user-1' },
           { userId: 'user-2' },
         ],
-      });
+      }]);
       (prisma.conversationParticipant.findUnique as jest.Mock).mockResolvedValue({
         conversationId: 'conversation-1',
         userId: 'user-1',
