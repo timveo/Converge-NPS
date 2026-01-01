@@ -5,8 +5,6 @@ import {
   MessageCircle,
   Users,
   Briefcase,
-  FlaskConical,
-  Building2,
   User,
   Settings,
   LogOut,
@@ -46,16 +44,6 @@ const navItems: NavItem[] = [
     path: '/opportunities',
     icon: Briefcase,
     label: 'Opportunities',
-  },
-  {
-    path: '/projects',
-    icon: FlaskConical,
-    label: 'Research',
-  },
-  {
-    path: '/partners',
-    icon: Building2,
-    label: 'Partners',
   },
 ];
 
