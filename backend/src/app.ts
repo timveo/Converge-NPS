@@ -112,12 +112,14 @@ export function createApp(): Application {
           return;
         }
       }
-      logger.info(`${req.method} ${req.path}`, {
+
+      // Log 304s at debug level to reduce noise, everything else at info
+      const logLevel = res.statusCode === 304 ? 'debug' : 'info';
+      logger[logLevel](`${req.method} ${req.path}`, {
         statusCode: res.statusCode,
         method: req.method,
         path: req.path,
         duration: `${duration}ms`,
-        timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
       });
     });
     

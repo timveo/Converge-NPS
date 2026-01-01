@@ -51,7 +51,6 @@ export function initializeSocketServer(httpServer: HTTPServer) {
       }) as { sub: string };
       socket.userId = decoded.sub;
 
-      logger.info('Socket authenticated', { userId: decoded.sub, socketId: socket.id });
       next();
     } catch (error) {
       logger.error('Socket authentication failed', { error });
@@ -62,8 +61,6 @@ export function initializeSocketServer(httpServer: HTTPServer) {
   // Connection handler
   io.on('connection', (socket: AuthenticatedSocket) => {
     const userId = socket.userId!;
-
-    logger.info('User connected', { userId, socketId: socket.id });
 
     // Add to active users
     if (!activeUsers.has(userId)) {
@@ -206,8 +203,6 @@ export function initializeSocketServer(httpServer: HTTPServer) {
      * Disconnect handler
      */
     socket.on('disconnect', () => {
-      logger.info('User disconnected', { userId, socketId: socket.id });
-
       // Remove from active users
       const userSockets = activeUsers.get(userId);
       if (userSockets) {

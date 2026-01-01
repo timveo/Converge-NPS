@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as projectService from '../services/project.service';
+import logger from '../utils/logger';
 
 /**
  * GET /v1/projects
@@ -76,6 +77,12 @@ export async function expressInterest(req: Request, res: Response) {
     };
 
     const interest = await projectService.expressInterest(userId, data);
+
+    logger.info('Project interest expressed', {
+      userId,
+      projectId,
+      interestId: interest.id,
+    });
 
     res.status(201).json({
       success: true,
@@ -183,6 +190,11 @@ export async function withdrawInterest(req: Request, res: Response) {
 
     await projectService.withdrawInterest(userId, id);
 
+    logger.info('Project interest withdrawn', {
+      userId,
+      interestId: id,
+    });
+
     res.json({
       success: true,
       message: 'Interest withdrawn successfully',
@@ -282,6 +294,12 @@ export async function applyToOpportunity(req: Request, res: Response) {
       ...req.body,
     });
 
+    logger.info('Opportunity application submitted', {
+      userId,
+      opportunityId,
+      applicationId: application.id,
+    });
+
     res.status(201).json({
       success: true,
       data: application,
@@ -320,6 +338,11 @@ export async function bookmarkProject(req: Request, res: Response) {
     const { notes } = req.body;
 
     const bookmark = await projectService.bookmarkProject(userId, projectId, notes);
+
+    logger.info('Project bookmarked', {
+      userId,
+      projectId,
+    });
 
     res.status(201).json({
       success: true,
@@ -410,6 +433,11 @@ export async function bookmarkOpportunity(req: Request, res: Response) {
     const userId = req.user!.id;
 
     const bookmark = await projectService.bookmarkOpportunity(userId, opportunityId);
+
+    logger.info('Opportunity bookmarked', {
+      userId,
+      opportunityId,
+    });
 
     res.status(201).json({
       success: true,

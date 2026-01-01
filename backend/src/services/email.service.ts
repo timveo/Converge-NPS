@@ -11,6 +11,7 @@
  */
 
 import sgMail from '@sendgrid/mail';
+import logger from '../utils/logger';
 
 // Initialize SendGrid with API key
 if (process.env.SENDGRID_API_KEY) {
@@ -33,7 +34,7 @@ export class EmailService {
    */
   static async send(options: SendEmailOptions): Promise<boolean> {
     if (!process.env.SENDGRID_API_KEY) {
-      console.error('SendGrid API key not configured');
+      logger.error('SendGrid API key not configured');
       return false;
     }
 
@@ -50,10 +51,18 @@ export class EmailService {
       };
 
       const response = await sgMail.send(msg);
-      console.log('Email sent successfully:', response[0].statusCode);
+      logger.info('Email sent successfully', {
+        to: options.to,
+        subject: options.subject,
+        statusCode: response[0].statusCode,
+      });
       return true;
     } catch (error: any) {
-      console.error('Email send error:', error?.response?.body || error.message || error);
+      logger.error('Email send error', {
+        to: options.to,
+        subject: options.subject,
+        error: error?.response?.body || error.message || error,
+      });
       return false;
     }
   }

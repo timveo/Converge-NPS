@@ -2,6 +2,7 @@ import prisma from '../config/database';
 import axios, { AxiosInstance } from 'axios';
 import { randomUUID } from 'crypto';
 import type { ProjectStage } from '@prisma/client';
+import logger from '../utils/logger';
 
 // Smartsheet API configuration
 const SMARTSHEET_API_BASE = 'https://api.smartsheet.com/2.0';
@@ -121,7 +122,7 @@ async function processQueue() {
       try {
         await request();
       } catch (error) {
-        console.error('Queue request failed:', error);
+        logger.error('Queue request failed', { error });
       }
       // Rate limiting: wait between requests
       await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
@@ -525,7 +526,10 @@ export async function exportAttendees(): Promise<ExportResult> {
           value: c.value,
         })),
       }));
-      console.log('Smartsheet add rows payload (first row):', JSON.stringify(rowsPayload[0], null, 2));
+      logger.debug('Smartsheet add rows payload', {
+        firstRow: rowsPayload[0],
+        totalRows: rowsPayload.length,
+      });
       const response = await queueRequest(() =>
         client.post(`/sheets/${sheetId}/rows`, rowsPayload)
       );
@@ -550,7 +554,10 @@ export async function exportAttendees(): Promise<ExportResult> {
       }
     } catch (error: any) {
       const errorDetail = error.response?.data?.message || error.response?.data?.detail || error.message;
-      console.error('Smartsheet add rows error:', JSON.stringify(error.response?.data || error.message, null, 2));
+      logger.error('Smartsheet add rows error', {
+        error: error.response?.data || error.message,
+        batchSize: batch.length,
+      });
       for (const item of batch) {
         result.failed++;
         result.errors.push({
@@ -588,7 +595,10 @@ export async function exportAttendees(): Promise<ExportResult> {
       }
     } catch (error: any) {
       const errorDetail = error.response?.data?.message || error.response?.data?.detail || error.message;
-      console.error('Smartsheet update rows error:', JSON.stringify(error.response?.data || error.message, null, 2));
+      logger.error('Smartsheet update rows error', {
+        error: error.response?.data || error.message,
+        batchSize: batch.length,
+      });
       for (const item of batch) {
         result.failed++;
         result.errors.push({

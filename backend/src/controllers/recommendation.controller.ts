@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as recommendationService from '../services/recommendation.service';
+import logger from '../utils/logger';
 
 /**
  * POST /v1/recommendations
@@ -29,7 +30,10 @@ export async function getRecommendations(req: Request, res: Response) {
       recommendations,
     });
   } catch (error: any) {
-    console.error('Error getting recommendations:', error);
+    logger.error('Error getting recommendations', {
+      error: error.message,
+      userId: req.user?.id,
+    });
 
     if (error.message === 'User profile not found') {
       return res.status(404).json({
@@ -73,7 +77,10 @@ export async function getConnectionRecommendations(req: Request, res: Response) 
       count: recommendations.length,
     });
   } catch (error: any) {
-    console.error('Error getting connection recommendations:', error);
+    logger.error('Error getting connection recommendations', {
+      error: error.message,
+      userId: req.user?.id,
+    });
 
     if (error.message === 'User profile not found') {
       return res.status(404).json({

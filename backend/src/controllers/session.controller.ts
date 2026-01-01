@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as sessionService from '../services/session.service';
+import logger from '../utils/logger';
 
 /**
  * GET /v1/sessions
@@ -77,6 +78,13 @@ export async function createRsvp(req: Request, res: Response) {
 
     const rsvp = await sessionService.createRsvp(userId, data);
 
+    logger.info('RSVP created', {
+      userId,
+      sessionId,
+      rsvpId: rsvp.id,
+      status: rsvp.status,
+    });
+
     res.status(201).json({
       success: true,
       data: rsvp,
@@ -124,6 +132,12 @@ export async function updateRsvp(req: Request, res: Response) {
     const data = sessionService.updateRsvpSchema.parse(req.body) as any;
 
     const rsvp = await sessionService.updateRsvp(userId, id, data);
+
+    logger.info('RSVP updated', {
+      userId,
+      rsvpId: id,
+      newStatus: rsvp.status,
+    });
 
     res.json({
       success: true,
@@ -177,6 +191,11 @@ export async function deleteRsvp(req: Request, res: Response) {
     const userId = req.user!.id;
 
     await sessionService.deleteRsvp(userId, id);
+
+    logger.info('RSVP deleted', {
+      userId,
+      rsvpId: id,
+    });
 
     res.json({
       success: true,

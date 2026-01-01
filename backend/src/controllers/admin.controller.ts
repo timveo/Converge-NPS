@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as adminService from '../services/admin.service';
+import logger from '../utils/logger';
 
 // Middleware to check admin/staff role
 export function requireAdmin(req: Request, res: Response, next: Function) {
@@ -22,6 +23,12 @@ export async function createSession(req: Request, res: Response) {
   try {
     const data = adminService.createSessionSchema.parse(req.body) as any;
     const session = await adminService.createSession(data);
+
+    logger.info('Session created by admin', {
+      adminId: req.user?.id,
+      sessionId: session.id,
+      title: session.title,
+    });
 
     res.status(201).json({
       success: true,
@@ -60,6 +67,11 @@ export async function updateSession(req: Request, res: Response) {
     const { id } = req.params;
     const data = adminService.updateSessionSchema.parse(req.body) as any;
     const session = await adminService.updateSession(id, data);
+
+    logger.info('Session updated by admin', {
+      adminId: req.user?.id,
+      sessionId: id,
+    });
 
     res.json({
       success: true,
@@ -437,7 +449,7 @@ export async function getEventAnalytics(req: Request, res: Response) {
       data: analytics,
     });
   } catch (error: any) {
-    console.error('Event analytics error:', error);
+    logger.error('Event analytics error', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch event analytics',

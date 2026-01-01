@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import * as messageService from '../services/message.service';
 import prisma from '../config/database';
 import { getSocketIO } from '../socket';
+import logger from '../utils/logger';
 
 /**
  * POST /v1/messages
@@ -90,7 +91,7 @@ export async function getOrCreateConversation(req: Request, res: Response) {
     const { recipientId, participantId } = req.body;
 
     const otherUserId = recipientId || participantId;
-    console.log('Creating/getting conversation:', { userId, otherUserId });
+    logger.debug('Creating/getting conversation', { userId, otherUserId });
 
     if (!otherUserId) {
       return res.status(400).json({
@@ -100,14 +101,14 @@ export async function getOrCreateConversation(req: Request, res: Response) {
     }
 
     const conversation = await messageService.getOrCreateConversation(userId, otherUserId);
-    console.log('Conversation created/found:', conversation?.id);
+    logger.debug('Conversation created/found', { conversationId: conversation?.id });
 
     res.json({
       success: true,
       data: conversation,
     });
   } catch (error: any) {
-    console.error('Error creating conversation:', error);
+    logger.error('Error creating conversation', { error: error.message, userId: req.user?.id });
     if (error.message.includes('does not allow messaging')) {
       return res.status(400).json({
         success: false,
@@ -129,9 +130,9 @@ export async function getOrCreateConversation(req: Request, res: Response) {
 export async function getConversations(req: Request, res: Response) {
   try {
     const userId = req.user!.id;
-    console.log('Fetching conversations for user:', userId);
+    logger.debug('Fetching conversations for user', { userId });
     const conversations = await messageService.getUserConversations(userId);
-    console.log('Found conversations:', conversations.length);
+    logger.debug('Found conversations', { userId, count: conversations.length });
 
     res.json({
       success: true,
@@ -139,7 +140,7 @@ export async function getConversations(req: Request, res: Response) {
       count: conversations.length,
     });
   } catch (error: any) {
-    console.error('Error fetching conversations:', error);
+    logger.error('Error fetching conversations', { error: error.message, userId: req.user?.id });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch conversations',
@@ -356,7 +357,7 @@ export async function searchUsersForMessaging(req: Request, res: Response) {
       data: users,
     });
   } catch (error: any) {
-    console.error('Error searching users:', error);
+    logger.error('Error searching users', { error: error.message, userId: req.user?.id });
     res.status(500).json({
       success: false,
       error: 'Failed to search users',

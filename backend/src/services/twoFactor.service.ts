@@ -7,6 +7,7 @@
 import prisma from '../config/database';
 import crypto from 'crypto';
 import { EmailService } from './email.service';
+import logger from '../utils/logger';
 
 // Configuration
 const CODE_LENGTH = 6;
@@ -84,9 +85,10 @@ export class TwoFactorService {
 
     // Log code in development for testing (NEVER do this in production!)
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`\n========================================`);
-      console.log(`2FA CODE FOR ${email}: ${code}`);
-      console.log(`========================================\n`);
+      logger.debug('2FA code generated for development', {
+        email,
+        code,
+      });
     }
 
     // Store hashed code
@@ -104,7 +106,7 @@ export class TwoFactorService {
     if (!emailSent) {
       // In development, still allow login even if email fails (code is logged)
       if (process.env.NODE_ENV !== 'production') {
-        console.warn('Email sending failed, but code is logged above for development testing');
+        logger.warn('Email sending failed in development, but code is available in logs');
         return {
           success: true,
           message: 'Verification code sent (check server logs in development)',
