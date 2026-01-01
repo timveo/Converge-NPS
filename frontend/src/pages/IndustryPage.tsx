@@ -141,6 +141,7 @@ function IndustryMobilePage() {
   const [expandedFilterSections, setExpandedFilterSections] = useState<Set<string>>(new Set());
   const [expandedPartners, setExpandedPartners] = useState<Set<string>>(new Set());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favoritingIds, setFavoritingIds] = useState<Set<string>>(new Set());
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const { dismiss, isDismissed } = useDismissedRecommendations('industry');
 
@@ -168,16 +169,38 @@ function IndustryMobilePage() {
     });
   };
 
-  const toggleFavorite = (partnerId: string) => {
-    setFavorites(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(partnerId)) {
-        newSet.delete(partnerId);
+  const toggleFavorite = async (partnerId: string) => {
+    if (favoritingIds.has(partnerId)) {
+      return; // Prevent duplicate requests
+    }
+
+    const currentlyFavorited = favorites.has(partnerId);
+    setFavoritingIds(prev => new Set(prev).add(partnerId));
+
+    try {
+      if (currentlyFavorited) {
+        await api.delete(`/partners/${partnerId}/favorite`);
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(partnerId);
+          return newSet;
+        });
+        toast.success('Partner removed from favorites');
       } else {
-        newSet.add(partnerId);
+        await api.post(`/partners/${partnerId}/favorite`);
+        setFavorites(prev => new Set(prev).add(partnerId));
+        toast.success('Partner added to favorites');
       }
-      return newSet;
-    });
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || error.message || 'Failed to update favorite';
+      toast.error(message);
+    } finally {
+      setFavoritingIds(prev => {
+        const next = new Set(prev);
+        next.delete(partnerId);
+        return next;
+      });
+    }
   };
 
   const isFavorite = (partnerId: string) => favorites.has(partnerId);
@@ -286,6 +309,12 @@ function IndustryMobilePage() {
         poc_is_checked_in: p.pocIsCheckedIn ?? p.poc_is_checked_in ?? false
       }));
       setPartners(mappedPartners);
+
+      // Extract favorited partner IDs from the response
+      const favoritedIds = data
+        .filter((p: any) => p.isFavorited)
+        .map((p: any) => p.id);
+      setFavorites(new Set(favoritedIds));
 
       const writeCache = () => {
         void offlineDataCache.set('industry:partners', mappedPartners)

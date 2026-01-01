@@ -15,7 +15,8 @@ import logger from '../utils/logger';
 export async function listPartners(req: Request, res: Response, next: NextFunction) {
   try {
     const filters = partnerService.partnerFiltersSchema.parse(req.query);
-    const result = await partnerService.listPartners(filters);
+    const userId = req.user?.id;
+    const result = await partnerService.listPartners(filters, userId);
 
     res.status(200).json({
       data: result.partners,
@@ -61,6 +62,7 @@ export async function getPartner(req: Request, res: Response, next: NextFunction
 export async function favoritePartner(req: Request, res: Response, next: NextFunction) {
   try {
     if (!req.user) {
+      logger.error('Favorite partner failed: Not authenticated');
       return res.status(401).json({
         error: { code: 'UNAUTHORIZED', message: 'Not authenticated' },
       });
@@ -71,7 +73,11 @@ export async function favoritePartner(req: Request, res: Response, next: NextFun
 
     const favorite = await partnerService.favoritePartner(req.user.id, partnerId, notes);
 
-    logger.info('Partner favorited', { userId: req.user.id, partnerId });
+    logger.info('Partner favorited', {
+      userId: req.user.id,
+      partnerId,
+      favoriteId: favorite.id,
+    });
 
     res.status(201).json({
       message: 'Partner favorited successfully',
@@ -79,6 +85,10 @@ export async function favoritePartner(req: Request, res: Response, next: NextFun
     });
   } catch (error: any) {
     if (error.message === 'Partner already favorited') {
+      logger.warn('Partner already favorited', {
+        userId: req.user?.id,
+        partnerId: req.params.id,
+      });
       return res.status(409).json({
         error: {
           code: 'ALREADY_FAVORITED',
@@ -86,6 +96,11 @@ export async function favoritePartner(req: Request, res: Response, next: NextFun
         },
       });
     }
+    logger.error('Failed to favorite partner', {
+      error: error.message,
+      userId: req.user?.id,
+      partnerId: req.params.id,
+    });
     next(error);
   }
 }
@@ -97,6 +112,7 @@ export async function favoritePartner(req: Request, res: Response, next: NextFun
 export async function unfavoritePartner(req: Request, res: Response, next: NextFunction) {
   try {
     if (!req.user) {
+      logger.error('Unfavorite partner failed: Not authenticated');
       return res.status(401).json({
         error: { code: 'UNAUTHORIZED', message: 'Not authenticated' },
       });
@@ -111,7 +127,12 @@ export async function unfavoritePartner(req: Request, res: Response, next: NextF
     res.status(200).json({
       message: 'Partner unfavorited successfully',
     });
-  } catch (error) {
+  } catch (error: any) {
+    logger.error('Failed to unfavorite partner', {
+      error: error.message,
+      userId: req.user?.id,
+      partnerId: req.params.id,
+    });
     next(error);
   }
 }

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import prisma from '../config/database';
+import logger from '../utils/logger';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -210,7 +211,7 @@ Generate personalized recommendations. Remember to respond with ONLY the JSON ob
     // Extract text content from response
     const textContent = message.content.find(c => c.type === 'text');
     if (!textContent || textContent.type !== 'text') {
-      console.error('No text content in AI response');
+      logger.error('No text content in AI response');
       return [];
     }
 
@@ -237,7 +238,7 @@ Generate personalized recommendations. Remember to respond with ONLY the JSON ob
 
     return recommendations;
   } catch (error) {
-    console.error('Error generating AI recommendations:', error);
+    logger.error('Error generating AI recommendations', { error });
     // Return empty array on error - let frontend handle gracefully
     return [];
   }

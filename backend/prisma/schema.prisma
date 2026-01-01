@@ -72,54 +72,54 @@ model PasswordReset {
 }
 
 model Profile {
-  id                       String                    @id @db.Uuid
-  fullName                 String                    @map("full_name")
-  email                    String                    @unique
-  phone                    String?
-  rank                     String?
-  organization             String?
-  department               String?
-  role                     String?
-  branchOfService          String?                   @map("branch_of_service")
-  participantType          ParticipantType?          @map("participant_type")
-  bio                      String?
-  avatarUrl                String?                   @map("avatar_url")
-  accelerationInterests    String[]                  @map("acceleration_interests")
-  linkedinUrl              String?                   @map("linkedin_url")
-  websiteUrl               String?                   @map("website_url")
-  profileVisibility              ProfileVisibility   @default(public) @map("profile_visibility")
-  allowQrScanning                Boolean             @default(true) @map("allow_qr_scanning")
-  allowMessaging                 Boolean             @default(true) @map("allow_messaging")
-  hideContactInfo                Boolean             @default(false) @map("hide_contact_info")
-  showProfileAllowConnections    Boolean             @default(true) @map("show_profile_allow_connections")
-  onboardingCompleted            Boolean             @default(false) @map("onboarding_completed")
-  onboardingStep           Int                       @default(0) @map("onboarding_step")
-  isWalkIn                 Boolean                   @default(false) @map("is_walk_in")
-  isCheckedIn              Boolean                   @default(false) @map("is_checked_in")
-  checkedInById            String?                   @map("checked_in_by_id") @db.Uuid
-  createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  auditLogsTarget          AuditLog[]                @relation("AuditLogTarget")
-  auditLogs                AuditLog[]                @relation("AuditLogUser")
-  connectionsAsTarget      Connection[]              @relation("TargetUserConnections")
-  connectionsAsUser        Connection[]              @relation("UserConnections")
-  conversationParticipants ConversationParticipant[]
-  messageReadReceipts      MessageReadReceipt[]
-  messagesSent             Message[]                 @relation("MessageSender")
-  offlineQueue             OfflineQueue[]
-  opportunities            Opportunity[]             @relation("OpportunityPoster")
-  opportunitiesAsPoc       Opportunity[]             @relation("OpportunityPOC")
-  opportunityInterests     OpportunityInterest[]
-  partnerFavorites         PartnerFavorite[]
-  partnersAsPoc            Partner[]                 @relation("PartnerPOC")
-  projectBookmarks         ProjectBookmark[]
-  projectInterests         ProjectInterest[]
-  projectsAsPi             Project[]                 @relation("ProjectPI")
-  projectsAsPoc            Project[]                 @relation("ProjectPOC")
-  qrCode                   QrCode?
-  rsvps                    Rsvp[]
-  smartsheetSyncs          SmartsheetSync[]
-  userRoles                UserRole[]
+  id                          String                    @id @db.Uuid
+  fullName                    String                    @map("full_name")
+  email                       String                    @unique
+  phone                       String?
+  rank                        String?
+  organization                String?
+  department                  String?
+  role                        String?
+  branchOfService             String?                   @map("branch_of_service")
+  participantType             ParticipantType?          @map("participant_type")
+  bio                         String?
+  avatarUrl                   String?                   @map("avatar_url")
+  accelerationInterests       String[]                  @map("acceleration_interests")
+  linkedinUrl                 String?                   @map("linkedin_url")
+  websiteUrl                  String?                   @map("website_url")
+  profileVisibility           ProfileVisibility         @default(public) @map("profile_visibility")
+  allowQrScanning             Boolean                   @default(true) @map("allow_qr_scanning")
+  allowMessaging              Boolean                   @default(true) @map("allow_messaging")
+  hideContactInfo             Boolean                   @default(false) @map("hide_contact_info")
+  showProfileAllowConnections Boolean                   @default(true) @map("show_profile_allow_connections")
+  onboardingCompleted         Boolean                   @default(false) @map("onboarding_completed")
+  onboardingStep              Int                       @default(0) @map("onboarding_step")
+  isWalkIn                    Boolean                   @default(false) @map("is_walk_in")
+  isCheckedIn                 Boolean                   @default(false) @map("is_checked_in")
+  checkedInById               String?                   @map("checked_in_by_id") @db.Uuid
+  createdAt                   DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  auditLogsTarget             AuditLog[]                @relation("AuditLogTarget")
+  auditLogs                   AuditLog[]                @relation("AuditLogUser")
+  connectionsAsTarget         Connection[]              @relation("TargetUserConnections")
+  connectionsAsUser           Connection[]              @relation("UserConnections")
+  conversationParticipants    ConversationParticipant[]
+  messageReadReceipts         MessageReadReceipt[]
+  messagesSent                Message[]                 @relation("MessageSender")
+  offlineQueue                OfflineQueue[]
+  opportunities               Opportunity[]             @relation("OpportunityPoster")
+  opportunitiesAsPoc          Opportunity[]             @relation("OpportunityPOC")
+  opportunityInterests        OpportunityInterest[]
+  partnerFavorites            PartnerFavorite[]
+  partnersAsPoc               Partner[]                 @relation("PartnerPOC")
+  projectBookmarks            ProjectBookmark[]
+  projectInterests            ProjectInterest[]
+  projectsAsPi                Project[]                 @relation("ProjectPI")
+  projectsAsPoc               Project[]                 @relation("ProjectPOC")
+  qrCode                      QrCode?
+  rsvps                       Rsvp[]
+  smartsheetSyncs             SmartsheetSync[]
+  userRoles                   UserRole[]
 
   @@map("profiles")
 }
@@ -354,25 +354,25 @@ model OpportunityInterest {
 }
 
 model Partner {
-  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name            String            @unique
-  description     String?
-  websiteUrl      String?           @map("website_url")
-  logoUrl         String?           @map("logo_url")
-  organizationType String?           @map("organization_type")
-  researchAreas   String[]          @map("research_areas")
-  seeking         String[]          @map("seeking")
-  collaborationPitch String?         @map("collaboration_pitch")
-  pocUserId       String?           @map("poc_user_id") @db.Uuid
-  pocFirstName    String?           @map("poc_first_name")
-  pocLastName     String?           @map("poc_last_name")
-  pocEmail        String?           @map("poc_email")
-  pocRank         String?           @map("poc_rank")
-  isFeatured      Boolean           @default(false) @map("is_featured")
-  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-  poc             Profile?          @relation("PartnerPOC", fields: [pocUserId], references: [id])
-  favorites       PartnerFavorite[]
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String            @unique
+  description        String?
+  websiteUrl         String?           @map("website_url")
+  logoUrl            String?           @map("logo_url")
+  organizationType   String?           @map("organization_type")
+  researchAreas      String[]          @map("research_areas")
+  seeking            String[]          @map("seeking")
+  collaborationPitch String?           @map("collaboration_pitch")
+  pocUserId          String?           @map("poc_user_id") @db.Uuid
+  pocFirstName       String?           @map("poc_first_name")
+  pocLastName        String?           @map("poc_last_name")
+  pocEmail           String?           @map("poc_email")
+  pocRank            String?           @map("poc_rank")
+  isFeatured         Boolean           @default(false) @map("is_featured")
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  poc                Profile?          @relation("PartnerPOC", fields: [pocUserId], references: [id])
+  favorites          PartnerFavorite[]
 
   @@index([isFeatured])
   @@index([organizationType])

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as smartsheetService from '../services/smartsheet.service';
+import logger from '../utils/logger';
 
 /**
  * GET /api/v1/admin/smartsheet/status
@@ -174,6 +175,14 @@ export async function importSessions(req: Request, res: Response) {
     const successCount = result.imported + result.updated;
     const totalProcessed = successCount + result.failed;
 
+    logger.info('Smartsheet sessions imported', {
+      adminId: req.user?.id,
+      imported: result.imported,
+      updated: result.updated,
+      failed: result.failed,
+      total: totalProcessed,
+    });
+
     res.json({
       success: true,
       data: result,
@@ -198,6 +207,14 @@ export async function importProjects(req: Request, res: Response) {
 
     const successCount = result.imported + result.updated;
     const totalProcessed = successCount + result.failed;
+
+    logger.info('Smartsheet projects imported', {
+      adminId: req.user?.id,
+      imported: result.imported,
+      updated: result.updated,
+      failed: result.failed,
+      total: totalProcessed,
+    });
 
     res.json({
       success: true,
@@ -246,13 +263,22 @@ export async function importPartners(req: Request, res: Response) {
   try {
     const result = await smartsheetService.importPartners();
 
-    const successCount = result.imported + result.updated;
+    const successCount = result.imported + result.updated + result.skipped;
     const totalProcessed = successCount + result.failed;
+
+    logger.info('Smartsheet partners imported', {
+      adminId: req.user?.id,
+      imported: result.imported,
+      updated: result.updated,
+      skipped: result.skipped,
+      failed: result.failed,
+      total: totalProcessed,
+    });
 
     res.json({
       success: true,
       data: result,
-      message: `Import complete: ${result.imported} new, ${result.updated} updated, ${result.failed} failed out of ${totalProcessed} total rows`,
+      message: `Import complete: ${result.imported} new, ${result.updated} updated, ${result.skipped} skipped, ${result.failed} failed out of ${totalProcessed} total rows`,
     });
   } catch (error: any) {
     res.status(500).json({

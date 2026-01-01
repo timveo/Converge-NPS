@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Star, MapPin, Building2, ChevronLeft, Users } from 'lucide-react';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 
 interface Partner {
   id: string;
@@ -22,12 +25,15 @@ interface Partner {
   poc_last_name?: string;
   poc_email?: string;
   poc_rank?: string;
+  isFavorited?: boolean;
 }
 
 export default function PartnersPage() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [favoritingIds, setFavoritingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadPartners();
@@ -38,11 +44,69 @@ export default function PartnersPage() {
       setLoading(true);
       const response = await api.get('/partners');
       const data = (response as any).data?.data || (response as any).data || [];
-      setPartners(data);
+
+      // Map backend camelCase to frontend snake_case
+      const mappedPartners = data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        partnership_type: p.organizationType,
+        research_areas: p.researchAreas || [],
+        website_url: p.websiteUrl,
+        logo_url: p.logoUrl,
+        is_featured: p.isFeatured,
+        poc_user_id: p.pocUserId,
+        poc_first_name: p.pocFirstName,
+        poc_last_name: p.pocLastName,
+        poc_email: p.pocEmail,
+        poc_rank: p.pocRank,
+        isFavorited: p.isFavorited || false,
+      }));
+
+      setPartners(mappedPartners);
     } catch (error) {
       console.error('Failed to load partners:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async (partnerId: string, currentlyFavorited: boolean) => {
+    if (!user) {
+      toast.error('Please sign in to favorite partners');
+      return;
+    }
+
+    if (favoritingIds.has(partnerId)) {
+      return; // Prevent duplicate requests
+    }
+
+    setFavoritingIds(prev => new Set(prev).add(partnerId));
+
+    try {
+      if (currentlyFavorited) {
+        await api.delete(`/partners/${partnerId}/favorite`);
+        toast.success('Partner removed from favorites');
+      } else {
+        await api.post(`/partners/${partnerId}/favorite`);
+        toast.success('Partner added to favorites');
+      }
+
+      // Update local state
+      setPartners(prev =>
+        prev.map(p =>
+          p.id === partnerId ? { ...p, isFavorited: !currentlyFavorited } : p
+        )
+      );
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || error.message || 'Failed to update favorite';
+      toast.error(message);
+    } finally {
+      setFavoritingIds(prev => {
+        const next = new Set(prev);
+        next.delete(partnerId);
+        return next;
+      });
     }
   };
 
@@ -121,8 +185,24 @@ export default function PartnersPage() {
                     </div>
                     <p className="text-sm md:text-sm text-muted-foreground">{partner.description}</p>
                   </div>
-                  <Button variant="ghost" size="icon" className="flex-shrink-0">
-                    <Star className="w-4 h-4 md:w-5 md:h-5" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="flex-shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(partner.id, partner.isFavorited || false);
+                    }}
+                    disabled={favoritingIds.has(partner.id)}
+                  >
+                    <Star
+                      className={cn(
+                        "w-4 h-4 md:w-5 md:h-5 transition-colors",
+                        partner.isFavorited
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-muted-foreground"
+                      )}
+                    />
                   </Button>
                 </div>
 
@@ -131,7 +211,7 @@ export default function PartnersPage() {
                   <span className="truncate">
                     {partner.poc_rank && <span className="font-medium">{partner.poc_rank}</span>}
                     {partner.poc_rank && (partner.poc_first_name || partner.poc_last_name) && ' '}
-                    {partner.poc_first_name || partner.poc_last_name 
+                    {partner.poc_first_name || partner.poc_last_name
                       ? `${partner.poc_first_name || ''} ${partner.poc_last_name || ''}`.trim()
                       : 'Unknown'}
                   </span>

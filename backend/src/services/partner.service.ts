@@ -23,7 +23,7 @@ export type PartnerFilters = z.infer<typeof partnerFiltersSchema>;
 /**
  * List all industry partners with optional filters
  */
-export async function listPartners(filters: PartnerFilters) {
+export async function listPartners(filters: PartnerFilters, userId?: string) {
   const { organizationType, technologyFocus, seeking, search, page, limit } = filters;
 
   const skip = (page - 1) * limit;
@@ -55,7 +55,7 @@ export async function listPartners(filters: PartnerFilters) {
     ];
   }
 
-  const [partners, total] = await Promise.all([
+  const [partners, total, favorites] = await Promise.all([
     prisma.partner.findMany({
       where,
       skip,
@@ -87,17 +87,27 @@ export async function listPartners(filters: PartnerFilters) {
       },
     }),
     prisma.partner.count({ where }),
+    userId
+      ? prisma.partnerFavorite.findMany({
+          where: { userId },
+          select: { partnerId: true },
+        })
+      : Promise.resolve([]),
   ]);
 
-  // Flatten the poc.isCheckedIn into pocIsCheckedIn
-  const partnersWithCheckedIn = partners.map((partner) => ({
+  // Create a set of favorited partner IDs for quick lookup
+  const favoritedIds = new Set(favorites.map((f) => f.partnerId));
+
+  // Flatten the poc.isCheckedIn into pocIsCheckedIn and add isFavorited
+  const partnersWithMetadata = partners.map((partner) => ({
     ...partner,
     pocIsCheckedIn: partner.poc?.isCheckedIn ?? false,
+    isFavorited: favoritedIds.has(partner.id),
     poc: undefined, // Remove the nested poc object
   }));
 
   return {
-    partners: partnersWithCheckedIn,
+    partners: partnersWithMetadata,
     pagination: {
       page,
       limit,
@@ -194,26 +204,31 @@ export async function favoritePartner(userId: string, partnerId: string, notes?:
     throw new Error('Partner already favorited');
   }
 
-  const favorite = await prisma.partnerFavorite.create({
-    data: {
-      userId,
-      partnerId,
-    },
-    include: {
-      partner: {
-        select: {
-          id: true,
-          name: true,
-          logoUrl: true,
-          organizationType: true,
-          researchAreas: true,
-          collaborationPitch: true,
+  try {
+    const favorite = await prisma.partnerFavorite.create({
+      data: {
+        userId,
+        partnerId,
+      },
+      include: {
+        partner: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+            organizationType: true,
+            researchAreas: true,
+            collaborationPitch: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return favorite;
+    return favorite;
+  } catch (error: any) {
+    console.error('Error creating partner favorite:', error);
+    throw error;
+  }
 }
 
 /**

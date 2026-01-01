@@ -10,6 +10,7 @@ import { AppRole, ParticipantType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID, randomBytes } from 'crypto';
 import { EmailService } from './email.service';
+import logger from '../utils/logger';
 
 /**
  * Check in an attendee (updates Profile.isCheckedIn)
@@ -195,7 +196,10 @@ export async function registerWalkIn(
 
   // Send walk-in check-in confirmation email
   EmailService.sendWalkInCheckinEmail(result.email, result.fullName).catch((err) => {
-    console.error('Failed to send walk-in check-in email:', err);
+    logger.error('Failed to send walk-in check-in email', {
+      email: result.email,
+      error: err,
+    });
   });
 
   return {
