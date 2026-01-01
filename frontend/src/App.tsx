@@ -20,8 +20,6 @@ import ScannerPage from '@/pages/ScannerPage';
 import OpportunitiesPage from '@/pages/OpportunitiesPage';
 import SubmitOpportunityPage from '@/pages/SubmitOpportunityPage';
 import IndustryPage from '@/pages/IndustryPage';
-import ProjectsPage from '@/pages/ProjectsPage';
-import PartnersPage from '@/pages/PartnersPage';
 import SettingsPage from '@/pages/SettingsPage';
 
 // Admin Pages
@@ -45,8 +43,6 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/login" element={<AuthPage />} />
-        <Route path="/register" element={<AuthPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
@@ -65,8 +61,6 @@ function App() {
           <Route path="/opportunities" element={<OpportunitiesPage />} />
           <Route path="/opportunities/submit" element={<SubmitOpportunityPage />} />
           <Route path="/industry" element={<IndustryPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/partners" element={<PartnersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 
